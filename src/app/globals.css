@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Paleta Base — Dark Mode Frio */
+  --bg-deep: #061c2c;
+  --bg-surface: #193347;
+  --bg-elevated: #334b60;
+  --border-muted: #4f6478;
+  --text-muted: #6c7f91;
+  --text-secondary: #91a1b2;
+  --text-primary: #b7c7d6;
+
+  /* Cores Semânticas */
+  --color-danger-text: #f06a76;
+  --color-danger-primary: #d93848;
+  --color-danger-surface: #8c2332;
+
+  --color-warning-primary: #e8b04b;
+
+  --color-success-primary: #2eb886;
+  --color-success-surface: #1d6f56;
+
+  /* Geometria Bento */
+  --radius-bento: 18px;
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --border-width-bento: 1.5px;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font-jetbrains-mono), monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+}
