@@ -2,8 +2,20 @@ import type { ApiError, ApiErrorCode, ApiErrorDetail, AuthRefreshResponse } from
 
 const DEFAULT_API_BASE_URL = 'http://localhost:8000/api/v1';
 
+const NON_REFRESHABLE_AUTH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/verify-email',
+  '/auth/resend-verification',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+] as const;
+
 let inMemoryAccessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
+let unauthorizedHandler: (() => void) | null = null;
 
 export function getAccessToken(): string | null {
   return inMemoryAccessToken;
@@ -15,6 +27,10 @@ export function setAccessToken(token: string | null): void {
 
 export function clearAccessToken(): void {
   inMemoryAccessToken = null;
+}
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
 }
 
 export class ApiClientError extends Error {
@@ -118,7 +134,7 @@ async function parseErrorResponse(response: Response): Promise<ApiClientError> {
   });
 }
 
-async function executeSingleFlightRefresh(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) {
     return refreshPromise;
   }
@@ -155,18 +171,19 @@ async function executeSingleFlightRefresh(): Promise<string | null> {
   return refreshPromise;
 }
 
+function isNonRefreshablePath(path: string): boolean {
+  return NON_REFRESHABLE_AUTH_PATHS.some((authPath) => path.includes(authPath));
+}
+
 function shouldAttemptRefresh(
   path: string,
   options: ApiRequestOptions,
   error: ApiClientError,
 ): boolean {
-  if (options.skipRefresh || options.skipAuth) {
+  if (options.skipRefresh || options.skipAuth || isNonRefreshablePath(path)) {
     return false;
   }
-  if (path.includes('/auth/login') || path.includes('/auth/refresh')) {
-    return false;
-  }
-  return error.status === 401 && error.code === 'TOKEN_EXPIRED';
+  return error.status === 401 && error.code !== 'INVALID_CREDENTIALS';
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
@@ -201,10 +218,11 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     const apiError = await parseErrorResponse(response);
 
     if (shouldAttemptRefresh(path, options, apiError)) {
-      const newToken = await executeSingleFlightRefresh();
+      const newToken = await refreshAccessToken();
       if (newToken) {
         return apiRequest<T>(path, { ...options, skipRefresh: true });
       }
+      unauthorizedHandler?.();
     }
 
     throw apiError;

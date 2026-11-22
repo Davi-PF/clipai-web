@@ -107,6 +107,32 @@ export interface AuthRefreshResponse {
   expires_in: number;
 }
 
+export interface RegisterRequest {
+  username: string;
+  email: string;
+  password: string;
+  display_name: string;
+}
+
+export interface RegisterResponse {
+  message: string;
+  user: User;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+}
+
+export interface ApiMessageResponse {
+  message: string;
+}
+
 // ============================================================================
 // 4. Catálogo: Jogos e Tags
 // ============================================================================
