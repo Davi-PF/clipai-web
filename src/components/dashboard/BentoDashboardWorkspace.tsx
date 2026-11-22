@@ -16,7 +16,7 @@ import {
 } from '@/components/dashboard/QuickFiltersCard';
 import { UploadClipModal } from '@/components/upload/UploadClipModal';
 import { Button } from '@/components/ui/Button';
-import { useSidebarState } from '@/contexts/sidebar-context';
+import { type DashboardContentSection, useSidebarState } from '@/contexts/sidebar-context';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
 import { useClipSocial, type SocialMutationPatch } from '@/hooks/useClipSocial';
@@ -29,7 +29,7 @@ import type { Collection } from '@/types/collection';
 
 const QUEUE_PAGE_SIZE = 6;
 const SEARCH_DEBOUNCE_MS = 300;
-const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
+const DASHBOARD_SECTIONS: readonly DashboardContentSection[] = [
   'home',
   'recent',
   'featured',
@@ -37,15 +37,15 @@ const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
   'collections',
 ] as const;
 
-function resolveInitialDashboardSection(): DashboardSection {
+function resolveDashboardSectionFromUrl(): DashboardContentSection | null {
   if (typeof window === 'undefined') {
-    return 'home';
+    return null;
   }
   const param = new URLSearchParams(window.location.search).get('section');
   if (param && (DASHBOARD_SECTIONS as readonly string[]).includes(param)) {
-    return param as DashboardSection;
+    return param as DashboardContentSection;
   }
-  return 'home';
+  return null;
 }
 
 export function BentoDashboardWorkspace() {
@@ -56,11 +56,12 @@ export function BentoDashboardWorkspace() {
   const quickFiltersRef = useRef<HTMLDivElement | null>(null);
   const viewedClipIdsRef = useRef<Set<string>>(new Set());
 
-  const { isCollapsed: isSidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } =
-    useSidebarState();
-  const [activeSection, setActiveSection] = useState<DashboardSection>(
-    resolveInitialDashboardSection,
-  );
+  const {
+    isCollapsed: isSidebarCollapsed,
+    toggleCollapsed: toggleSidebarCollapsed,
+    activeSection,
+    setActiveSection,
+  } = useSidebarState();
   const [quickFilter, setQuickFilter] = useState<QuickFilterSelection>({});
   const [activeCollection, setActiveCollection] = useState<Collection | null>(null);
 
@@ -86,6 +87,14 @@ export function BentoDashboardWorkspace() {
   const [saveCollectionClip, setSaveCollectionClip] = useState<ClipSummary | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
+
+  // Sincroniza seção caso o usuário acesse diretamente /dashboard?section=... (ex.: F5)
+  useEffect(() => {
+    const urlSection = resolveDashboardSectionFromUrl();
+    if (urlSection) {
+      setActiveSection(urlSection);
+    }
+  }, [setActiveSection]);
 
   // Debounce da busca
   useEffect(() => {

@@ -1,17 +1,23 @@
 'use client';
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import type { DashboardSection } from '@/components/dashboard/LiquidSidebar';
+
+export type DashboardContentSection = Exclude<DashboardSection, 'settings'>;
 
 export interface SidebarContextValue {
   isCollapsed: boolean;
   setIsCollapsed: (value: boolean) => void;
   toggleCollapsed: () => void;
+  activeSection: DashboardContentSection;
+  setActiveSection: (section: DashboardContentSection) => void;
 }
 
 const SidebarContext = createContext<SidebarContextValue | null>(null);
 
 export function SidebarProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [activeSection, setActiveSection] = useState<DashboardContentSection>('home');
 
   const toggleCollapsed = useCallback(() => {
     setIsCollapsed((prev) => !prev);
@@ -22,8 +28,10 @@ export function SidebarProvider({ children }: Readonly<{ children: ReactNode }>)
       isCollapsed,
       setIsCollapsed,
       toggleCollapsed,
+      activeSection,
+      setActiveSection,
     }),
-    [isCollapsed, toggleCollapsed],
+    [isCollapsed, toggleCollapsed, activeSection],
   );
 
   return <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>;
@@ -32,6 +40,7 @@ export function SidebarProvider({ children }: Readonly<{ children: ReactNode }>)
 export function useSidebarState(): SidebarContextValue {
   const context = useContext(SidebarContext);
   const [localCollapsed, setLocalCollapsed] = useState(false);
+  const [localSection, setLocalSection] = useState<DashboardContentSection>('home');
 
   const toggleLocal = useCallback(() => {
     setLocalCollapsed((prev) => !prev);
@@ -45,5 +54,7 @@ export function useSidebarState(): SidebarContextValue {
     isCollapsed: localCollapsed,
     setIsCollapsed: setLocalCollapsed,
     toggleCollapsed: toggleLocal,
+    activeSection: localSection,
+    setActiveSection: setLocalSection,
   };
 }

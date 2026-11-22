@@ -40,8 +40,11 @@ export function UserSettingsWorkspace() {
 
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<SettingsTabId>(() => resolveInitialTab(tabParam));
-  const { isCollapsed: isSidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } =
-    useSidebarState();
+  const {
+    isCollapsed: isSidebarCollapsed,
+    toggleCollapsed: toggleSidebarCollapsed,
+    setActiveSection,
+  } = useSidebarState();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
@@ -54,6 +57,7 @@ export function UserSettingsWorkspace() {
     if (section === 'settings') {
       return;
     }
+    setActiveSection(section);
     router.push(section === 'home' ? '/dashboard' : `/dashboard?section=${section}`);
   };
 
