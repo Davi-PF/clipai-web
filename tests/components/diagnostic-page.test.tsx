@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import DiagnosticHomePage from '@/app/page';
+import { ApiHealthStatusCard } from '@/components/ui/ApiHealthStatusCard';
 
-describe('DiagnosticHomePage (/)', () => {
+describe('ApiHealthStatusCard', () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
@@ -14,7 +14,7 @@ describe('DiagnosticHomePage (/)', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders CLIPAÍ branding, color palette tokens, hybrid typography and online API status', async () => {
+  it('renders online API status with version and database state', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -26,14 +26,7 @@ describe('DiagnosticHomePage (/)', () => {
       ),
     );
 
-    render(<DiagnosticHomePage />);
-
-    expect(screen.getByRole('heading', { name: 'CLIPAÍ' })).toBeInTheDocument();
-    expect(screen.getByText('Oxford by Night')).toBeInTheDocument();
-    expect(screen.getByText('#061C2C')).toBeInTheDocument();
-    expect(screen.getByText('#2EB886')).toBeInTheDocument();
-    expect(screen.getByText(/BEBAS NEUE — DISPLAY & CTAS PRINCIPAIS/i)).toBeInTheDocument();
-    expect(screen.getByText(/JETBRAINS MONO — CORPO, METADADOS & FILTROS/i)).toBeInTheDocument();
+    render(<ApiHealthStatusCard />);
 
     await waitFor(() => {
       expect(screen.getByTestId('health-badge-online')).toBeInTheDocument();
@@ -55,7 +48,7 @@ describe('DiagnosticHomePage (/)', () => {
       ),
     );
 
-    render(<DiagnosticHomePage />);
+    render(<ApiHealthStatusCard />);
 
     await waitFor(() => {
       expect(screen.getByTestId('health-badge-offline')).toBeInTheDocument();
