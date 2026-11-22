@@ -18,13 +18,7 @@ import type { User } from '@/types/api';
 import { getUserDisplayName } from '@/types/user';
 
 export type DashboardSection =
-  | 'home'
-  | 'recent'
-  | 'featured'
-  | 'favorites'
-  | 'collections'
-  | 'studio'
-  | 'settings';
+  'home' | 'recent' | 'featured' | 'favorites' | 'collections' | 'studio' | 'settings';
 
 interface NavItemConfig {
   id: DashboardSection;

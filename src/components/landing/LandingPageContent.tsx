@@ -100,7 +100,10 @@ export function LandingPageContent() {
           <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)]">
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 rounded-control border border-border-muted bg-bg-surface px-3 py-1.5 font-mono text-mono-badge font-semibold uppercase text-success">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-success" aria-hidden="true" />
+                <span
+                  className="h-2 w-2 animate-pulse rounded-full bg-success"
+                  aria-hidden="true"
+                />
                 <span>FEITO PARA A CALL • ARMAZENAMENTO EM NUVEM</span>
               </div>
 

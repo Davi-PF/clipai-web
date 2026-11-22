@@ -154,11 +154,7 @@ export function StudioClipsTable({
 
       {/* Corpo da tabela / estados */}
       {isLoading ? (
-        <div
-          aria-busy="true"
-          aria-label="Carregando lista de clipes"
-          className="mt-4 space-y-3"
-        >
+        <div aria-busy="true" aria-label="Carregando lista de clipes" className="mt-4 space-y-3">
           {[1, 2, 3, 4].map((row) => (
             <div
               key={row}
@@ -260,7 +256,10 @@ export function StudioClipsTable({
                     {/* Privacidade */}
                     <td className="py-3.5 pr-4">
                       <span className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 py-1 font-mono text-mono-badge text-text-primary">
-                        <PrivacyIcon className="h-3.5 w-3.5 text-text-secondary" aria-hidden="true" />
+                        <PrivacyIcon
+                          className="h-3.5 w-3.5 text-text-secondary"
+                          aria-hidden="true"
+                        />
                         {privacyMeta.label}
                       </span>
                     </td>
@@ -283,7 +282,9 @@ export function StudioClipsTable({
                     <td className="py-3.5 pr-4">
                       <div className="w-32 space-y-1.5">
                         <div className="flex items-center justify-between font-mono text-mono-badge">
-                          <span className={`font-semibold ${RETENTION_TEXT_CLASSES[retentionTone]}`}>
+                          <span
+                            className={`font-semibold ${RETENTION_TEXT_CLASSES[retentionTone]}`}
+                          >
                             {formatPercentage(clip.avg_retention_pct)}
                           </span>
                           <span className="text-text-muted">{clip.sessions_count} sess.</span>
