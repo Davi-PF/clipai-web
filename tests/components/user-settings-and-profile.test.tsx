@@ -439,5 +439,29 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
       'data-collapsed',
       'true',
     );
+
+    // Selecting "Favoritos" from /settings navigates to /dashboard?section=favorites
+    const favoritesButtons = screen.getAllByRole('button', { name: 'Favoritos' });
+    await user.click(favoritesButtons[0]!);
+    expect(pushMock).toHaveBeenCalledWith('/dashboard?section=favorites');
+
+    // Selecting "Início" from /settings navigates to /dashboard
+    const homeButtons = screen.getAllByRole('button', { name: 'Início' });
+    await user.click(homeButtons[0]!);
+    expect(pushMock).toHaveBeenCalledWith('/dashboard');
+
+    // Mounting BentoDashboardWorkspace on /dashboard?section=favorites loads favorited clips directly
+    window.history.replaceState(null, '', '/dashboard?section=favorites');
+    const listClipsSpy = vi.spyOn(clipsService, 'listClips');
+    rerender(
+      <AppProviders>
+        <BentoDashboardWorkspace />
+      </AppProviders>,
+    );
+
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenCalledWith(expect.objectContaining({ favorited: true }));
+    });
+    window.history.replaceState(null, '', '/');
   });
 });
