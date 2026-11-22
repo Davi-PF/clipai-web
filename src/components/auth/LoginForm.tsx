@@ -18,6 +18,17 @@ interface LoginFieldErrors {
   form?: string;
 }
 
+function getSafeRedirectTarget(): string {
+  if (typeof window === 'undefined') {
+    return '/dashboard';
+  }
+  const param = new URLSearchParams(window.location.search).get('redirect');
+  if (param && param.startsWith('/') && !param.startsWith('//')) {
+    return param;
+  }
+  return '/dashboard';
+}
+
 export function LoginForm() {
   const router = useRouter();
   const { login } = useAuth();
@@ -65,7 +76,7 @@ export function LoginForm() {
       }
 
       success('Login realizado com sucesso! Bem-vindo de volta.');
-      router.replace('/dashboard');
+      router.replace(getSafeRedirectTarget());
     } catch (err: unknown) {
       const message =
         err instanceof ApiClientError
