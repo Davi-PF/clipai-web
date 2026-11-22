@@ -2,12 +2,16 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsPage from '@/app/settings/page';
+import { BentoDashboardWorkspace } from '@/components/dashboard/BentoDashboardWorkspace';
 import { PublicProfileView } from '@/components/profile/PublicProfileView';
+import { AppProviders } from '@/components/providers/AppProviders';
 import { ToastViewport } from '@/components/ui/Toast';
 import { AuthProvider } from '@/contexts/auth-context';
 import { ToastProvider } from '@/contexts/toast-context';
 import { ApiClientError, clearAccessToken } from '@/lib/api-client';
 import { authService } from '@/services/auth-service';
+import { clipsService } from '@/services/clips-service';
+import { collectionsService } from '@/services/collections-service';
 import { userService } from '@/services/user-service';
 import type { User } from '@/types/api';
 
@@ -372,5 +376,68 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'PERFIL NÃO ENCONTRADO' })).toBeInTheDocument();
     });
+  });
+
+  it('preserves collapsed LiquidSidebar state when navigating from dashboard to /settings', async () => {
+    const user = userEvent.setup();
+    mockAuthenticatedBoot();
+
+    vi.spyOn(clipsService, 'listGames').mockResolvedValue({
+      items: [],
+      page: 1,
+      page_size: 20,
+      total: 0,
+      total_pages: 1,
+    });
+    vi.spyOn(clipsService, 'listTags').mockResolvedValue({ items: [] });
+    vi.spyOn(clipsService, 'listClips').mockResolvedValue({
+      items: [],
+      page: 1,
+      page_size: 6,
+      total: 0,
+      total_pages: 1,
+    });
+    vi.spyOn(collectionsService, 'listCollections').mockResolvedValue({
+      items: [],
+      page: 1,
+      page_size: 12,
+      total: 0,
+      total_pages: 1,
+    });
+
+    const { rerender } = render(
+      <AppProviders>
+        <BentoDashboardWorkspace />
+      </AppProviders>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Sidebar Líquida de navegação')).toBeInTheDocument();
+    });
+
+    const collapseButtons = screen.getAllByRole('button', { name: 'Recolher sidebar' });
+    await user.click(collapseButtons[0]!);
+    expect(screen.getByLabelText('Sidebar Líquida de navegação')).toHaveAttribute(
+      'data-collapsed',
+      'true',
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Abrir configurações do usuário' }));
+    expect(pushMock).toHaveBeenCalledWith('/settings');
+
+    rerender(
+      <AppProviders>
+        <SettingsPage />
+      </AppProviders>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'CONFIGURAÇÕES DA CONTA' })).toBeInTheDocument();
+    });
+
+    expect(screen.getByLabelText('Sidebar Líquida de navegação')).toHaveAttribute(
+      'data-collapsed',
+      'true',
+    );
   });
 });
