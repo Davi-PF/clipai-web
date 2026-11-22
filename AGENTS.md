@@ -12,6 +12,7 @@ Antes de criar, alterar ou refatorar qualquer página, componente, hook, serviç
 2. [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md): Paleta base Dark Mode Frio, cores semânticas, variáveis CSS (`:root`), configuração Tailwind, regras tipográficas do Modo Híbrido (**Bebas Neue** + **JetBrains Mono**), especificações geométricas dos 4 componentes signature do Dashboard Bento e responsividade.
 3. [`docs/FRONTEND_ARCHITECTURE.md`](docs/FRONTEND_ARCHITECTURE.md): Árvore de pastas do Next.js App Router, cliente HTTP (`credentials: 'include'` + refresh *single-flight*), pipeline de upload client-side (`<video>` + `<canvas>` WebP + `XMLHttpRequest` PUT para o Cloudflare R2), player de vídeo e CI/CD.
 4. [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md): Contrato REST espelhado do repositório `clipai-api` (`/api/v1/...`), códigos de erro e interfaces TypeScript base (`User`, `Clip`, `Collection`, `PresignedUploadResponse`, `ApiError`).
+5. [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md): Fluxo oficial de branches (GitHub Flow), nomenclatura, sincronização cross-repo com `clipai-api`, commits atômicos e regras de Pull Request.
 
 ---
 
@@ -90,3 +91,14 @@ Nenhuma funcionalidade é considerada concluída sem seus respectivos testes aut
    npm run typecheck
    npm run test:coverage
    ```
+
+---
+
+## 7. Git & Branching Protocol (Obrigatório)
+
+Todo agente ou desenvolvedor deve seguir rigorosamente as diretrizes definidas em [`docs/GIT_WORKFLOW.md`](docs/GIT_WORKFLOW.md):
+
+1. **Consulta Obrigatória:** Sempre consulte `docs/GIT_WORKFLOW.md` antes de criar branches, commitar ou abrir Pull Requests.
+2. **Proibição de Commits Diretos na `main`:** Nunca edite ou faça commits diretamente na branch `main`. Antes de modificar qualquer arquivo, verifique a branch atual (`git branch --show-current`) e crie/troque para uma branch adequada (`feat/...`, `fix/...`, `docs/...`, `chore/...`, `refactor/...`, `test/...`).
+3. **Portão de Qualidade Pré-Commit:** Sempre execute e garanta sucesso em `npm run lint`, `npx tsc --noEmit` e `npm test` antes de registrar qualquer commit.
+4. **Commits Atômicos & Conventional Commits:** Organize todas as entregas em commits atômicos (uma responsabilidade lógica por commit, com stage seletivo) seguindo o padrão `<type>(<scope>): <imperative lowercase description>` em inglês.
