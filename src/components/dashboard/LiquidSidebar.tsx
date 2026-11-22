@@ -9,11 +9,15 @@ import {
   Flame,
   FolderKanban,
   LogOut,
+  Settings,
   Sparkles,
 } from 'lucide-react';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import type { User } from '@/types/api';
+import { getUserDisplayName } from '@/types/user';
 
-export type DashboardSection = 'home' | 'recent' | 'featured' | 'favorites' | 'collections';
+export type DashboardSection =
+  'home' | 'recent' | 'featured' | 'favorites' | 'collections' | 'settings';
 
 interface NavItemConfig {
   id: DashboardSection;
@@ -27,6 +31,7 @@ const NAV_ITEMS: readonly NavItemConfig[] = [
   { id: 'featured', label: 'Destaques', Icon: Flame },
   { id: 'favorites', label: 'Favoritos', Icon: Bookmark },
   { id: 'collections', label: 'Coleções', Icon: FolderKanban },
+  { id: 'settings', label: 'Ajustes', Icon: Settings },
 ] as const;
 
 export interface LiquidSidebarProps {
@@ -39,11 +44,6 @@ export interface LiquidSidebarProps {
   onLogout: () => void;
 }
 
-function getUserInitials(user: User): string {
-  const source = user.display_name || user.username;
-  return source.slice(0, 2).toUpperCase();
-}
-
 export function LiquidSidebar({
   activeSection,
   onSelectSection,
@@ -53,6 +53,8 @@ export function LiquidSidebar({
   isLoggingOut,
   onLogout,
 }: Readonly<LiquidSidebarProps>) {
+  const displayName = getUserDisplayName(user);
+
   return (
     <>
       {/* Navegação compacta Mobile/Tablet (< lg) */}
@@ -71,9 +73,22 @@ export function LiquidSidebar({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="hidden font-mono text-mono-meta text-text-secondary sm:inline">
-              @{user.username}
-            </span>
+            <button
+              type="button"
+              onClick={() => onSelectSection('settings')}
+              aria-label="Abrir configurações do perfil"
+              className="inline-flex items-center gap-2 rounded-control border border-border-muted bg-bg-elevated px-2.5 py-1 text-left transition-colors hover:border-success"
+            >
+              <UserAvatar
+                username={user.username}
+                displayName={user.display_name}
+                avatarUrl={user.avatar_url}
+                size="xs"
+              />
+              <span className="hidden font-mono text-mono-meta text-text-primary sm:inline">
+                @{user.username}
+              </span>
+            </button>
             <button
               type="button"
               onClick={onLogout}
@@ -233,29 +248,34 @@ export function LiquidSidebar({
             isCollapsed ? 'flex flex-col items-center gap-3' : 'pr-4'
           }`}
         >
-          <div className={`flex items-center gap-2.5 ${isCollapsed ? 'justify-center' : 'mb-3'}`}>
-            <div className="relative flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full border border-border-muted bg-bg-deep font-mono text-xs font-bold uppercase leading-none tracking-normal text-text-primary">
-              <span className="inline-flex items-center justify-center leading-none">
-                {getUserInitials(user)}
-              </span>
-              <span
-                title="Online"
-                aria-label="Status online"
-                className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-bg-surface bg-success"
-              />
-            </div>
+          <button
+            type="button"
+            onClick={() => onSelectSection('settings')}
+            aria-label="Abrir configurações do usuário"
+            title="Configurações do perfil"
+            className={`group flex items-center gap-2.5 rounded-card transition-colors hover:bg-bg-elevated/70 ${
+              isCollapsed ? 'justify-center p-1' : 'mb-3 w-full p-1.5 text-left'
+            }`}
+          >
+            <UserAvatar
+              username={user.username}
+              displayName={user.display_name}
+              avatarUrl={user.avatar_url}
+              size="md"
+              showOnlineStatus
+            />
 
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
-                <p className="truncate font-mono text-mono-body font-semibold text-text-primary">
-                  {user.display_name}
+                <p className="truncate font-mono text-mono-body font-semibold text-text-primary group-hover:text-success">
+                  {displayName}
                 </p>
                 <p className="truncate font-mono text-mono-badge text-text-muted">
                   @{user.username}
                 </p>
               </div>
             )}
-          </div>
+          </button>
 
           <button
             type="button"

@@ -191,6 +191,10 @@ export function BentoDashboardWorkspace() {
   );
 
   const handleSelectSection = (section: DashboardSection) => {
+    if (section === 'settings') {
+      router.push('/settings');
+      return;
+    }
     setActiveSection(section);
     setPage(1);
     if (section !== 'collections') {
