@@ -19,7 +19,15 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'CLIPAÍ — Plataforma Brasileira de Clipes de Jogadas',
   description:
-    'Armazene, organize em coleções e compartilhe seus melhores momentos e highlights de jogos com upload direto e alta performance.',
+    'Armazene, organize em coleções, analise a retenção e compartilhe seus melhores momentos e highlights de jogos com upload direto e alta performance.',
+  openGraph: {
+    title: 'CLIPAÍ — Plataforma Brasileira de Clipes de Jogadas',
+    description:
+      'Armazene, organize em coleções, analise a retenção e compartilhe seus melhores momentos e highlights de jogos.',
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: 'CLIPAÍ',
+  },
 };
 
 export default function RootLayout({
