@@ -17,9 +17,12 @@ import {
 } from 'lucide-react';
 import { ClipPlayer } from '@/components/player/ClipPlayer';
 import { Button } from '@/components/ui/Button';
+import { DiscordBadge } from '@/components/ui/DiscordBadge';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useLShapePath } from '@/hooks/useLShapePath';
 import { formatDurationBadge } from '@/lib/validators';
 import { getClipShareSlug, isClipFavorited, isClipLiked, type ClipSummary } from '@/types/clip';
+import { getUserDisplayName } from '@/types/user';
 
 export interface HeroPlayerBentoProps {
   clip: ClipSummary | null;
@@ -165,17 +168,30 @@ export function HeroPlayerBento({
                 <div className="space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     {showFeaturedBadge && (
-                      <span className="inline-flex items-center gap-1 rounded-control bg-warning px-2 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep">
+                      <span className="inline-flex h-6 items-center gap-1 rounded-control bg-warning px-2 font-mono text-mono-badge font-bold uppercase leading-none text-bg-deep">
                         ★ DESTAQUE
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 py-0.5 font-mono text-mono-badge uppercase text-success">
-                      <Gamepad2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      {clip.game.name}
+                    <span className="inline-flex h-6 items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 font-mono text-mono-badge uppercase leading-none text-success">
+                      <Gamepad2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span>{clip.game.name}</span>
                     </span>
-                    <span className="rounded-control border border-border-muted bg-bg-deep px-2.5 py-0.5 font-mono text-mono-badge text-text-primary">
-                      @{clip.author.username}
-                    </span>
+                    <Link
+                      href={`/u/${clip.author.username}`}
+                      className="inline-flex h-6 items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 font-mono text-mono-badge leading-none text-text-primary transition-colors hover:border-success"
+                    >
+                      <UserAvatar
+                        username={clip.author.username}
+                        displayName={clip.author.display_name}
+                        avatarUrl={clip.author.avatar_url}
+                        size="xs"
+                      />
+                      <span>{getUserDisplayName(clip.author)}</span>
+                      <span className="text-text-muted">@{clip.author.username}</span>
+                    </Link>
+                    {clip.author.discord_linked && (
+                      <DiscordBadge discordUsername={clip.author.discord_username} compact />
+                    )}
                   </div>
 
                   <h1 className="line-clamp-2 font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">

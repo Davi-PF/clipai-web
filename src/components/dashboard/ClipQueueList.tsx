@@ -2,8 +2,10 @@
 
 import { ChevronLeft, ChevronRight, Film, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { formatDurationBadge } from '@/lib/validators';
 import { isClipFavorited, isClipLiked, type ClipSummary } from '@/types/clip';
+import { getUserDisplayName } from '@/types/user';
 
 export interface ClipQueueListProps {
   clips: ClipSummary[];
@@ -122,6 +124,7 @@ export function ClipQueueList({
           {clips.map((clip) => {
             const isActive = clip.id === activeClipId;
             const accentClass = getAccentBarColor(clip, isActive);
+            const authorDisplayName = getUserDisplayName(clip.author);
 
             return (
               <button
@@ -157,9 +160,18 @@ export function ClipQueueList({
                     >
                       {clip.title}
                     </p>
-                    <p className="truncate font-mono text-mono-badge text-text-muted">
-                      {clip.game.name} • @{clip.author.username} • {clip.views_count} views
-                    </p>
+                    <div className="flex items-center gap-1.5 font-mono text-mono-badge text-text-muted">
+                      <UserAvatar
+                        username={clip.author.username}
+                        displayName={clip.author.display_name}
+                        avatarUrl={clip.author.avatar_url}
+                        size="xs"
+                      />
+                      <p className="truncate">
+                        {clip.game.name} • {authorDisplayName} (@{clip.author.username}) •{' '}
+                        {clip.views_count} views
+                      </p>
+                    </div>
                   </div>
                 </div>
               </button>

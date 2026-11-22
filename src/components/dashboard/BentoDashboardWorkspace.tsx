@@ -16,6 +16,7 @@ import {
 } from '@/components/dashboard/QuickFiltersCard';
 import { UploadClipModal } from '@/components/upload/UploadClipModal';
 import { Button } from '@/components/ui/Button';
+import { type DashboardContentSection, useSidebarState } from '@/contexts/sidebar-context';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
 import { useClipSocial, type SocialMutationPatch } from '@/hooks/useClipSocial';
@@ -28,6 +29,24 @@ import type { Collection } from '@/types/collection';
 
 const QUEUE_PAGE_SIZE = 6;
 const SEARCH_DEBOUNCE_MS = 300;
+const DASHBOARD_SECTIONS: readonly DashboardContentSection[] = [
+  'home',
+  'recent',
+  'featured',
+  'favorites',
+  'collections',
+] as const;
+
+function resolveDashboardSectionFromUrl(): DashboardContentSection | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  const param = new URLSearchParams(window.location.search).get('section');
+  if (param && (DASHBOARD_SECTIONS as readonly string[]).includes(param)) {
+    return param as DashboardContentSection;
+  }
+  return null;
+}
 
 export function BentoDashboardWorkspace() {
   const router = useRouter();
@@ -37,8 +56,12 @@ export function BentoDashboardWorkspace() {
   const quickFiltersRef = useRef<HTMLDivElement | null>(null);
   const viewedClipIdsRef = useRef<Set<string>>(new Set());
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [activeSection, setActiveSection] = useState<DashboardSection>('home');
+  const {
+    isCollapsed: isSidebarCollapsed,
+    toggleCollapsed: toggleSidebarCollapsed,
+    activeSection,
+    setActiveSection,
+  } = useSidebarState();
   const [quickFilter, setQuickFilter] = useState<QuickFilterSelection>({});
   const [activeCollection, setActiveCollection] = useState<Collection | null>(null);
 
@@ -64,6 +87,14 @@ export function BentoDashboardWorkspace() {
   const [saveCollectionClip, setSaveCollectionClip] = useState<ClipSummary | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
+
+  // Sincroniza seção caso o usuário acesse diretamente /dashboard?section=... (ex.: F5)
+  useEffect(() => {
+    const urlSection = resolveDashboardSectionFromUrl();
+    if (urlSection) {
+      setActiveSection(urlSection);
+    }
+  }, [setActiveSection]);
 
   // Debounce da busca
   useEffect(() => {
@@ -110,6 +141,12 @@ export function BentoDashboardWorkspace() {
   useEffect(() => {
     void loadCollections();
   }, [loadCollections]);
+
+  useEffect(() => {
+    if (activeSection === 'collections' && !activeCollection && collections.length > 0) {
+      setActiveCollection(collections[0] ?? null);
+    }
+  }, [activeSection, activeCollection, collections]);
 
   // Carrega clipes filtrados
   const loadClips = useCallback(async () => {
@@ -191,8 +228,19 @@ export function BentoDashboardWorkspace() {
   );
 
   const handleSelectSection = (section: DashboardSection) => {
+    if (section === 'settings') {
+      router.push('/settings');
+      return;
+    }
     setActiveSection(section);
     setPage(1);
+    if (
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).has('section')
+    ) {
+      const nextUrl = section === 'home' ? '/dashboard' : `/dashboard?section=${section}`;
+      window.history.replaceState(null, '', nextUrl);
+    }
     if (section !== 'collections') {
       setActiveCollection(null);
     } else if (!activeCollection && collections.length > 0) {
@@ -272,7 +320,7 @@ export function BentoDashboardWorkspace() {
         activeSection={activeSection}
         onSelectSection={handleSelectSection}
         isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+        onToggleCollapse={toggleSidebarCollapsed}
         user={user}
         isLoggingOut={isLoggingOut}
         onLogout={() => void handleLogout()}
@@ -375,7 +423,7 @@ export function BentoDashboardWorkspace() {
               isSidebarCollapsed={isSidebarCollapsed}
               isLikePending={activeClip ? isLikePending(activeClip.id) : false}
               isFavoritePending={activeClip ? isFavoritePending(activeClip.id) : false}
-              onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+              onToggleSidebar={toggleSidebarCollapsed}
               onPlayStart={handlePlayStart}
               onToggleLike={(clip) => void toggleLike(clip)}
               onToggleFavorite={(clip) => void toggleFavorite(clip)}

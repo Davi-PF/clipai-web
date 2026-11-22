@@ -14,10 +14,18 @@ import { useToast } from '@/contexts/toast-context';
 import { clearAccessToken, setUnauthorizedHandler } from '@/lib/api-client';
 import { authService } from '@/services/auth-service';
 import type {
+  ApiMessageResponse,
   AuthLoginResponse,
+  DiscordCallbackRequest,
+  DiscordCallbackResponse,
   LoginRequest,
   RegisterRequest,
   RegisterResponse,
+  TwoFactorDisableRequest,
+  TwoFactorEnableRequest,
+  TwoFactorEnableResponse,
+  TwoFactorSetupResponse,
+  TwoFactorVerifyLoginRequest,
   User,
 } from '@/types/api';
 
@@ -26,6 +34,12 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (payload: LoginRequest) => Promise<AuthLoginResponse>;
+  verify2faLogin: (payload: TwoFactorVerifyLoginRequest) => Promise<AuthLoginResponse>;
+  completeDiscordCallback: (payload: DiscordCallbackRequest) => Promise<DiscordCallbackResponse>;
+  setup2fa: () => Promise<TwoFactorSetupResponse>;
+  enable2fa: (payload: TwoFactorEnableRequest) => Promise<TwoFactorEnableResponse>;
+  disable2fa: (payload: TwoFactorDisableRequest) => Promise<ApiMessageResponse>;
+  updateUser: (nextUser: User) => void;
   register: (payload: RegisterRequest) => Promise<RegisterResponse>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
@@ -38,6 +52,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const { warning } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const updateUser = useCallback((nextUser: User) => {
+    setUser(nextUser);
+  }, []);
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
     try {
@@ -114,6 +132,52 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     return response;
   }, []);
 
+  const verify2faLogin = useCallback(
+    async (payload: TwoFactorVerifyLoginRequest): Promise<AuthLoginResponse> => {
+      const response = await authService.verify2faLogin(payload);
+      if (response.access_token && response.user) {
+        setUser(response.user);
+      }
+      return response;
+    },
+    [],
+  );
+
+  const completeDiscordCallback = useCallback(
+    async (payload: DiscordCallbackRequest): Promise<DiscordCallbackResponse> => {
+      const response = await authService.handleDiscordCallback(payload);
+      if (!response.requires_2fa && response.user) {
+        if (response.mode === 'link' || response.access_token) {
+          setUser(response.user);
+        }
+      }
+      return response;
+    },
+    [],
+  );
+
+  const setup2fa = useCallback(async (): Promise<TwoFactorSetupResponse> => {
+    return authService.setup2fa();
+  }, []);
+
+  const enable2fa = useCallback(
+    async (payload: TwoFactorEnableRequest): Promise<TwoFactorEnableResponse> => {
+      const response = await authService.enable2fa(payload);
+      setUser((prev) => (prev ? { ...prev, is_2fa_enabled: true } : prev));
+      return response;
+    },
+    [],
+  );
+
+  const disable2fa = useCallback(
+    async (payload: TwoFactorDisableRequest): Promise<ApiMessageResponse> => {
+      const response = await authService.disable2fa(payload);
+      setUser((prev) => (prev ? { ...prev, is_2fa_enabled: false } : prev));
+      return response;
+    },
+    [],
+  );
+
   const register = useCallback(async (payload: RegisterRequest): Promise<RegisterResponse> => {
     return authService.register(payload);
   }, []);
@@ -132,11 +196,30 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       isAuthenticated: Boolean(user),
       isLoading,
       login,
+      verify2faLogin,
+      completeDiscordCallback,
+      setup2fa,
+      enable2fa,
+      disable2fa,
+      updateUser,
       register,
       logout,
       refreshSession,
     }),
-    [user, isLoading, login, register, logout, refreshSession],
+    [
+      user,
+      isLoading,
+      login,
+      verify2faLogin,
+      completeDiscordCallback,
+      setup2fa,
+      enable2fa,
+      disable2fa,
+      updateUser,
+      register,
+      logout,
+      refreshSession,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,14 +1,22 @@
-import type { VideoMimeType } from '@/types/api';
+import type { AvatarMimeType, VideoMimeType } from '@/types/api';
 
 export const MAX_VIDEO_SIZE_BYTES = 104_857_600; // 100 MB
 export const MAX_THUMBNAIL_SIZE_BYTES = 5_242_880; // 5 MB
+export const MAX_AVATAR_SIZE_BYTES = 5_242_880; // 5 MB
 export const MIN_DURATION_SECONDS = 1.0;
 export const MAX_DURATION_SECONDS = 120.0;
 export const MAX_TAGS_COUNT = 10;
+export const MAX_BIO_LENGTH = 240;
 
 export const ALLOWED_VIDEO_MIME_TYPES: readonly VideoMimeType[] = [
   'video/mp4',
   'video/webm',
+] as const;
+
+export const ALLOWED_AVATAR_MIME_TYPES: readonly AvatarMimeType[] = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
 ] as const;
 
 export interface ValidationResult {
@@ -18,6 +26,10 @@ export interface ValidationResult {
 
 export function isAllowedVideoMimeType(mimeType: string): mimeType is VideoMimeType {
   return ALLOWED_VIDEO_MIME_TYPES.includes(mimeType as VideoMimeType);
+}
+
+export function isAllowedAvatarMimeType(mimeType: string): mimeType is AvatarMimeType {
+  return ALLOWED_AVATAR_MIME_TYPES.includes(mimeType.trim().toLowerCase() as AvatarMimeType);
 }
 
 export function validateVideoFileMeta(file: { type: string; size: number }): ValidationResult {
@@ -32,6 +44,24 @@ export function validateVideoFileMeta(file: { type: string; size: number }): Val
     return {
       valid: false,
       errorMessage: 'O arquivo excede o limite máximo de 100 MB.',
+    };
+  }
+
+  return { valid: true, errorMessage: null };
+}
+
+export function validateAvatarFileMeta(file: { type: string; size: number }): ValidationResult {
+  if (!isAllowedAvatarMimeType(file.type)) {
+    return {
+      valid: false,
+      errorMessage: 'Formato de imagem não suportado. Use apenas JPG, PNG ou WebP.',
+    };
+  }
+
+  if (file.size <= 0 || file.size > MAX_AVATAR_SIZE_BYTES) {
+    return {
+      valid: false,
+      errorMessage: 'A imagem de perfil não pode ultrapassar 5 MB.',
     };
   }
 
@@ -88,6 +118,8 @@ const UPPERCASE_REGEX = /[A-Z]/;
 const LOWERCASE_REGEX = /[a-z]/;
 const DIGIT_REGEX = /\d/;
 const SPECIAL_CHAR_REGEX = /[^A-Za-z0-9]/;
+const TOTP_CODE_REGEX = /^\d{6}$/;
+const BACKUP_CODE_REGEX = /^[A-Za-z0-9-]{6,16}$/;
 
 export function validateEmail(email: string): ValidationResult {
   const trimmed = email.trim();
@@ -117,6 +149,37 @@ export function validateDisplayName(displayName: string): ValidationResult {
     return {
       valid: false,
       errorMessage: 'Informe um nome de exibição entre 2 e 50 caracteres.',
+    };
+  }
+  return { valid: true, errorMessage: null };
+}
+
+export function validateBio(bio: string): ValidationResult {
+  if (bio.trim().length > MAX_BIO_LENGTH) {
+    return {
+      valid: false,
+      errorMessage: 'A biografia deve ter no máximo 240 caracteres.',
+    };
+  }
+  return { valid: true, errorMessage: null };
+}
+
+export function validateTwoFactorCode(code: string, isBackupCode = false): ValidationResult {
+  const trimmed = code.trim();
+  if (isBackupCode) {
+    if (!BACKUP_CODE_REGEX.test(trimmed)) {
+      return {
+        valid: false,
+        errorMessage: 'Informe um código de backup válido (ex.: 7K4M-9P2X).',
+      };
+    }
+    return { valid: true, errorMessage: null };
+  }
+
+  if (!TOTP_CODE_REGEX.test(trimmed)) {
+    return {
+      valid: false,
+      errorMessage: 'Informe o código numérico de 6 dígitos do seu autenticador.',
     };
   }
   return { valid: true, errorMessage: null };

@@ -10,11 +10,20 @@ export type VideoMimeType = 'video/mp4' | 'video/webm';
 
 export type ThumbnailMimeType = 'image/webp' | 'image/jpeg' | 'image/png';
 
+export type AvatarMimeType = 'image/jpeg' | 'image/png' | 'image/webp';
+
+export type AvatarSource = 'custom' | 'discord' | 'none';
+
+export type DiscordAuthMode = 'login' | 'link';
+
 export type ClipSortOption = 'recent' | 'popular' | 'featured';
 
 export type ApiErrorCode =
   | 'BAD_REQUEST'
   | 'UPLOAD_VERIFICATION_FAILED'
+  | 'INVALID_2FA_CODE'
+  | 'DISCORD_OAUTH_FAILED'
+  | 'PASSWORD_REQUIRED_BEFORE_UNLINK'
   | 'INVALID_CREDENTIALS'
   | 'TOKEN_EXPIRED'
   | 'INVALID_TOKEN'
@@ -70,10 +79,24 @@ export interface User {
   email: string;
   display_name: string;
   avatar_url: string | null;
+  avatar_source?: AvatarSource;
+  has_custom_avatar?: boolean;
   bio?: string | null;
+  discord_linked?: boolean;
+  discord_username?: string | null;
+  discord_avatar_url?: string | null;
+  discord_linked_at?: string | null;
   is_email_verified: boolean;
-  is_2fa_enabled: boolean; // Reservado no contrato desde o MVP para a v1.1
+  is_2fa_enabled: boolean;
+  has_password?: boolean;
   created_at?: string;
+}
+
+export interface UserPublicStats {
+  clips_count: number;
+  total_views: number;
+  total_likes: number;
+  collections_count: number;
 }
 
 export interface PublicUserProfile {
@@ -81,7 +104,15 @@ export interface PublicUserProfile {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  avatar_source?: AvatarSource;
   bio: string | null;
+  discord_linked?: boolean;
+  discord_username?: string | null;
+  stats?: UserPublicStats;
+  clips_count?: number;
+  total_views?: number;
+  total_likes?: number;
+  collections_count?: number;
   created_at: string;
 }
 
@@ -90,14 +121,48 @@ export interface ClipAuthorSummary {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  discord_linked?: boolean;
+  discord_username?: string | null;
+  is_2fa_enabled?: boolean;
+  has_password?: boolean;
+}
+
+export interface UserUpdateRequest {
+  display_name?: string | null;
+  bio?: string | null;
+  avatar_source?: AvatarSource;
+}
+
+export interface AvatarUploadUrlRequest {
+  mime_type: AvatarMimeType;
+  size_bytes: number;
+}
+
+export interface AvatarPresignedTarget {
+  url: string;
+  method: 'PUT';
+  headers: Record<string, string>;
+}
+
+export interface AvatarUploadUrlResponse {
+  avatar_key: string;
+  object_key: string;
+  upload_url: string;
+  expires_in: number;
+  avatar_upload: AvatarPresignedTarget;
+}
+
+export interface AvatarConfirmRequest {
+  avatar_key: string;
 }
 
 export interface AuthLoginResponse {
   access_token: string | null;
   token_type: 'bearer';
   expires_in: number;
-  requires_2fa: boolean; // Sempre false na v1.0; true na v1.1 quando 2FA ativo
-  temp_2fa_token: string | null; // Reservado para o desafio TOTP na v1.1
+  requires_2fa: boolean;
+  challenge_token?: string | null;
+  temp_2fa_token: string | null;
   user: User;
 }
 
@@ -127,6 +192,51 @@ export interface LoginRequest {
 export interface ResetPasswordRequest {
   token: string;
   new_password: string;
+}
+
+export interface TwoFactorSetupResponse {
+  otpauth_uri: string;
+  manual_secret: string;
+  secret: string;
+  issuer: string;
+}
+
+export interface TwoFactorEnableRequest {
+  code: string;
+}
+
+export interface TwoFactorEnableResponse {
+  is_2fa_enabled: boolean;
+  backup_codes: string[];
+  message: string;
+}
+
+export interface TwoFactorDisableRequest {
+  code: string;
+  password?: string | null;
+}
+
+export interface TwoFactorVerifyLoginRequest {
+  challenge_token: string;
+  code: string;
+}
+
+export interface DiscordAuthUrlResponse {
+  url: string;
+  authorization_url: string;
+  state: string;
+  mode: DiscordAuthMode;
+}
+
+export interface DiscordCallbackRequest {
+  code: string;
+  state: string;
+}
+
+export interface DiscordCallbackResponse extends AuthLoginResponse {
+  mode: DiscordAuthMode;
+  linked: boolean;
+  message?: string | null;
 }
 
 export interface ApiMessageResponse {

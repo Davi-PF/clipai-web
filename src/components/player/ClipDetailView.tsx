@@ -26,6 +26,8 @@ import { ClipPlayer } from '@/components/player/ClipPlayer';
 import { DeleteClipDialog } from '@/components/player/DeleteClipDialog';
 import { EditClipModal } from '@/components/player/EditClipModal';
 import { Button } from '@/components/ui/Button';
+import { DiscordBadge } from '@/components/ui/DiscordBadge';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
 import { useClipSocial, type SocialMutationPatch } from '@/hooks/useClipSocial';
@@ -393,9 +395,25 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
                     <UserIcon className="h-3.5 w-3.5" aria-hidden="true" />
                     AUTOR
                   </span>
-                  <p className="mt-1 font-mono text-mono-body font-semibold text-text-primary">
-                    {clip.author.display_name} (@{clip.author.username})
-                  </p>
+                  <div className="mt-1.5 flex items-center gap-2.5">
+                    <UserAvatar
+                      username={clip.author.username}
+                      displayName={clip.author.display_name}
+                      avatarUrl={clip.author.avatar_url}
+                      size="sm"
+                    />
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <Link
+                        href={`/u/${clip.author.username}`}
+                        className="block truncate font-mono text-mono-body font-semibold text-text-primary transition-colors hover:text-success"
+                      >
+                        {clip.author.display_name} (@{clip.author.username})
+                      </Link>
+                      {clip.author.discord_linked && (
+                        <DiscordBadge discordUsername={clip.author.discord_username} compact />
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="rounded-card bg-bg-deep p-3.5">

@@ -1,329 +1,994 @@
-# REST API Contract Reference & TypeScript Types — CLIPAÍ (`clipai-web`)
+# REST API Contract (`/api/v1`) — CLIPAÍ
 
-> [!IMPORTANT]
-> **Regra de Sincronização Estrita:** Este arquivo espelha exatamente o contrato oficial definido em `docs/API_CONTRACT.md` do repositório backend **`clipai-api`** (`/api/v1`).
-> - O frontend **NUNCA** deve inventar rotas, alterar nomes de propriedades JSON (`snake_case`) ou assumir formatos de resposta que não existam no `docs/API_CONTRACT.md` do `clipai-api`.
-> - Qualquer alteração de contrato exige atualização coordenada em ambos os repositórios.
+## 1. Convenções Gerais
 
----
+- **Base URL:** `/api/v1`
+- **Formato de Payload:** `application/json; charset=utf-8`
+- **Nomenclatura JSON:** `snake_case` em todos os campos de request e response.
+- **Timestamps:** ISO 8601 em UTC (ex.: `2026-11-21T22:15:00Z`).
+- **Idioma:** Chaves JSON e códigos internos (`error.code`) em inglês; mensagens voltadas ao usuário final (`error.message`, `detail`) em **português do Brasil (PT-BR)**.
 
-## 1. Convenções da API Consumida (`/api/v1`)
+### 1.1. Headers Padrão
+| Header | Obrigatório? | Descrição |
+| :--- | :---: | :--- |
+| `Content-Type: application/json` | Sim (em `POST`/`PATCH`) | Tipo de mídia das requisições à API. |
+| `Authorization: Bearer <access_token>` | Rotas autenticadas | Token JWT de acesso (TTL: 15 minutos). |
+| `Cookie: clipai_refresh_token=<token>` | `/auth/refresh` e `/auth/logout` | Cookie `HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth`. |
 
-- **Base URL:** Configurada via `NEXT_PUBLIC_API_BASE_URL` (ex.: `https://api.clipai.com.br/api/v1`).
-- **Formato JSON:** Todas as chaves de request e response trafegam em `snake_case`.
-- **Timestamps:** Strings ISO 8601 em UTC (ex.: `"2026-11-21T22:15:00Z"`).
-- **Autenticação:**
-  - `Authorization: Bearer <access_token>` (token JWT mantido em memória no cliente; TTL de 15 minutos).
-  - Cookie `clipai_refresh_token` (`HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth`; TTL de 7 dias), trafegado automaticamente via `credentials: 'include'` nas chamadas de `/auth/login`, `/auth/refresh` e `/auth/logout`.
-- **Idioma das Mensagens de Erro:** `error.code` é sempre uma constante em inglês (`UPPER_SNAKE_CASE`), enquanto `error.message` e `error.details[].message` já vêm do backend em **português do Brasil (PT-BR)** prontos para exibição na UI.
+### 1.2. Envelope Padronizado de Paginação
+Todas as rotas de listagem aceitam os query params `page` (default: `1`, mín: `1`) e `page_size` (default: `20`, mín: `1`, máx: `50`) e retornam:
 
----
-
-## 2. Mapa de Endpoints do MVP (`/api/v1`)
-
-### 2.1. Healthcheck e Autenticação (`/auth`)
-| Método | Rota | Auth | Credenciais Cookie | Descrição |
-| :---: | :--- | :---: | :---: | :--- |
-| `GET` | `/api/v1/health` | Público | Não | Status da API e banco de dados. |
-| `POST` | `/api/v1/auth/register` | Público | Não | Cria conta (`is_email_verified = false`) e dispara e-mail via Resend. |
-| `POST` | `/api/v1/auth/verify-email` | Público | Não | Confirma o e-mail do usuário usando o `token` recebido. |
-| `POST` | `/api/v1/auth/resend-verification` | Público | Não | Reenvia o link de verificação de e-mail. |
-| `POST` | `/api/v1/auth/login` | Público | `include` | Autentica, retorna `access_token` e define cookie `clipai_refresh_token`. |
-| `POST` | `/api/v1/auth/refresh` | Cookie | `include` | Rotaciona o cookie `clipai_refresh_token` e retorna novo `access_token`. |
-| `POST` | `/api/v1/auth/logout` | Cookie / JWT | `include` | Revoga o refresh token no banco e limpa o cookie (`204 No Content`). |
-| `POST` | `/api/v1/auth/forgot-password` | Público | Não | Solicita link de recuperação de senha por e-mail. |
-| `POST` | `/api/v1/auth/reset-password` | Público | Não | Redefine a senha com o `token` e revoga sessões ativas. |
-
-### 2.2. Usuários, Jogos e Tags (`/users`, `/games`, `/tags`)
-| Método | Rota | Auth | Descrição |
-| :---: | :--- | :---: | :--- |
-| `GET` | `/api/v1/users/me` | Bearer JWT | Retorna o perfil completo do usuário autenticado. |
-| `PATCH` | `/api/v1/users/me` | Bearer JWT | Atualiza `display_name`, `bio` ou `avatar_url`. |
-| `GET` | `/api/v1/users/me/favorites` | Bearer JWT | Lista paginada de clipes favoritados pelo usuário autenticado. |
-| `GET` | `/api/v1/users/{username}` | Público | Retorna o perfil público de um usuário. |
-| `GET` | `/api/v1/users/{username}/clips` | Opcional | Lista clipes `ready` do usuário (inclui `unlisted`/`friends` se for o próprio autor). |
-| `GET` | `/api/v1/games` | Público | Lista paginada de jogos (`q`, `page`, `page_size`). |
-| `GET` | `/api/v1/tags` | Público | Lista de tags sugeridas ou filtradas por prefixo (`q`, `limit`). |
-
-### 2.3. Clipes e Upload Direto R2 (`/clips`)
-| Método | Rota | Auth | Descrição |
-| :---: | :--- | :---: | :--- |
-| `POST` | `/api/v1/clips/upload-url` | Bearer JWT (Verificado) | Valida metadados, cria clipe `pending_upload` e retorna Presigned `PUT` URLs do R2. |
-| `POST` | `/api/v1/clips/{clip_id}/confirm-upload` | Bearer JWT (Autor) | Executa `HeadObject` no R2 e promove o clipe para `status = 'ready'`. |
-| `GET` | `/api/v1/clips` | Opcional | Lista paginada de clipes (`q`, `game`, `game_slug`, `game_id`, `tag`, `author`, `mine`, `favorited`, `collection_id`, `sort`, `page`, `page_size`). |
-| `GET` | `/api/v1/clips/{slug}` | Opcional | Detalhes completos do clipe por `slug` ou `clip_id` (`public`, `unlisted`, ou `friends` para autenticados). |
-| `PATCH` | `/api/v1/clips/{clip_id}` | Bearer JWT (Autor) | Atualiza `title`, `description`, `game_id`, `privacy` ou `tags`. |
-| `DELETE` | `/api/v1/clips/{clip_id}` | Bearer JWT (Autor) | Remove o clipe do PostgreSQL e deleta vídeo/thumbnail no Cloudflare R2 (`204`). |
-| `POST` | `/api/v1/clips/{clip_id}/views` | Opcional | Incrementa `views_count` (rate-limited a 1 view / 10 min por usuário/IP + clipe). |
-| `POST` / `DELETE` | `/api/v1/clips/{clip_id}/like` | Bearer JWT (Verificado) | Curte ou remove curtida do clipe (idempotente). |
-| `POST` / `DELETE` | `/api/v1/clips/{clip_id}/favorite` | Bearer JWT (Verificado) | Favorita ou remove favorito do clipe (idempotente). |
-
-### 2.4. Coleções (`/collections`)
-| Método | Rota | Auth | Descrição |
-| :---: | :--- | :---: | :--- |
-| `GET` | `/api/v1/collections` | Opcional | Lista paginada de coleções (`mine`, `author`, `page`, `page_size`) com `clips_count` e `preview_thumbnails`. |
-| `POST` | `/api/v1/collections` | Bearer JWT (Verificado) | Cria uma nova coleção (`title`, `description`, `privacy`, `accent_color`). |
-| `GET` | `/api/v1/users/{username}/collections` | Opcional | Lista paginada das coleções de um usuário. |
-| `GET` | `/api/v1/collections/{collection_id}` | Opcional | Detalhes da coleção e lista ordenada de clipes (`position`). |
-| `PATCH` | `/api/v1/collections/{collection_id}` | Bearer JWT (Dono) | Atualiza título, descrição ou privacidade da coleção. |
-| `DELETE` | `/api/v1/collections/{collection_id}` | Bearer JWT (Dono) | Exclui a coleção (`204 No Content`). |
-| `POST` | `/api/v1/collections/{collection_id}/clips` | Bearer JWT (Dono) | Adiciona um clipe à coleção na posição informada. |
-| `DELETE` | `/api/v1/collections/{collection_id}/clips/{clip_id}` | Bearer JWT (Dono) | Remove um clipe da coleção (`204 No Content`). |
-
----
-
-## 3. Contratos TypeScript Base (`src/types/api.ts`)
-
-As interfaces abaixo são a referência obrigatória de tipagem para todos os serviços, hooks e componentes do `clipai-web`:
-
-```ts
-// ============================================================================
-// 1. Enums & Literal Types
-// ============================================================================
-
-export type PrivacyLevel = 'public' | 'unlisted' | 'friends';
-
-export type ClipStatus = 'pending_upload' | 'ready' | 'failed';
-
-export type VideoMimeType = 'video/mp4' | 'video/webm';
-
-export type ThumbnailMimeType = 'image/webp' | 'image/jpeg' | 'image/png';
-
-export type ClipSortOption = 'recent' | 'popular';
-
-export type ApiErrorCode =
-  | 'BAD_REQUEST'
-  | 'UPLOAD_VERIFICATION_FAILED'
-  | 'INVALID_CREDENTIALS'
-  | 'TOKEN_EXPIRED'
-  | 'INVALID_TOKEN'
-  | 'EMAIL_NOT_VERIFIED'
-  | 'FORBIDDEN'
-  | 'RESOURCE_NOT_FOUND'
-  | 'CONFLICT'
-  | 'FILE_TOO_LARGE'
-  | 'UNSUPPORTED_MEDIA_TYPE'
-  | 'VALIDATION_ERROR'
-  | 'RATE_LIMIT_EXCEEDED'
-  | 'INTERNAL_SERVER_ERROR';
-
-// ============================================================================
-// 2. Envelope de Paginação e Erros Padronizados
-// ============================================================================
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  page: number;
-  page_size: number;
-  total: number;
-  total_pages: number;
-}
-
-export interface ApiErrorDetail {
-  field: string;
-  message: string; // Em PT-BR
-}
-
-export interface ApiError {
-  error: {
-    code: ApiErrorCode;
-    message: string; // Em PT-BR
-    details?: ApiErrorDetail[];
-    request_id: string;
-  };
-}
-
-// ============================================================================
-// 3. Usuário e Autenticação (User & Auth)
-// ============================================================================
-
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  display_name: string;
-  avatar_url: string | null;
-  bio?: string | null;
-  is_email_verified: boolean;
-  is_2fa_enabled: boolean; // Reservado no contrato desde o MVP para a v1.1
-  created_at?: string;
-}
-
-export interface PublicUserProfile {
-  id: string;
-  username: string;
-  display_name: string;
-  avatar_url: string | null;
-  bio: string | null;
-  created_at: string;
-}
-
-export interface ClipAuthorSummary {
-  id: string;
-  username: string;
-  display_name: string;
-  avatar_url: string | null;
-}
-
-export interface AuthLoginResponse {
-  access_token: string | null;
-  token_type: 'bearer';
-  expires_in: number;
-  requires_2fa: boolean; // Sempre false na v1.0; true na v1.1 quando 2FA ativo
-  temp_2fa_token: string | null; // Reservado para o desafio TOTP na v1.1
-  user: User;
-}
-
-export interface AuthRefreshResponse {
-  access_token: string;
-  token_type: 'bearer';
-  expires_in: number;
-}
-
-// ============================================================================
-// 4. Catálogo: Jogos e Tags
-// ============================================================================
-
-export interface Game {
-  id: string;
-  name: string;
-  slug: string;
-  cover_url?: string | null;
-}
-
-export interface Tag {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-// ============================================================================
-// 5. Clipes e Fluxo de Upload via Presigned URL
-// ============================================================================
-
-export interface ClipTechnicalMetadata {
-  codec?: string;
-  container: 'mp4' | 'webm';
-  width: number;
-  height: number;
-  resolution_label: string; // ex.: "1080p", "720p"
-  fps?: number;
-  bitrate_kbps?: number;
-  audio_codec?: string;
-  audio_channels?: number;
-  aspect_ratio: string; // ex.: "16:9"
-}
-
-export interface PresignedUploadRequest {
-  title: string;
-  description?: string | null;
-  game_id: string;
-  privacy: PrivacyLevel;
-  tags: string[];
-  video_mime_type: VideoMimeType;
-  video_size_bytes: number;
-  duration_seconds: number;
-  thumbnail_mime_type: ThumbnailMimeType;
-  thumbnail_size_bytes: number;
-  technical_metadata: ClipTechnicalMetadata;
-}
-
-export interface PresignedPutTarget {
-  url: string;
-  method: 'PUT';
-  headers: {
-    'Content-Type': string;
-    'Content-Length': string;
-  };
-}
-
-export interface PresignedUploadResponse {
-  clip_id: string;
-  status: 'pending_upload';
-  expires_in: number; // 900 segundos (15 min)
-  video_upload: PresignedPutTarget;
-  thumbnail_upload: PresignedPutTarget;
-}
-
-export interface ClipSummary {
-  id: string;
-  title: string;
-  privacy: PrivacyLevel;
-  video_url: string;
-  thumbnail_url: string;
-  duration_seconds: number;
-  views_count: number;
-  likes_count: number;
-  favorites_count: number;
-  is_liked_by_me: boolean;
-  is_favorited_by_me: boolean;
-  author: ClipAuthorSummary;
-  game: Game;
-  tags: string[];
-  created_at: string;
-}
-
-export interface Clip extends ClipSummary {
-  description: string | null;
-  status: ClipStatus;
-  file_size_bytes: number;
-  mime_type: VideoMimeType;
-  technical_metadata: ClipTechnicalMetadata;
-  updated_at: string;
-}
-
-export interface ClipLikeResponse {
-  clip_id: string;
-  likes_count: number;
-  is_liked_by_me: boolean;
-}
-
-export interface ClipFavoriteResponse {
-  clip_id: string;
-  favorites_count: number;
-  is_favorited_by_me: boolean;
-}
-
-export interface ClipViewResponse {
-  clip_id: string;
-  views_count: number;
-}
-
-// ============================================================================
-// 6. Coleções (Playlists)
-// ============================================================================
-
-export interface CollectionOwnerSummary {
-  id: string;
-  username: string;
-  display_name: string;
-}
-
-export interface Collection {
-  id: string;
-  title: string;
-  description: string | null;
-  privacy: PrivacyLevel;
-  clips_count?: number;
-  owner: CollectionOwnerSummary;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CollectionClipItem {
-  position: number;
-  added_at: string;
-  clip: {
-    id: string;
-    title: string;
-    thumbnail_url: string;
-    duration_seconds: number;
-    views_count: number;
-    likes_count: number;
-  };
-}
-
-export interface CollectionDetail extends Omit<Collection, 'clips_count'> {
-  clips: CollectionClipItem[];
+```json
+{
+  "items": [],
+  "page": 1,
+  "page_size": 20,
+  "total": 142,
+  "total_pages": 8
 }
 ```
+
+### 1.3. Formato Padronizado de Erro
+Qualquer resposta com status `4xx` ou `5xx` segue estritamente este contrato:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Os dados enviados são inválidos. Verifique os campos e tente novamente.",
+    "details": [
+      {
+        "field": "video_size_bytes",
+        "message": "O arquivo de vídeo não pode ultrapassar 100 MB."
+      }
+    ],
+    "request_id": "req_01JDF8K2M4N6P8Q0R2S4T6V8X0"
+  }
+}
+```
+
+#### Catálogo de Códigos de Erro (`error.code`)
+| HTTP Status | `error.code` | Mensagem Padrão (PT-BR) |
+| :---: | :--- | :--- |
+| `400` | `BAD_REQUEST` | `"Não foi possível processar a requisição."` |
+| `400` | `UPLOAD_VERIFICATION_FAILED` | `"Não foi possível confirmar o envio do arquivo no servidor de mídia."` |
+| `400` | `INVALID_2FA_CODE` | `"Código de verificação 2FA ou código de backup inválido."` |
+| `400` | `DISCORD_OAUTH_FAILED` | `"Código de autorização do Discord inválido ou expirado."` |
+| `400` | `PASSWORD_REQUIRED_BEFORE_UNLINK` | `"Você não possui uma senha cadastrada. Defina uma senha antes de desvincular o Discord para não perder o acesso à sua conta."` |
+| `401` | `INVALID_CREDENTIALS` | `"E-mail ou senha incorretos."` |
+| `401` | `TOKEN_EXPIRED` | `"Sua sessão expirou. Faça login novamente."` |
+| `401` | `INVALID_TOKEN` | `"Token de autenticação inválido ou revogado."` |
+| `403` | `EMAIL_NOT_VERIFIED` | `"Confirme seu endereço de e-mail antes de realizar esta ação."` |
+| `403` | `FORBIDDEN` | `"Você não tem permissão para acessar ou alterar este recurso."` |
+| `404` | `RESOURCE_NOT_FOUND` | `"O recurso solicitado não foi encontrado."` |
+| `409` | `CONFLICT` | `"Já existe um registro com os dados informados."` |
+| `413` | `FILE_TOO_LARGE` | `"O tamanho do arquivo excede o limite máximo permitido."` |
+| `415` | `UNSUPPORTED_MEDIA_TYPE` | `"Formato de arquivo não suportado. Use apenas MP4 ou WebM."` |
+| `422` | `VALIDATION_ERROR` | `"Os dados enviados são inválidos. Verifique os campos e tente novamente."` |
+| `429` | `RATE_LIMIT_EXCEEDED` | `"Muitas tentativas em sequência. Aguarde alguns instantes e tente novamente."` |
+| `500` | `INTERNAL_SERVER_ERROR` | `"Ocorreu um erro interno inesperado. Tente novamente mais tarde."` |
+
+---
+
+## 2. Fluxo Sequencial de Upload via Presigned URL (Cloudflare R2)
+
+Os arquivos de vídeo e thumbnail **nunca trafegam pelo servidor FastAPI**. O fluxo obrigatório em 3 fases está ilustrado abaixo:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Usuário (clipai-web)
+    participant API as FastAPI (clipai-api)
+    participant DB as PostgreSQL
+    participant R2 as Cloudflare R2 (S3 API)
+
+    User->>User: Seleciona vídeo (.mp4/.webm <= 100MB, <= 120s) e extrai metadados + thumbnail
+    User->>API: POST /api/v1/clips/upload-url (Bearer JWT + metadados JSON)
+    API->>API: Valida MIME types, tamanho (<= 100MB), duração (<= 120s) e email verificado
+    API->>DB: INSERT INTO clips (status = 'pending_upload', technical_metadata, ...)
+    API->>R2: Gera Presigned PUT URLs (vídeo + thumbnail, TTL = 900s, Content-Type/Length fixos)
+    API-->>User: 201 Created (clip_id, video_upload_url, thumbnail_upload_url, expires_in)
+
+    par Upload Direto do Vídeo
+        User->>R2: PUT video_upload_url (Binary Stream, Content-Type: video/mp4)
+        R2-->>User: 200 OK (ETag)
+    and Upload Direto da Thumbnail
+        User->>R2: PUT thumbnail_upload_url (Binary Stream, Content-Type: image/webp)
+        R2-->>User: 200 OK (ETag)
+    end
+
+    User->>API: POST /api/v1/clips/{clip_id}/confirm-upload (Bearer JWT)
+    API->>DB: SELECT clip WHERE id = clip_id AND user_id = current_user.id
+    API->>R2: HeadObject (video_object_key) & HeadObject (thumbnail_object_key)
+    alt Objetos existem e tamanhos conferem
+        R2-->>API: 200 OK (ContentLength, ContentType)
+        API->>DB: UPDATE clips SET status = 'ready', updated_at = now()
+        API-->>User: 200 OK (ClipResponse completo com URLs públicas de reprodução)
+    else Objeto ausente ou tamanho divergente
+        R2-->>API: 404 Not Found / Divergência de tamanho
+        API->>DB: UPDATE clips SET status = 'failed', updated_at = now()
+        API-->>User: 400 Bad Request (UPLOAD_VERIFICATION_FAILED)
+    end
+```
+
+---
+
+## 3. Endpoints — Healthcheck
+
+### `GET /api/v1/health`
+Verifica a disponibilidade da API e a conectividade com o PostgreSQL.
+- **Auth:** Público
+- **Response `200 OK`:**
+```json
+{
+  "status": "ok",
+  "version": "1.0.0",
+  "database": "connected"
+}
+```
+
+---
+
+## 4. Endpoints — Autenticação (`/api/v1/auth`)
+
+### 4.1. `POST /api/v1/auth/register`
+Registra um novo usuário e dispara o e-mail de confirmação via Resend.
+- **Auth:** Público (Rate limit: 5 req/min por IP)
+- **Request Body:**
+```json
+{
+  "username": "fallen_br",
+  "email": "gabriel@exemplo.com.br",
+  "password": "StrongPassword!2026",
+  "display_name": "Gabriel Toledo"
+}
+```
+- **Response `201 Created`:**
+```json
+{
+  "message": "Cadastro realizado com sucesso. Verifique sua caixa de entrada para confirmar seu e-mail.",
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "fallen_br",
+    "email": "gabriel@exemplo.com.br",
+    "display_name": "Gabriel Toledo",
+    "is_email_verified": false,
+    "is_2fa_enabled": false,
+    "created_at": "2026-11-21T22:00:00Z"
+  }
+}
+```
+- **Erros:** `409 CONFLICT` (e-mail ou username já em uso), `422 VALIDATION_ERROR`.
+
+---
+
+### 4.2. `POST /api/v1/auth/verify-email`
+Confirma o e-mail do usuário a partir do token enviado por e-mail.
+- **Auth:** Público
+- **Request Body:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "E-mail confirmado com sucesso. Sua conta está pronta para uso."
+}
+```
+- **Erros:** `400 INVALID_TOKEN`, `401 TOKEN_EXPIRED`.
+
+---
+
+### 4.3. `POST /api/v1/auth/resend-verification`
+Reenvia o e-mail de confirmação caso a conta ainda não esteja verificada.
+- **Auth:** Público (Rate limit: 3 req/15min por IP/e-mail)
+- **Request Body:**
+```json
+{
+  "email": "gabriel@exemplo.com.br"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "Se o e-mail estiver cadastrado e pendente de confirmação, um novo link foi enviado."
+}
+```
+
+---
+
+### 4.4. `POST /api/v1/auth/login`
+Autentica o usuário. Quando `is_2fa_enabled = false`, retorna o `access_token` no corpo JSON e define o cookie `clipai_refresh_token` (`HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth; Max-Age=604800`). Quando `is_2fa_enabled = true`, **não emite** tokens de sessão ainda e retorna o desafio 2FA (`requires_2fa: true` + `challenge_token` de 5 minutos).
+- **Auth:** Público (Rate limit: 10 req/min por IP + e-mail)
+- **Request Body:**
+```json
+{
+  "email": "gabriel@exemplo.com.br",
+  "password": "StrongPassword!2026"
+}
+```
+- **Response `200 OK` (Sem 2FA ativo):**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 900,
+  "requires_2fa": false,
+  "challenge_token": null,
+  "temp_2fa_token": null,
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "fallen_br",
+    "email": "gabriel@exemplo.com.br",
+    "display_name": "Gabriel Toledo",
+    "avatar_url": null,
+    "avatar_source": "none",
+    "discord_linked": false,
+    "discord_username": null,
+    "is_email_verified": true,
+    "is_2fa_enabled": false,
+    "has_password": true
+  }
+}
+```
+- **Response `200 OK` (Desafio quando `is_2fa_enabled = true`):**
+```json
+{
+  "access_token": null,
+  "token_type": "bearer",
+  "expires_in": 300,
+  "requires_2fa": true,
+  "challenge_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "temp_2fa_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "fallen_br",
+    "email": "gabriel@exemplo.com.br",
+    "display_name": "Gabriel Toledo",
+    "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400/avatar-123.webp",
+    "avatar_source": "custom",
+    "discord_linked": true,
+    "discord_username": "fallen_disc",
+    "is_email_verified": true,
+    "is_2fa_enabled": true,
+    "has_password": true
+  }
+}
+```
+
+---
+
+### 4.5. `POST /api/v1/auth/refresh`
+Rotaciona o Refresh Token lido do cookie `clipai_refresh_token`, revoga o anterior, emite um novo cookie `HttpOnly` e retorna um novo `access_token`.
+- **Auth:** Cookie `clipai_refresh_token`
+- **Request Body:** Nenhum
+- **Response `200 OK`:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "expires_in": 900
+}
+```
+- **Erros:** `401 INVALID_TOKEN` (inclusive quando detectado reuso de token já rotacionado, revogando toda a `family_id`).
+
+---
+
+### 4.6. `POST /api/v1/auth/logout`
+Revoga o Refresh Token atual no banco de dados e limpa o cookie `clipai_refresh_token` (`Max-Age=0`).
+- **Auth:** Cookie `clipai_refresh_token` (ou Bearer JWT)
+- **Response `204 No Content`**
+
+---
+
+### 4.7. `POST /api/v1/auth/forgot-password`
+Envia e-mail transacional via Resend com link de recuperação de senha (TTL: 30 minutos).
+- **Auth:** Público (Rate limit: 3 req/15min por IP)
+- **Request Body:**
+```json
+{
+  "email": "gabriel@exemplo.com.br"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "Se o endereço de e-mail estiver cadastrado, enviamos as instruções para redefinir sua senha."
+}
+```
+
+---
+
+### 4.8. `POST /api/v1/auth/reset-password`
+Redefine a senha do usuário usando o token recebido por e-mail e revoga todas as sessões (`refresh_tokens`) existentes.
+- **Auth:** Público
+- **Request Body:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "new_password": "NewStrongPassword!2026"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "Sua senha foi redefinida com sucesso. Faça login com a nova senha."
+}
+```
+
+---
+
+### 4.9. `GET /api/v1/auth/me`
+Retorna os dados completos do perfil do usuário autenticado (mesmo contrato de `GET /api/v1/users/me`).
+- **Auth:** Bearer JWT obrigatório
+- **Response `200 OK`:** Objeto `UserMeResponse`.
+
+---
+
+### 4.10. `GET /api/v1/auth/discord/url`
+Gera a URL oficial de autorização do Discord OAuth2 (`scopes: identify email`) com token `state` assinado (JWT de 10 minutos contendo `mode` e `user_id` quando `mode=link`) para proteção contra CSRF.
+- **Auth:** Público quando `mode=login`; Bearer JWT obrigatório quando `mode=link`
+- **Query Params:** `mode` (`login` ou `link`, default: `login`)
+- **Response `200 OK`:**
+```json
+{
+  "url": "https://discord.com/api/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=identify+email&state=eyJ...",
+  "authorization_url": "https://discord.com/api/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=identify+email&state=eyJ...",
+  "state": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "mode": "login"
+}
+```
+
+---
+
+### 4.11. `POST /api/v1/auth/discord/callback`
+Valida o token `state` de CSRF, troca o `code` de autorização na API v10 do Discord e consulta `/users/@me`.
+- **Modo `link` (usuário autenticado):** valida que o `discord_id` não pertence a outra conta (`409 CONFLICT`), vincula os metadados do Discord e, se o usuário ainda não possuir avatar customizado, define automaticamente `avatar_source = "discord"`.
+- **Modo `login`:**
+  - Se o `discord_id` já estiver vinculado, autentica o usuário (respeitando o desafio 2FA caso `is_2fa_enabled = true`).
+  - Se não estiver vinculado, verifica se existe conta com o mesmo e-mail: faz vínculo automático somente se o e-mail no Discord estiver `verified: true` e a conta local já estiver verificada; caso contrário, cria uma nova conta com `username` único normalizado e `avatar_source = "discord"`.
+- **Auth:** Opcional (Rate limit: 10 req/min por IP)
+- **Request Body:**
+```json
+{
+  "code": "NhhvTDYsFcdgNLJh...",
+  "state": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+- **Response `200 OK`:** Objeto `DiscordCallbackResponse` (estende `LoginResponse` com `mode`, `linked` e `message`; define o cookie `HttpOnly` `clipai_refresh_token` em `mode="login"` quando `requires_2fa = false`).
+
+---
+
+### 4.12. `POST /api/v1/auth/2fa/setup`
+Gera um segredo Base32 aleatório (`pyotp.random_base32()`), criptografa em repouso com Fernet (`TOTP_ENCRYPTION_KEY`) e salva como pendente (mantendo `is_2fa_enabled = false` até a confirmação).
+- **Auth:** Bearer JWT obrigatório
+- **Response `200 OK`:**
+```json
+{
+  "otpauth_uri": "otpauth://totp/CLIPA%C3%8D:gabriel%40exemplo.com.br?secret=JBSWY3DPEHPK3PXP&issuer=CLIPA%C3%8D",
+  "manual_secret": "JBSWY3DPEHPK3PXP",
+  "secret": "JBSWY3DPEHPK3PXP",
+  "issuer": "CLIPAÍ"
+}
+```
+
+---
+
+### 4.13. `POST /api/v1/auth/2fa/enable`
+Valida o primeiro código TOTP de 6 dígitos (`valid_window=1`), ativa `is_2fa_enabled = true`, gera 8 códigos de backup de uso único, persiste apenas os hashes `SHA-256` em `totp_backup_codes` e retorna os códigos em texto claro **uma única vez**.
+- **Auth:** Bearer JWT obrigatório
+- **Request Body:**
+```json
+{
+  "code": "482910"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "is_2fa_enabled": true,
+  "backup_codes": [
+    "7K4M-9P2X",
+    "3R8W-5N6Q",
+    "9B2V-4C7Z",
+    "6H3J-8L5D",
+    "2F7G-6K9M",
+    "8P4Q-3R7T",
+    "5V9W-2X4Y",
+    "4Z6B-7N3C"
+  ],
+  "message": "Autenticação em duas etapas ativada com sucesso. Guarde seus códigos de backup em local seguro."
+}
+```
+
+---
+
+### 4.14. `POST /api/v1/auth/2fa/disable`
+Valida a senha atual do usuário (obrigatória quando `has_password = true`) + um código TOTP de 6 dígitos (ou código de backup), desativa o 2FA e limpa `totp_secret_encrypted` e `totp_backup_codes`.
+- **Auth:** Bearer JWT obrigatório
+- **Request Body:**
+```json
+{
+  "code": "482910",
+  "password": "StrongPassword!2026"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "A autenticação em duas etapas (2FA) foi desativada com sucesso."
+}
+```
+
+---
+
+### 4.15. `POST /api/v1/auth/2fa/verify-login` (alias: `/2fa/verify`)
+Conclui o login em duas etapas validando o `challenge_token` (TTL: 5 minutos, `scope="2fa_challenge"`) e o código TOTP de 6 dígitos (ou consumindo um código de backup de uso único). Emite o `access_token` definitivo e o cookie `HttpOnly` `clipai_refresh_token`.
+- **Auth:** Público (Rate limit rigoroso: 5 req/min por IP)
+- **Request Body:**
+```json
+{
+  "challenge_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "code": "482910"
+}
+```
+- **Response `200 OK`:** Objeto `LoginResponse` completo + cookie `clipai_refresh_token`.
+
+---
+
+## 5. Endpoints — Usuários (`/api/v1/users`)
+
+### 5.1. `GET /api/v1/users/me`
+Retorna os dados completos do perfil do usuário autenticado, com `display_name` (fallback automático para `username`), `avatar_url` resolvida conforme `avatar_source`, estado do vínculo Discord, status do 2FA e indicador `has_password`.
+- **Auth:** Bearer JWT obrigatório
+- **Response `200 OK` (`UserMeResponse`):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "fallen_br",
+  "email": "gabriel@exemplo.com.br",
+  "display_name": "Gabriel Toledo",
+  "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400-e29b-41d4-a716-446655440000/avatar-a1b2c3d4.webp",
+  "avatar_source": "custom",
+  "has_custom_avatar": true,
+  "bio": "AWPer e criador de conteúdo.",
+  "discord_linked": true,
+  "discord_username": "fallen_disc",
+  "discord_avatar_url": "https://cdn.discordapp.com/avatars/123456789/abcdef.png?size=256",
+  "discord_linked_at": "2026-11-22T12:00:00Z",
+  "is_email_verified": true,
+  "is_2fa_enabled": true,
+  "has_password": true,
+  "created_at": "2026-11-21T22:00:00Z"
+}
+```
+
+### 5.2. `PATCH /api/v1/users/me`
+Atualiza `display_name` (até 50 caracteres), `bio` (até 240 caracteres) e `avatar_source` (`custom`, `discord` ou `none`) do usuário autenticado.
+- **Auth:** Bearer JWT obrigatório
+- **Request Body:**
+```json
+{
+  "display_name": "FalleN",
+  "bio": "Professor do CS2.",
+  "avatar_source": "custom"
+}
+```
+- **Response `200 OK`:** Objeto `UserMeResponse` atualizado.
+
+### 5.3. `POST /api/v1/users/me/avatar/upload-url`
+Valida o MIME type (`image/jpeg`, `image/png`, `image/webp`) e o tamanho máximo (`<= 5 MB`) e gera uma Presigned `PUT` URL no Cloudflare R2 na chave `avatars/{user_id}/avatar-{uuid}.{ext}`.
+- **Auth:** Bearer JWT obrigatório
+- **Request Body:**
+```json
+{
+  "mime_type": "image/webp",
+  "size_bytes": 184320
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "avatar_key": "avatars/550e8400-e29b-41d4-a716-446655440000/avatar-9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.webp",
+  "object_key": "avatars/550e8400-e29b-41d4-a716-446655440000/avatar-9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.webp",
+  "upload_url": "https://<account_id>.r2.cloudflarestorage.com/clipai-media/avatars/550e.../avatar-9b1d....webp?X-Amz-Algorithm=AWS4-HMAC-SHA256...",
+  "expires_in": 600,
+  "avatar_upload": {
+    "url": "https://<account_id>.r2.cloudflarestorage.com/clipai-media/avatars/550e.../avatar-9b1d....webp?X-Amz-Algorithm=AWS4-HMAC-SHA256...",
+    "method": "PUT",
+    "headers": {
+      "Content-Type": "image/webp"
+    }
+  }
+}
+```
+
+### 5.4. `POST /api/v1/users/me/avatar/confirm`
+Verifica a existência e o tamanho do objeto enviado ao Cloudflare R2 via `HeadObject`, remove o `avatar_key` anterior do R2 (se existir), atualiza `avatar_key` e define `avatar_source = "custom"`.
+- **Auth:** Bearer JWT obrigatório
+- **Request Body:**
+```json
+{
+  "avatar_key": "avatars/550e8400-e29b-41d4-a716-446655440000/avatar-9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.webp"
+}
+```
+- **Response `200 OK`:** Objeto `UserMeResponse` atualizado.
+
+### 5.5. `DELETE /api/v1/users/me/discord`
+Desvincula a conta do Discord do perfil do usuário autenticado.
+- **Regra Crítica de Segurança:** Bloqueia com HTTP `400 PASSWORD_REQUIRED_BEFORE_UNLINK` em PT-BR caso `password_hash` seja nulo (`has_password = false`), impedindo que contas criadas via Discord fiquem sem método de login.
+- **Auth:** Bearer JWT obrigatório
+- **Response `200 OK`:** Objeto `UserMeResponse` atualizado.
+
+### 5.6. `POST /api/v1/users/me/discord/use-avatar`
+Alterna `avatar_source = "discord"` para utilizar o avatar sincronizado da conta Discord vinculada.
+- **Auth:** Bearer JWT obrigatório
+- **Response `200 OK`:** Objeto `UserMeResponse` atualizado.
+
+### 5.7. `GET /api/v1/users/me/favorites`
+Lista paginada dos clipes favoritados pelo usuário autenticado.
+- **Auth:** Bearer JWT obrigatório
+- **Query Params:** `page`, `page_size`
+- **Response `200 OK`:** Envelope paginado contendo objetos `ClipSummaryResponse`.
+
+### 5.8. `GET /api/v1/users/{username}`
+Retorna o perfil público de um usuário pelo `username`, incluindo `avatar_url` resolvida, indicador de vínculo com o Discord e estatísticas públicas básicas.
+- **Auth:** Público
+- **Response `200 OK` (`UserPublicResponse`):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "fallen_br",
+  "display_name": "FalleN",
+  "bio": "Professor do CS2.",
+  "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400-e29b-41d4-a716-446655440000/avatar-9b1deb4d.webp",
+  "avatar_source": "custom",
+  "discord_linked": true,
+  "discord_username": "fallen_disc",
+  "stats": {
+    "clips_count": 12,
+    "total_views": 1840,
+    "total_likes": 310,
+    "collections_count": 3
+  },
+  "clips_count": 12,
+  "total_views": 1840,
+  "total_likes": 310,
+  "collections_count": 3,
+  "created_at": "2026-11-21T22:00:00Z"
+}
+```
+
+### 5.9. `GET /api/v1/users/{username}/clips`
+Lista os clipes com `status = 'ready'` de um usuário. Se o solicitante for o próprio dono do perfil (autenticado via JWT), permite filtrar também seus clipes `unlisted` e `friends`; caso contrário, retorna apenas `privacy = 'public'`.
+- **Auth:** Opcional (Bearer JWT expande visibilidade para o próprio autor)
+- **Query Params:** `page`, `page_size`, `privacy` (opcional, apenas para o próprio autor)
+- **Response `200 OK`:** Envelope paginado de `ClipSummaryResponse`.
+
+---
+
+## 6. Endpoints — Jogos e Tags (`/api/v1/games`, `/api/v1/tags`)
+
+### 6.1. `GET /api/v1/games`
+Lista jogos cadastrados com busca opcional por nome.
+- **Auth:** Público
+- **Query Params:** `q` (opcional, busca parcial por nome), `page`, `page_size`
+- **Response `200 OK`:**
+```json
+{
+  "items": [
+    {
+      "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "name": "Counter-Strike 2",
+      "slug": "counter-strike-2",
+      "cover_url": "https://cdn.clipai.com.br/games/cs2.webp"
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 1,
+  "total_pages": 1
+}
+```
+
+### 6.2. `GET /api/v1/tags`
+Lista as tags mais utilizadas ou filtradas por prefixo.
+- **Auth:** Público
+- **Query Params:** `q` (opcional), `limit` (default: `20`, máx: `50`)
+- **Response `200 OK`:**
+```json
+{
+  "items": [
+    {
+      "id": "2a4e6679-7425-40de-944b-e07fc1f90111",
+      "name": "clutch",
+      "slug": "clutch"
+    }
+  ]
+}
+```
+
+---
+
+## 7. Endpoints — Clipes (`/api/v1/clips`)
+
+### 7.1. `POST /api/v1/clips/upload-url`
+Valida os metadados do vídeo e da thumbnail, cria o registro `pending_upload` no banco e retorna as Presigned `PUT` URLs do Cloudflare R2.
+- **Auth:** Bearer JWT obrigatório (`is_email_verified = true`)
+- **Request Body:**
+```json
+{
+  "title": "Clutch 1v4 de AWP na Mirage",
+  "description": "Round decisivo na prorrogação.",
+  "game_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "privacy": "public",
+  "tags": ["clutch", "awp", "mirage"],
+  "video_mime_type": "video/mp4",
+  "video_size_bytes": 48234496,
+  "duration_seconds": 34.5,
+  "thumbnail_mime_type": "image/webp",
+  "thumbnail_size_bytes": 184320,
+  "technical_metadata": {
+    "codec": "h264",
+    "container": "mp4",
+    "width": 1920,
+    "height": 1080,
+    "resolution_label": "1080p",
+    "fps": 60,
+    "bitrate_kbps": 11180,
+    "audio_codec": "aac",
+    "audio_channels": 2,
+    "aspect_ratio": "16:9"
+  }
+}
+```
+- **Response `201 Created`:**
+```json
+{
+  "clip_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "slug": "xK9mP2qR7zA",
+  "status": "pending_upload",
+  "expires_in": 600,
+  "video_upload": {
+    "url": "https://<account_id>.r2.cloudflarestorage.com/clipai-media/clips/550e.../9b1d.../video.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256...",
+    "method": "PUT",
+    "headers": {
+      "Content-Type": "video/mp4"
+    }
+  },
+  "thumbnail_upload": {
+    "url": "https://<account_id>.r2.cloudflarestorage.com/clipai-media/clips/550e.../9b1d.../thumb.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256...",
+    "method": "PUT",
+    "headers": {
+      "Content-Type": "image/webp"
+    }
+  }
+}
+```
+> Nota: `thumbnail_mime_type` e `thumbnail_size_bytes` são opcionais no request; quando omitidos, `thumbnail_upload` é retornado como `null`.
+- **Erros:** `403 EMAIL_NOT_VERIFIED`, `413 FILE_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE`, `422 VALIDATION_ERROR`.
+
+---
+
+### 7.2. `POST /api/v1/clips/{clip_id}/confirm-upload` (alias: `/confirm`)
+Confirma que o upload direto ao Cloudflare R2 foi concluído, executa `HeadObject` no R2 e altera o `status` do clipe de `pending_upload` para `ready`.
+- **Auth:** Bearer JWT obrigatório (apenas o autor do clipe)
+- **Request Body:** Nenhum
+- **Response `200 OK`:** Objeto `ClipDetailResponse` (ver `GET /api/v1/clips/{slug}`).
+- **Erros:** `400 UPLOAD_VERIFICATION_FAILED`, `403 FORBIDDEN`, `404 RESOURCE_NOT_FOUND`.
+
+---
+
+### 7.3. `GET /api/v1/clips`
+Lista paginada de clipes (`status = 'ready'`) com suporte a busca, filtros e regras de visibilidade:
+- **Anônimo:** retorna apenas `privacy = 'public'`.
+- **Autenticado:** retorna `public`, `friends` e os próprios clipes `unlisted`.
+- **Com `mine=true` (autenticado obrigatório):** retorna todos os clipes `ready` do usuário autenticado (`public`, `friends` e `unlisted`).
+- **Auth:** Opcional (obrigatório quando `mine=true`)
+- **Query Params:**
+  - `q` (opcional): Busca textual em `title`, `description` e nome do jogo
+  - `game` (opcional): Filtra por UUID ou `slug` do jogo
+  - `game_slug` (opcional): Filtra pelo slug do jogo
+  - `game_id` (opcional): Filtra pelo UUID do jogo
+  - `tag` (opcional): Filtra pelo slug da tag
+  - `author` (opcional): Filtra pelo `username` do autor
+  - `mine` (opcional, default `false`): Lista apenas clipes do usuário autenticado
+  - `favorited` (opcional, default `false`): Lista apenas clipes favoritados pelo usuário autenticado (requer auth)
+  - `collection_id` (opcional): Filtra clipes pertencentes à coleção informada
+  - `sort` (opcional): `recent` (default), `popular` ou `featured` (engajamento/destaques)
+  - `page` (default: `1`), `page_size` (default: `20`, máx: `50`)
+- **Response `200 OK`:**
+```json
+{
+  "items": [
+    {
+      "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      "slug": "xK9mP2qR7zA",
+      "title": "Clutch 1v4 de AWP na Mirage",
+      "privacy": "public",
+      "video_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../video.mp4",
+      "thumbnail_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../thumb.webp",
+      "duration_seconds": 34.5,
+      "views_count": 128,
+      "likes_count": 24,
+      "favorites_count": 7,
+      "is_liked": false,
+      "is_favorited": false,
+      "is_liked_by_me": false,
+      "is_favorited_by_me": false,
+      "author": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "fallen_br",
+        "display_name": "FalleN",
+        "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400.webp",
+        "discord_linked": true,
+        "discord_username": "fallen_disc",
+        "is_2fa_enabled": true,
+        "has_password": true
+      },
+      "game": {
+        "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "name": "CS2",
+        "slug": "cs2"
+      },
+      "tags": ["clutch", "awp", "mirage"],
+      "created_at": "2026-11-21T22:05:00Z"
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 1,
+  "total_pages": 1
+}
+```
+
+---
+
+### 7.4. `GET /api/v1/clips/{slug}` (também aceita `clip_id` UUID)
+Retorna os detalhes completos de um clipe (`status = 'ready'`), respeitando sua configuração de `privacy`:
+- `public` e `unlisted`: acessíveis por qualquer pessoa com o link.
+- `friends`: acessível apenas para usuários autenticados (`401 INVALID_TOKEN` para anônimos).
+- Clipes `pending_upload` ou `failed` nunca são expostos para terceiros (`404 RESOURCE_NOT_FOUND`).
+- **Auth:** Opcional (obrigatório para visualizar clipes `friends`)
+- **Response `200 OK` (`ClipDetailResponse`):**
+```json
+{
+  "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "slug": "xK9mP2qR7zA",
+  "title": "Clutch 1v4 de AWP na Mirage",
+  "description": "Round decisivo na prorrogação.",
+  "status": "ready",
+  "privacy": "public",
+  "video_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../video.mp4",
+  "thumbnail_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../thumb.webp",
+  "file_size_bytes": 48234496,
+  "duration_seconds": 34.5,
+  "mime_type": "video/mp4",
+  "technical_metadata": {
+    "codec": "h264",
+    "container": "mp4",
+    "width": 1920,
+    "height": 1080,
+    "resolution_label": "1080p",
+    "fps": 60,
+    "bitrate_kbps": 11180,
+    "audio_codec": "aac",
+    "audio_channels": 2,
+    "aspect_ratio": "16:9"
+  },
+  "views_count": 128,
+  "likes_count": 24,
+  "favorites_count": 7,
+  "is_liked_by_me": true,
+  "is_favorited_by_me": false,
+  "author": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "fallen_br",
+    "display_name": "FalleN",
+    "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400.webp"
+  },
+  "game": {
+    "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "name": "CS2",
+    "slug": "cs2"
+  },
+  "tags": ["clutch", "awp", "mirage"],
+  "created_at": "2026-11-21T22:05:00Z",
+  "updated_at": "2026-11-21T22:06:10Z"
+}
+```
+
+---
+
+### 7.5. `PATCH /api/v1/clips/{clip_id}`
+Atualiza título, descrição, jogo, privacidade ou tags de um clipe pertencente ao usuário.
+- **Auth:** Bearer JWT obrigatório (apenas o autor do clipe)
+- **Request Body:**
+```json
+{
+  "title": "Clutch 1v4 de AWP na Mirage (OT)",
+  "description": "Round decisivo na prorrogação da Mirage.",
+  "game_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "privacy": "unlisted",
+  "tags": ["clutch", "awp", "cs2"]
+}
+```
+- **Response `200 OK`:** `ClipDetailResponse` atualizado.
+
+---
+
+### 7.6. `DELETE /api/v1/clips/{clip_id}`
+Remove o clipe do banco de dados e exclui os objetos de vídeo e thumbnail correspondentes no Cloudflare R2.
+- **Auth:** Bearer JWT obrigatório (apenas o autor do clipe)
+- **Response `204 No Content`**
+
+---
+
+### 7.7. `POST /api/v1/clips/{clip_id}/views` (alias: `/view`)
+Registra uma visualização no clipe e incrementa `views_count` atomicamente.
+- **Auth:** Opcional (Rate limit: 1 incremento por IP/usuário por `clip_id` a cada 10 minutos)
+- **Response `200 OK`:**
+```json
+{
+  "clip_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "views_count": 129
+}
+```
+
+---
+
+### 7.8. Curtidas e Favoritos em Clipes
+- **`POST /api/v1/clips/{clip_id}/like`** — Curte o clipe (idempotente). Auth: Bearer JWT (`is_email_verified = true`).
+- **`DELETE /api/v1/clips/{clip_id}/like`** — Remove a curtida (idempotente). Auth: Bearer JWT.
+  - **Response `200 OK` (ambos):**
+```json
+{
+  "clip_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "liked": true,
+  "is_liked_by_me": true,
+  "likes_count": 25
+}
+```
+- **`POST /api/v1/clips/{clip_id}/favorite`** — Favorita o clipe (idempotente). Auth: Bearer JWT (`is_email_verified = true`).
+- **`DELETE /api/v1/clips/{clip_id}/favorite`** — Remove dos favoritos (idempotente). Auth: Bearer JWT.
+  - **Response `200 OK` (ambos):**
+```json
+{
+  "clip_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "favorited": true,
+  "is_favorited_by_me": true,
+  "favorites_count": 8
+}
+```
+
+---
+
+## 8. Endpoints — Coleções (`/api/v1/collections`)
+
+### 8.1. `GET /api/v1/collections`
+Lista coleções acessíveis ao usuário (com `mine=true` para gerenciar as próprias), incluindo contagem de clipes e até 4 thumbnails de preview.
+- **Auth:** Opcional (obrigatório quando `mine=true`)
+- **Query Params:** `mine` (default `false`), `author` (opcional), `page`, `page_size`
+- **Response `200 OK`:** Envelope paginado de `CollectionSummaryResponse`.
+
+### 8.2. `POST /api/v1/collections`
+Cria uma nova coleção (playlist) de clipes. Aceita `title` (ou alias `name`), `description`, `privacy` e `accent_color` (`#RRGGBB` opcional).
+- **Auth:** Bearer JWT obrigatório (`is_email_verified = true`)
+- **Request Body:**
+```json
+{
+  "title": "Melhores Clutches de CS2",
+  "description": "Compilado de rounds 1vX.",
+  "privacy": "public",
+  "accent_color": "#2EB886"
+}
+```
+- **Response `201 Created`:**
+```json
+{
+  "id": "c3d4e5f6-1111-2222-3333-444455556666",
+  "title": "Melhores Clutches de CS2",
+  "description": "Compilado de rounds 1vX.",
+  "privacy": "public",
+  "accent_color": "#2EB886",
+  "clips_count": 0,
+  "preview_thumbnails": [],
+  "owner": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "fallen_br",
+    "display_name": "FalleN"
+  },
+  "created_at": "2026-11-21T22:10:00Z",
+  "updated_at": "2026-11-21T22:10:00Z"
+}
+```
+
+### 8.3. `GET /api/v1/users/{username}/collections`
+Lista as coleções de um usuário (apenas `public` para visitantes; inclui `friends` para autenticados e `unlisted` para o próprio dono).
+- **Auth:** Opcional
+- **Query Params:** `page`, `page_size`
+- **Response `200 OK`:** Envelope paginado de `CollectionSummaryResponse`.
+
+### 8.4. `GET /api/v1/collections/{collection_id}`
+Retorna os metadados da coleção e a lista paginada e ordenada de clipes `ready` pertencentes a ela.
+- **Auth:** Opcional (respeita `collection.privacy` e filtra os clipes internos conforme `clip.privacy`)
+- **Query Params:** `page` (default `1`), `page_size` (default `20`, máx `50`)
+- **Response `200 OK`:**
+```json
+{
+  "id": "c3d4e5f6-1111-2222-3333-444455556666",
+  "title": "Melhores Clutches de CS2",
+  "description": "Compilado de rounds 1vX.",
+  "privacy": "public",
+  "accent_color": "#2EB886",
+  "clips_count": 1,
+  "owner": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "fallen_br",
+    "display_name": "FalleN"
+  },
+  "clips": [
+    {
+      "position": 0,
+      "added_at": "2026-11-21T22:12:00Z",
+      "clip": {
+        "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+        "slug": "xK9mP2qR7zA",
+        "title": "Clutch 1v4 de AWP na Mirage",
+        "video_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../video.mp4",
+        "thumbnail_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../thumb.webp",
+        "duration_seconds": 34.5,
+        "views_count": 129,
+        "likes_count": 25,
+        "is_liked": true,
+        "is_favorited": false,
+        "is_liked_by_me": true,
+        "is_favorited_by_me": false
+      }
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total_pages": 1,
+  "created_at": "2026-11-21T22:10:00Z",
+  "updated_at": "2026-11-21T22:12:00Z"
+}
+```
+
+### 8.5. `PATCH /api/v1/collections/{collection_id}`
+Atualiza título (`title`/`name`), descrição, cor de destaque (`accent_color`) ou privacidade da coleção.
+- **Auth:** Bearer JWT obrigatório (apenas o dono da coleção)
+- **Request Body:** `{ "title": "...", "description": "...", "privacy": "unlisted", "accent_color": "#E8B04B" }`
+- **Response `200 OK`:** `CollectionSummaryResponse` atualizado.
+
+### 8.6. `DELETE /api/v1/collections/{collection_id}`
+Exclui a coleção (não exclui os clipes originais, apenas os vínculos em `collection_clips`).
+- **Auth:** Bearer JWT obrigatório (apenas o dono da coleção)
+- **Response `204 No Content`**
+
+### 8.7. `POST /api/v1/collections/{collection_id}/clips`
+Adiciona um clipe (`status = 'ready'`) a uma coleção do usuário de forma idempotente.
+- **Auth:** Bearer JWT obrigatório (apenas o dono da coleção)
+- **Request Body:**
+```json
+{
+  "clip_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "position": 0
+}
+```
+- **Response `201 Created`:**
+```json
+{
+  "collection_id": "c3d4e5f6-1111-2222-3333-444455556666",
+  "clip_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "position": 0,
+  "added_at": "2026-11-21T22:12:00Z"
+}
+```
+
+### 8.8. `DELETE /api/v1/collections/{collection_id}/clips/{clip_id}`
+Remove um clipe específico da coleção (idempotente).
+- **Auth:** Bearer JWT obrigatório (apenas o dono da coleção)
+- **Response `204 No Content`**

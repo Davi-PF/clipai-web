@@ -11,6 +11,8 @@ const NON_REFRESHABLE_AUTH_PATHS = [
   '/auth/resend-verification',
   '/auth/forgot-password',
   '/auth/reset-password',
+  '/auth/2fa/verify-login',
+  '/auth/2fa/verify',
 ] as const;
 
 let inMemoryAccessToken: string | null = null;
