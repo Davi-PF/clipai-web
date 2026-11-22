@@ -440,18 +440,12 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
       'true',
     );
 
-    // Selecting "Favoritos" from /settings navigates to /dashboard?section=favorites
+    // Selecting "Favoritos" from /settings updates SidebarContext and navigates to /dashboard?section=favorites
     const favoritesButtons = screen.getAllByRole('button', { name: 'Favoritos' });
     await user.click(favoritesButtons[0]!);
     expect(pushMock).toHaveBeenCalledWith('/dashboard?section=favorites');
 
-    // Selecting "Início" from /settings navigates to /dashboard
-    const homeButtons = screen.getAllByRole('button', { name: 'Início' });
-    await user.click(homeButtons[0]!);
-    expect(pushMock).toHaveBeenCalledWith('/dashboard');
-
-    // Mounting BentoDashboardWorkspace on /dashboard?section=favorites loads favorited clips directly
-    window.history.replaceState(null, '', '/dashboard?section=favorites');
+    // Rerender BentoDashboardWorkspace WITHOUT updating window.location.search (simulates Next.js transition timing)
     const listClipsSpy = vi.spyOn(clipsService, 'listClips');
     rerender(
       <AppProviders>
@@ -461,6 +455,23 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
 
     await waitFor(() => {
       expect(listClipsSpy).toHaveBeenCalledWith(expect.objectContaining({ favorited: true }));
+    });
+    expect(screen.getAllByRole('button', { name: 'Favoritos' })[0]).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+
+    // Direct URL load (e.g. F5 on /dashboard?section=featured) also syncs section
+    window.history.replaceState(null, '', '/dashboard?section=featured');
+    listClipsSpy.mockClear();
+    rerender(
+      <AppProviders>
+        <BentoDashboardWorkspace key="reload-featured" />
+      </AppProviders>,
+    );
+
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenCalledWith(expect.objectContaining({ sort: 'popular' }));
     });
     window.history.replaceState(null, '', '/');
   });
