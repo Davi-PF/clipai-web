@@ -162,3 +162,24 @@ export function validateLoginPassword(password: string): ValidationResult {
   }
   return { valid: true, errorMessage: null };
 }
+
+export function validateClipTitle(title: string): ValidationResult {
+  const trimmed = title.trim();
+  if (trimmed.length < 3 || trimmed.length > 120) {
+    return {
+      valid: false,
+      errorMessage: 'Informe um título entre 3 e 120 caracteres.',
+    };
+  }
+  return { valid: true, errorMessage: null };
+}
+
+export function validateClipDescription(description: string): ValidationResult {
+  if (description.trim().length > 1000) {
+    return {
+      valid: false,
+      errorMessage: 'A descrição não pode ultrapassar 1.000 caracteres.',
+    };
+  }
+  return { valid: true, errorMessage: null };
+}
