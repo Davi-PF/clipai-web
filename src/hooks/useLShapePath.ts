@@ -16,6 +16,8 @@ export interface LShapeGeometryInput {
 export interface LShapePaths {
   width: number;
   height: number;
+  cutoutWidth: number;
+  cutoutHeight: number;
   notchY: number;
   clipPath: string;
   strokePath: string;
@@ -105,6 +107,8 @@ export function useLShapePath(
   const [paths, setPaths] = useState<LShapePaths>({
     width: 0,
     height: 0,
+    cutoutWidth: 0,
+    cutoutHeight: 0,
     notchY: 0,
     clipPath: '',
     strokePath: '',
@@ -130,6 +134,8 @@ export function useLShapePath(
         setPaths({
           width,
           height,
+          cutoutWidth: 0,
+          cutoutHeight: 0,
           notchY: Math.round(height * 0.44),
           clipPath: '',
           strokePath: '',
@@ -163,6 +169,8 @@ export function useLShapePath(
       setPaths({
         width,
         height,
+        cutoutWidth,
+        cutoutHeight,
         notchY,
         clipPath,
         strokePath,

@@ -307,6 +307,12 @@ describe('BentoDashboardWorkspace — Sprint 3 Signature Components', () => {
     expect(screen.getByTestId('collection-fan-card-col-2')).toHaveAttribute('data-front', 'true');
     expect(screen.getByTestId('collection-fan-card-col-1')).toHaveAttribute('data-front', 'false');
 
+    // Cycle fan using header arrows (next -> col-1, prev -> col-2)
+    await user.click(screen.getByRole('button', { name: 'Próxima coleção' }));
+    expect(screen.getByTestId('collection-fan-card-col-1')).toHaveAttribute('data-front', 'true');
+    await user.click(screen.getByRole('button', { name: 'Coleção anterior' }));
+    expect(screen.getByTestId('collection-fan-card-col-2')).toHaveAttribute('data-front', 'true');
+
     // Click front card col-2 -> filters dashboard by col-2 and displays active banner
     await user.click(screen.getByTestId('collection-fan-card-col-2'));
     await waitFor(() => {

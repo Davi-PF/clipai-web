@@ -65,9 +65,9 @@ export function QuickFiltersCard({
     <section
       ref={cardRef}
       aria-label="Filtros rápidos"
-      className="w-full rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-3.5"
+      className="w-full rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-3"
     >
-      <header className="mb-2.5 flex items-center justify-between gap-2">
+      <header className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <Filter className="h-3.5 w-3.5 text-success" aria-hidden="true" />
           <h2 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
@@ -86,7 +86,7 @@ export function QuickFiltersCard({
         </button>
       </header>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1.5">
         {cells.map((cell) => {
           const isSelected =
             (cell.kind === 'all' && !hasActiveFilter) ||
@@ -109,7 +109,7 @@ export function QuickFiltersCard({
               type="button"
               aria-pressed={isSelected}
               onClick={handleClick}
-              className={`relative flex h-9 items-center justify-center gap-1.5 rounded-control border px-2 font-mono text-mono-badge transition-colors ${
+              className={`relative flex h-8 items-center justify-center gap-1 rounded-control border px-2 font-mono text-mono-badge transition-colors ${
                 isSelected
                   ? 'border-success bg-bg-deep font-semibold text-text-primary'
                   : 'border-border-muted bg-bg-elevated text-text-secondary hover:border-text-secondary hover:text-text-primary'

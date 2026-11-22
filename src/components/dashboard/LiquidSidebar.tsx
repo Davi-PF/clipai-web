@@ -117,7 +117,7 @@ export function LiquidSidebar({
       <aside
         aria-label="Sidebar Líquida de navegação"
         data-collapsed={isCollapsed ? 'true' : 'false'}
-        className={`hidden shrink-0 flex-col justify-between bg-bg-surface py-6 transition-[width] duration-300 ease-out lg:flex ${
+        className={`relative z-20 hidden shrink-0 flex-col justify-between border-r border-border-muted/25 bg-bg-surface py-6 shadow-[10px_0_28px_-2px_rgba(2,10,18,0.8),3px_0_10px_rgba(2,10,18,0.55)] transition-[width] duration-300 ease-out lg:flex ${
           isCollapsed ? 'w-[76px] items-center px-2' : 'w-[232px] pl-4 pr-0'
         }`}
       >
@@ -206,7 +206,7 @@ export function LiquidSidebar({
                   onClick={() => onSelectSection(id)}
                   className={`relative flex w-full items-center gap-3 py-3 pl-4 pr-4 text-left font-mono text-mono-body transition-colors ${
                     isActive
-                      ? 'liquid-nav-active rounded-l-[14px] bg-bg-deep font-semibold text-text-primary'
+                      ? 'liquid-nav-active z-30 -mr-[1px] w-[calc(100%+1px)] rounded-l-[14px] bg-bg-deep font-semibold text-text-primary'
                       : 'mr-4 w-[calc(100%-1rem)] rounded-card text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
                   }`}
                 >

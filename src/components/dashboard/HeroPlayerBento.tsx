@@ -57,7 +57,7 @@ export function HeroPlayerBento({
   cutoutRef,
 }: Readonly<HeroPlayerBentoProps>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const { width, height, notchY, clipPath, strokePath, isReady } = useLShapePath(
+  const { width, height, cutoutHeight, notchY, clipPath, strokePath, isReady } = useLShapePath(
     containerRef,
     cutoutRef,
     true,
@@ -170,8 +170,13 @@ export function HeroPlayerBento({
                 />
               </div>
 
-              {/* Perna inferior esquerda do "L": Título, metadados e barra de ações em pill */}
-              <div className="space-y-3 p-5 lg:max-w-[calc(100%-340px)]">
+              {/* Perna inferior esquerda do "L": altura mínima = cutoutHeight + 20px (18px do raio do canto) para o vídeo nunca ser cortado */}
+              <div
+                style={
+                  isReady && cutoutHeight > 0 ? { minHeight: `${cutoutHeight + 20}px` } : undefined
+                }
+                className="flex flex-col justify-center space-y-3 border-t border-border-muted/30 p-5 lg:max-w-[calc(100%-340px)]"
+              >
                 <div className="space-y-1">
                   <h1 className="line-clamp-2 font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
                     {clip.title}
