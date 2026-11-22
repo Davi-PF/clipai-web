@@ -204,9 +204,9 @@ export function LiquidSidebar({
                   type="button"
                   aria-current={isActive ? 'page' : undefined}
                   onClick={() => onSelectSection(id)}
-                  className={`relative flex w-full items-center gap-3 py-3 pl-4 pr-4 text-left font-mono text-mono-body transition-colors ${
+                  className={`relative flex items-center gap-3 py-3 pl-4 pr-4 text-left font-mono text-mono-body transition-colors ${
                     isActive
-                      ? 'liquid-nav-active z-30 -mr-[1px] w-[calc(100%+1px)] rounded-l-[14px] bg-bg-deep font-semibold text-text-primary'
+                      ? 'liquid-nav-active z-30 rounded-l-[14px] bg-bg-deep font-semibold text-text-primary'
                       : 'mr-4 w-[calc(100%-1rem)] rounded-card text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
                   }`}
                 >

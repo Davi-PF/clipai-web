@@ -42,10 +42,13 @@
 /* Curvas côncavas líquidas e contorno contínuo do item ativo na Sidebar Líquida (expandida) */
 .liquid-nav-active {
   position: relative;
+  width: calc(100% + 1px);
+  margin-right: -1px;
   border-top: 1px solid var(--border-muted);
   border-bottom: 1px solid var(--border-muted);
   border-left: 1px solid var(--border-muted);
   border-right: none;
+  box-shadow: 2px 0 0 0 var(--bg-deep);
 }
 
 .liquid-nav-active::before,
