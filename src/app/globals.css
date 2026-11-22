@@ -39,9 +39,13 @@
   }
 }
 
-/* Curvas côncavas líquidas do item ativo na Sidebar Líquida (expandida) */
+/* Curvas côncavas líquidas e contorno contínuo do item ativo na Sidebar Líquida (expandida) */
 .liquid-nav-active {
   position: relative;
+  border-top: 1px solid var(--border-muted);
+  border-bottom: 1px solid var(--border-muted);
+  border-left: 1px solid var(--border-muted);
+  border-right: none;
 }
 
 .liquid-nav-active::before,
@@ -49,17 +53,25 @@
   content: '';
   position: absolute;
   right: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   pointer-events: none;
 }
 
 .liquid-nav-active::before {
-  top: -16px;
-  background: radial-gradient(circle at 0 0, transparent 16px, var(--bg-deep) 16.5px);
+  top: -14px;
+  border-bottom-right-radius: 14px;
+  border-right: 1px solid var(--border-muted);
+  border-bottom: 1px solid var(--border-muted);
+  box-shadow: 6px 6px 0 6px var(--bg-deep);
+  clip-path: inset(0);
 }
 
 .liquid-nav-active::after {
-  bottom: -16px;
-  background: radial-gradient(circle at 0 100%, transparent 16px, var(--bg-deep) 16.5px);
+  bottom: -14px;
+  border-top-right-radius: 14px;
+  border-right: 1px solid var(--border-muted);
+  border-top: 1px solid var(--border-muted);
+  box-shadow: 6px -6px 0 6px var(--bg-deep);
+  clip-path: inset(0);
 }

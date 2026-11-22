@@ -143,23 +143,8 @@ export function HeroPlayerBento({
 
           {!isLoading && clip && (
             <div className="flex flex-col">
-              {/* Área do Player 16:9 com badges superiores */}
+              {/* Área do Player 16:9 limpa, sem overlays cobrindo o vídeo */}
               <div className="relative bg-bg-deep">
-                <div className="pointer-events-none absolute left-4 top-3 z-20 flex flex-wrap items-center gap-2">
-                  {showFeaturedBadge && (
-                    <span className="inline-flex items-center gap-1 rounded-control bg-warning px-2.5 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep">
-                      ★ DESTAQUE
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep/90 px-2.5 py-0.5 font-mono text-mono-badge uppercase text-success">
-                    <Gamepad2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    {clip.game.name}
-                  </span>
-                  <span className="rounded-control border border-border-muted bg-bg-deep/90 px-2.5 py-0.5 font-mono text-mono-badge text-text-primary">
-                    @{clip.author.username}
-                  </span>
-                </div>
-
                 <ClipPlayer
                   src={clip.video_url}
                   poster={clip.thumbnail_url}
@@ -175,9 +160,24 @@ export function HeroPlayerBento({
                 style={
                   isReady && cutoutHeight > 0 ? { minHeight: `${cutoutHeight + 20}px` } : undefined
                 }
-                className="flex flex-col justify-center space-y-3 border-t border-border-muted/30 p-5 lg:max-w-[calc(100%-340px)]"
+                className="flex flex-col justify-center space-y-2.5 p-5 lg:max-w-[calc(100%-340px)]"
               >
-                <div className="space-y-1">
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {showFeaturedBadge && (
+                      <span className="inline-flex items-center gap-1 rounded-control bg-warning px-2 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep">
+                        ★ DESTAQUE
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 py-0.5 font-mono text-mono-badge uppercase text-success">
+                      <Gamepad2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      {clip.game.name}
+                    </span>
+                    <span className="rounded-control border border-border-muted bg-bg-deep px-2.5 py-0.5 font-mono text-mono-badge text-text-primary">
+                      @{clip.author.username}
+                    </span>
+                  </div>
+
                   <h1 className="line-clamp-2 font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
                     {clip.title}
                   </h1>

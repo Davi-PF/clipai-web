@@ -117,7 +117,7 @@ export function LiquidSidebar({
       <aside
         aria-label="Sidebar Líquida de navegação"
         data-collapsed={isCollapsed ? 'true' : 'false'}
-        className={`relative z-20 hidden shrink-0 flex-col justify-between border-r border-border-muted/25 bg-bg-surface py-6 shadow-[10px_0_28px_-2px_rgba(2,10,18,0.8),3px_0_10px_rgba(2,10,18,0.55)] transition-[width] duration-300 ease-out lg:flex ${
+        className={`relative z-20 hidden shrink-0 flex-col justify-between border-r border-border-muted bg-bg-surface py-6 shadow-[10px_0_28px_-2px_rgba(2,10,18,0.8),3px_0_10px_rgba(2,10,18,0.55)] transition-[width] duration-300 ease-out lg:flex ${
           isCollapsed ? 'w-[76px] items-center px-2' : 'w-[232px] pl-4 pr-0'
         }`}
       >
@@ -234,8 +234,10 @@ export function LiquidSidebar({
           }`}
         >
           <div className={`flex items-center gap-2.5 ${isCollapsed ? 'justify-center' : 'mb-3'}`}>
-            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border-muted bg-bg-deep font-display text-display-cta uppercase text-text-primary">
-              {getUserInitials(user)}
+            <div className="relative flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-full border border-border-muted bg-bg-deep font-mono text-xs font-bold uppercase leading-none tracking-normal text-text-primary">
+              <span className="inline-flex items-center justify-center leading-none">
+                {getUserInitials(user)}
+              </span>
               <span
                 title="Online"
                 aria-label="Status online"

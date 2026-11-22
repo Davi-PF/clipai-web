@@ -319,8 +319,27 @@ describe('BentoDashboardWorkspace — Sprint 3 Signature Components', () => {
       expect(screen.getByTestId('active-collection-banner')).toHaveTextContent('Aces de Valorant');
     });
 
-    // Clear active collection filter
-    await user.click(screen.getByRole('button', { name: 'Remover filtro de coleção' }));
+    // Click Excluir -> opens safety confirmation dialog instead of deleting immediately
+    const deleteSpy = vi.spyOn(collectionsService, 'deleteCollection').mockResolvedValue(undefined);
+    await user.click(screen.getByRole('button', { name: 'Excluir coleção ativa' }));
+    expect(
+      screen.getByRole('heading', { name: 'EXCLUIR COLEÇÃO PERMANENTEMENTE?' }),
+    ).toBeInTheDocument();
+    expect(deleteSpy).not.toHaveBeenCalled();
+
+    // Cancel keeps collection intact
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(
+      screen.queryByRole('heading', { name: 'EXCLUIR COLEÇÃO PERMANENTEMENTE?' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('active-collection-banner')).toBeInTheDocument();
+
+    // Reopen and confirm deletion
+    await user.click(screen.getByRole('button', { name: 'Excluir coleção ativa' }));
+    await user.click(screen.getByRole('button', { name: 'CONFIRMAR EXCLUSÃO' }));
+    await waitFor(() => {
+      expect(deleteSpy).toHaveBeenCalledWith('col-2');
+    });
     expect(screen.queryByTestId('active-collection-banner')).not.toBeInTheDocument();
 
     // Open CreateCollectionModal via '+' button and create a collection

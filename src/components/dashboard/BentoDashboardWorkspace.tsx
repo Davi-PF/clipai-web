@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AlertTriangle, Edit3, FolderKanban, Trash2, X } from 'lucide-react';
 import { AddToCollectionModal } from '@/components/collections/AddToCollectionModal';
 import { CreateCollectionModal } from '@/components/collections/CreateCollectionModal';
+import { DeleteCollectionDialog } from '@/components/collections/DeleteCollectionDialog';
 import { ClipQueueList } from '@/components/dashboard/ClipQueueList';
 import { CollectionsFanWidget } from '@/components/dashboard/CollectionsFanWidget';
 import { HeroPlayerBento } from '@/components/dashboard/HeroPlayerBento';
@@ -58,6 +59,8 @@ export function BentoDashboardWorkspace() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
   const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
+  const [isDeleteCollectionOpen, setIsDeleteCollectionOpen] = useState(false);
+  const [isDeletingCollection, setIsDeletingCollection] = useState(false);
   const [saveCollectionClip, setSaveCollectionClip] = useState<ClipSummary | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
@@ -205,16 +208,20 @@ export function BentoDashboardWorkspace() {
 
   const handleDeleteActiveCollection = async () => {
     if (!activeCollection) return;
+    setIsDeletingCollection(true);
     try {
       await collectionsService.deleteCollection(activeCollection.id);
       success(`Coleção "${activeCollection.title}" excluída.`);
       setCollections((prev) => prev.filter((item) => item.id !== activeCollection.id));
+      setIsDeleteCollectionOpen(false);
       setActiveCollection(null);
       setActiveSection('home');
     } catch (err: unknown) {
       const message =
         err instanceof ApiClientError ? err.message : 'Não foi possível excluir a coleção.';
       showErrorToast(message);
+    } finally {
+      setIsDeletingCollection(false);
     }
   };
 
@@ -332,7 +339,7 @@ export function BentoDashboardWorkspace() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => void handleDeleteActiveCollection()}
+                      onClick={() => setIsDeleteCollectionOpen(true)}
                       aria-label="Excluir coleção ativa"
                       className="inline-flex items-center gap-1 rounded-control border border-danger bg-danger-surface px-2.5 py-1 font-mono text-mono-badge text-danger-text hover:bg-danger hover:text-text-primary"
                     >
@@ -460,6 +467,14 @@ export function BentoDashboardWorkspace() {
           onMembershipChanged={() => void loadCollections()}
         />
       )}
+
+      <DeleteCollectionDialog
+        isOpen={Boolean(activeCollection && isDeleteCollectionOpen)}
+        collectionTitle={activeCollection?.title ?? ''}
+        isDeleting={isDeletingCollection}
+        onCancel={() => setIsDeleteCollectionOpen(false)}
+        onConfirm={() => void handleDeleteActiveCollection()}
+      />
     </div>
   );
 }
