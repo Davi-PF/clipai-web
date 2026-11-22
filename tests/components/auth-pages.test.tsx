@@ -284,17 +284,18 @@ describe('Auth Pages & Route Guards', () => {
     });
   });
 
-  it('renders ProvisionalDashboardPage with user info and functional SAIR button', async () => {
+  it('renders ProvisionalDashboardPage with user info, clips empty state, upload trigger and SAIR button', async () => {
     const user = userEvent.setup();
-    fetchMock
-      .mockResolvedValueOnce(
-        new Response(
+    fetchMock.mockImplementation(async (input: string | URL) => {
+      const url = String(input);
+      if (url.endsWith('/auth/refresh')) {
+        return new Response(
           JSON.stringify({ access_token: 'valid_jwt', token_type: 'bearer', expires_in: 900 }),
           { status: 200 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
+        );
+      }
+      if (url.endsWith('/users/me')) {
+        return new Response(
           JSON.stringify({
             id: 'u1',
             username: 'fallen_br',
@@ -305,9 +306,25 @@ describe('Auth Pages & Route Guards', () => {
             is_2fa_enabled: false,
           }),
           { status: 200 },
-        ),
-      )
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+        );
+      }
+      if (url.includes('/games')) {
+        return new Response(
+          JSON.stringify({ items: [], page: 1, page_size: 50, total: 0, total_pages: 0 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes('/clips')) {
+        return new Response(
+          JSON.stringify({ items: [], page: 1, page_size: 12, total: 0, total_pages: 0 }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith('/auth/logout')) {
+        return new Response(null, { status: 204 });
+      }
+      return new Response(JSON.stringify({}), { status: 404 });
+    });
 
     renderWithProviders(<ProvisionalDashboardPage />);
 
@@ -316,6 +333,15 @@ describe('Auth Pages & Route Guards', () => {
     });
     expect(screen.getByText('gabriel@clipai.com.br')).toBeInTheDocument();
     expect(screen.getByTestId('email-pending-badge')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText('NENHUM CLIPE ENCONTRADO')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: /\+ ENVIAR CLIPE/i }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Fechar modal de upload' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'SAIR' }));
 
