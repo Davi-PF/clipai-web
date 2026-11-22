@@ -7,6 +7,7 @@ import { LiquidSidebar, type DashboardSection } from '@/components/dashboard/Liq
 import { ConnectionsSettingsTab } from '@/components/settings/ConnectionsSettingsTab';
 import { ProfileSettingsTab } from '@/components/settings/ProfileSettingsTab';
 import { SecurityTwoFactorTab } from '@/components/settings/SecurityTwoFactorTab';
+import { useSidebarState } from '@/contexts/sidebar-context';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -39,7 +40,8 @@ export function UserSettingsWorkspace() {
 
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState<SettingsTabId>(() => resolveInitialTab(tabParam));
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { isCollapsed: isSidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } =
+    useSidebarState();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
@@ -78,7 +80,7 @@ export function UserSettingsWorkspace() {
         activeSection="settings"
         onSelectSection={handleSelectSection}
         isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+        onToggleCollapse={toggleSidebarCollapsed}
         user={user}
         isLoggingOut={isLoggingOut}
         onLogout={() => void handleLogout()}

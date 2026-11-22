@@ -16,6 +16,7 @@ import {
 } from '@/components/dashboard/QuickFiltersCard';
 import { UploadClipModal } from '@/components/upload/UploadClipModal';
 import { Button } from '@/components/ui/Button';
+import { useSidebarState } from '@/contexts/sidebar-context';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
 import { useClipSocial, type SocialMutationPatch } from '@/hooks/useClipSocial';
@@ -37,7 +38,8 @@ export function BentoDashboardWorkspace() {
   const quickFiltersRef = useRef<HTMLDivElement | null>(null);
   const viewedClipIdsRef = useRef<Set<string>>(new Set());
 
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const { isCollapsed: isSidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } =
+    useSidebarState();
   const [activeSection, setActiveSection] = useState<DashboardSection>('home');
   const [quickFilter, setQuickFilter] = useState<QuickFilterSelection>({});
   const [activeCollection, setActiveCollection] = useState<Collection | null>(null);
@@ -276,7 +278,7 @@ export function BentoDashboardWorkspace() {
         activeSection={activeSection}
         onSelectSection={handleSelectSection}
         isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+        onToggleCollapse={toggleSidebarCollapsed}
         user={user}
         isLoggingOut={isLoggingOut}
         onLogout={() => void handleLogout()}
@@ -379,7 +381,7 @@ export function BentoDashboardWorkspace() {
               isSidebarCollapsed={isSidebarCollapsed}
               isLikePending={activeClip ? isLikePending(activeClip.id) : false}
               isFavoritePending={activeClip ? isFavoritePending(activeClip.id) : false}
-              onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+              onToggleSidebar={toggleSidebarCollapsed}
               onPlayStart={handlePlayStart}
               onToggleLike={(clip) => void toggleLike(clip)}
               onToggleFavorite={(clip) => void toggleFavorite(clip)}
