@@ -232,6 +232,10 @@ export function BentoDashboardWorkspace() {
       router.push('/settings');
       return;
     }
+    if (section === 'studio') {
+      router.push('/studio');
+      return;
+    }
     setActiveSection(section);
     setPage(1);
     if (
