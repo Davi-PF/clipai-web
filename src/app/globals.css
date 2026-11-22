@@ -38,3 +38,28 @@
     line-height: 1.5;
   }
 }
+
+/* Curvas côncavas líquidas do item ativo na Sidebar Líquida (expandida) */
+.liquid-nav-active {
+  position: relative;
+}
+
+.liquid-nav-active::before,
+.liquid-nav-active::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.liquid-nav-active::before {
+  top: -16px;
+  background: radial-gradient(circle at 0 0, transparent 16px, var(--bg-deep) 16.5px);
+}
+
+.liquid-nav-active::after {
+  bottom: -16px;
+  background: radial-gradient(circle at 0 100%, transparent 16px, var(--bg-deep) 16.5px);
+}

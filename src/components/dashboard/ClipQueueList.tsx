@@ -1,0 +1,172 @@
+'use client';
+
+import { ChevronLeft, ChevronRight, Film, Plus, Search } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { formatDurationBadge } from '@/lib/validators';
+import { isClipFavorited, isClipLiked, type ClipSummary } from '@/types/clip';
+
+export interface ClipQueueListProps {
+  clips: ClipSummary[];
+  activeClipId: string | null;
+  isLoading: boolean;
+  searchValue: string;
+  page: number;
+  totalPages: number;
+  onSearchChange: (value: string) => void;
+  onOpenUpload: () => void;
+  onSelectClip: (clip: ClipSummary) => void;
+  onPageChange: (nextPage: number) => void;
+}
+
+function getAccentBarColor(clip: ClipSummary, isActive: boolean): string {
+  if (isActive) return 'bg-success';
+  if (isClipFavorited(clip)) return 'bg-warning';
+  if (isClipLiked(clip) || clip.likes_count >= 10) return 'bg-danger';
+  return 'bg-border-muted';
+}
+
+export function ClipQueueList({
+  clips,
+  activeClipId,
+  isLoading,
+  searchValue,
+  page,
+  totalPages,
+  onSearchChange,
+  onOpenUpload,
+  onSelectClip,
+  onPageChange,
+}: Readonly<ClipQueueListProps>) {
+  const safeTotalPages = Math.max(1, totalPages);
+
+  return (
+    <section
+      aria-label="Busca e fila de clipes"
+      className="flex flex-col gap-4 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4"
+    >
+      {/* Topo: Busca + CTA + ENVIAR */}
+      <div className="flex items-center gap-2">
+        <div className="flex h-11 flex-1 items-center gap-2 rounded-control border border-border-muted bg-bg-elevated px-3 focus-within:border-success">
+          <Search className="h-4 w-4 shrink-0 text-text-muted" aria-hidden="true" />
+          <input
+            type="search"
+            value={searchValue}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Buscar clipes..."
+            aria-label="Buscar clipes na fila"
+            className="h-full w-full bg-transparent font-mono text-mono-meta text-text-primary placeholder:text-text-muted focus:outline-none"
+          />
+        </div>
+
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
+          leftIcon={<Plus className="h-4 w-4" />}
+          onClick={onOpenUpload}
+        >
+          ENVIAR
+        </Button>
+      </div>
+
+      {/* Cabeçalho da fila com paginação */}
+      <div className="flex items-center justify-between gap-2 border-b border-border-muted pb-2.5">
+        <h2 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+          NA FILA / RECENTES
+        </h2>
+
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-mono-badge text-text-muted">
+            {page}/{safeTotalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page <= 1 || isLoading}
+            onClick={() => onPageChange(page - 1)}
+            aria-label="Página anterior da fila"
+            className="flex h-7 w-7 items-center justify-center rounded-control border border-border-muted bg-bg-elevated text-text-secondary transition-colors hover:border-success hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            disabled={page >= safeTotalPages || isLoading}
+            onClick={() => onPageChange(page + 1)}
+            aria-label="Próxima página da fila"
+            className="flex h-7 w-7 items-center justify-center rounded-control border border-border-muted bg-bg-elevated text-text-secondary transition-colors hover:border-success hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      {/* Lista limpa vertical (gap: 10px, zero sobreposição) */}
+      {isLoading ? (
+        <div className="flex flex-col gap-[10px]" aria-busy="true" aria-label="Carregando fila">
+          {[1, 2, 3, 4].map((skeletonItem) => (
+            <div
+              key={skeletonItem}
+              className="h-[76px] w-full animate-pulse rounded-card border border-border-muted bg-bg-elevated"
+            />
+          ))}
+        </div>
+      ) : clips.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-6 text-center">
+          <Film className="h-7 w-7 text-text-muted" aria-hidden="true" />
+          <p className="font-mono text-mono-meta text-text-secondary">
+            Nenhum clipe na fila para este filtro.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-[10px]">
+          {clips.map((clip) => {
+            const isActive = clip.id === activeClipId;
+            const accentClass = getAccentBarColor(clip, isActive);
+
+            return (
+              <button
+                key={clip.id}
+                type="button"
+                aria-current={isActive ? 'true' : undefined}
+                onClick={() => onSelectClip(clip)}
+                className={`group flex h-[76px] w-full overflow-hidden rounded-card border text-left transition-colors ${
+                  isActive
+                    ? 'border-success bg-bg-deep'
+                    : 'border-border-muted bg-bg-elevated/60 hover:border-text-secondary hover:bg-bg-elevated'
+                }`}
+              >
+                <span className={`h-full w-1 shrink-0 ${accentClass}`} aria-hidden="true" />
+
+                <div className="flex min-w-0 flex-1 items-center gap-3 px-2.5 py-2">
+                  <div className="relative h-[56px] w-[100px] shrink-0 overflow-hidden rounded-[6px] bg-bg-deep">
+                    <img
+                      src={clip.thumbnail_url}
+                      alt={`Miniatura de ${clip.title}`}
+                      className="h-full w-full object-cover"
+                    />
+                    <span className="absolute bottom-1 right-1 rounded-[4px] bg-bg-deep/90 px-1 py-0.5 font-mono text-[10px] leading-none text-text-primary">
+                      {formatDurationBadge(clip.duration_seconds)}
+                    </span>
+                  </div>
+
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p
+                      className={`truncate font-mono text-mono-body font-semibold ${
+                        isActive ? 'text-success' : 'text-text-primary'
+                      }`}
+                    >
+                      {clip.title}
+                    </p>
+                    <p className="truncate font-mono text-mono-badge text-text-muted">
+                      {clip.game.name} • @{clip.author.username} • {clip.views_count} views
+                    </p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
