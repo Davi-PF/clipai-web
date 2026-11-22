@@ -8,6 +8,7 @@ import {
   isApiErrorPayload,
   resolveApiUrl,
   setAccessToken,
+  setUnauthorizedHandler,
 } from '@/lib/api-client';
 
 describe('api-client', () => {
@@ -23,6 +24,7 @@ describe('api-client', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     clearAccessToken();
+    setUnauthorizedHandler(null);
     process.env.NEXT_PUBLIC_API_URL = originalEnv;
   });
 
@@ -175,8 +177,10 @@ describe('api-client', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it('clears token and throws when refresh token rotation fails', async () => {
+  it('clears token, calls unauthorized handler and throws when refresh token rotation fails', async () => {
     setAccessToken('expired_token');
+    const onUnauthorized = vi.fn();
+    setUnauthorizedHandler(onUnauthorized);
 
     fetchMock
       .mockResolvedValueOnce(
@@ -209,5 +213,78 @@ describe('api-client', () => {
       code: 'TOKEN_EXPIRED',
     });
     expect(getAccessToken()).toBeNull();
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it('deduplicates concurrent refresh requests when multiple calls receive 401 simultaneously', async () => {
+    setAccessToken('stale_token');
+
+    let refreshCallCount = 0;
+    fetchMock.mockImplementation(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/auth/refresh')) {
+        refreshCallCount += 1;
+        return new Response(
+          JSON.stringify({
+            access_token: 'deduped_fresh_token',
+            token_type: 'bearer',
+            expires_in: 900,
+          }),
+          { status: 200 },
+        );
+      }
+
+      const authHeader = (init?.headers as Headers).get('Authorization');
+      if (authHeader === 'Bearer stale_token') {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: 'TOKEN_EXPIRED',
+              message: 'Sua sessão expirou. Faça login novamente.',
+              request_id: 'req_concurrent',
+            },
+          }),
+          { status: 401 },
+        );
+      }
+
+      return new Response(JSON.stringify({ ok: true, path: url }), { status: 200 });
+    });
+
+    const [r1, r2, r3] = await Promise.all([
+      apiClient.get<{ ok: boolean }>('/users/me'),
+      apiClient.get<{ ok: boolean }>('/clips'),
+      apiClient.get<{ ok: boolean }>('/users/me/favorites'),
+    ]);
+
+    expect(r1.ok).toBe(true);
+    expect(r2.ok).toBe(true);
+    expect(r3.ok).toBe(true);
+    expect(refreshCallCount).toBe(1);
+    expect(getAccessToken()).toBe('deduped_fresh_token');
+  });
+
+  it('does not attempt token refresh on non-refreshable auth endpoints', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: 'INVALID_CREDENTIALS',
+            message: 'E-mail ou senha incorretos.',
+            request_id: 'req_login_err',
+          },
+        }),
+        { status: 401 },
+      ),
+    );
+
+    await expect(
+      apiClient.post('/api/v1/auth/login', { email: 'a@b.com', password: 'wrong' }),
+    ).rejects.toMatchObject({
+      status: 401,
+      code: 'INVALID_CREDENTIALS',
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

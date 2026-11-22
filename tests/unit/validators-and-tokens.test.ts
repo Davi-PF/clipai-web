@@ -6,6 +6,12 @@ import {
   formatFileSizeMb,
   normalizeTagSlug,
   validateClipDuration,
+  validateDisplayName,
+  validateEmail,
+  validateLoginPassword,
+  validatePasswordConfirmation,
+  validatePasswordStrength,
+  validateUsername,
   validateVideoFileMeta,
 } from '@/lib/validators';
 
@@ -70,5 +76,27 @@ describe('validators & formatters', () => {
     expect(formatDurationBadge(-5)).toBe('00:00');
     expect(formatFileSizeMb(48_234_496)).toBe('46.0 MB');
     expect(formatFileSizeMb(0)).toBe('0.0 MB');
+  });
+
+  it('validates auth fields with PT-BR error messages', () => {
+    expect(validateEmail('fallen@clipai.com.br').valid).toBe(true);
+    expect(validateEmail('invalido').valid).toBe(false);
+
+    expect(validateUsername('fallen_br').valid).toBe(true);
+    expect(validateUsername('ab').valid).toBe(false);
+    expect(validateUsername('nome-invalido!').valid).toBe(false);
+
+    expect(validateDisplayName('Gabriel Toledo').valid).toBe(true);
+    expect(validateDisplayName('A').valid).toBe(false);
+
+    expect(validatePasswordStrength('StrongPass!2026').valid).toBe(true);
+    expect(validatePasswordStrength('weak').valid).toBe(false);
+    expect(validatePasswordStrength('SemSimbolo123').valid).toBe(false);
+
+    expect(validatePasswordConfirmation('StrongPass!2026', 'StrongPass!2026').valid).toBe(true);
+    expect(validatePasswordConfirmation('StrongPass!2026', 'Diferente!1').valid).toBe(false);
+
+    expect(validateLoginPassword('qualquer').valid).toBe(true);
+    expect(validateLoginPassword('').valid).toBe(false);
   });
 });
