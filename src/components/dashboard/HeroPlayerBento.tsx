@@ -149,6 +149,7 @@ export function HeroPlayerBento({
               {/* Área do Player 16:9 limpa, sem overlays cobrindo o vídeo */}
               <div className="relative bg-bg-deep">
                 <ClipPlayer
+                  clipId={clip.id}
                   src={clip.video_url}
                   poster={clip.thumbnail_url}
                   title={clip.title}

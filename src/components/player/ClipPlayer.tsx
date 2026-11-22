@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { Loader2, Maximize2, Minimize2, Pause, Play, Volume2, VolumeX } from 'lucide-react';
+import { useClipTelemetry } from '@/hooks/useClipTelemetry';
 import { formatDurationBadge } from '@/lib/validators';
 
 export interface ClipPlayerProps {
+  clipId?: string;
   src: string;
   poster?: string;
   title: string;
@@ -16,6 +18,7 @@ export interface ClipPlayerProps {
 }
 
 export function ClipPlayer({
+  clipId,
   src,
   poster,
   title,
@@ -37,6 +40,12 @@ export function ClipPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(initialDuration);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const telemetry = useClipTelemetry(clipId, duration);
+
+  useEffect(() => {
+    setDuration(initialDuration);
+  }, [initialDuration, src]);
 
   useEffect(() => {
     hasReportedViewRef.current = false;
@@ -94,6 +103,7 @@ export function ClipPlayer({
     if (!video) return;
     video.currentTime = nextTime;
     setCurrentTime(nextTime);
+    telemetry.onSeek(nextTime);
   };
 
   const toggleFullscreen = async () => {
@@ -114,6 +124,9 @@ export function ClipPlayer({
 
     const effectiveDuration =
       Number.isFinite(video.duration) && video.duration > 0 ? video.duration : duration;
+
+    telemetry.onTimeUpdate(video.currentTime, !video.paused && !video.ended, effectiveDuration);
+
     const threshold = effectiveDuration > 0 ? Math.min(3, effectiveDuration * 0.25) : 3;
     if (!hasReportedViewRef.current && video.currentTime >= threshold) {
       hasReportedViewRef.current = true;
@@ -139,13 +152,20 @@ export function ClipPlayer({
         onClick={() => void togglePlay()}
         onPlay={() => {
           setIsPlaying(true);
+          telemetry.onPlay(videoRef.current?.currentTime ?? 0);
           if (!hasReportedPlayStartRef.current) {
             hasReportedPlayStartRef.current = true;
             onPlayStart?.();
           }
         }}
-        onPause={() => setIsPlaying(false)}
-        onEnded={() => setIsPlaying(false)}
+        onPause={() => {
+          setIsPlaying(false);
+          telemetry.onPause();
+        }}
+        onEnded={() => {
+          setIsPlaying(false);
+          telemetry.onEnded(videoRef.current?.duration);
+        }}
         onWaiting={() => setIsBuffering(true)}
         onCanPlay={() => setIsBuffering(false)}
         onPlaying={() => setIsBuffering(false)}
