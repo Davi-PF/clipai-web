@@ -241,12 +241,35 @@ describe('ClipDetailView (/c/[slug]) & ClipPlayer', () => {
       ...SAMPLE_CLIP,
       title: 'Ace Atualizado',
     });
+    vi.spyOn(clipsService, 'toggleLike').mockResolvedValue({
+      clip_id: 'clip-123',
+      liked: true,
+      is_liked_by_me: true,
+      likes_count: 10,
+    });
+    vi.spyOn(clipsService, 'toggleFavorite').mockResolvedValue({
+      clip_id: 'clip-123',
+      favorited: true,
+      is_favorited_by_me: true,
+      favorites_count: 4,
+    });
     const deleteSpy = vi.spyOn(clipsService, 'deleteClip').mockResolvedValue(undefined);
 
     renderView();
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument();
+    });
+
+    // Social like and favorite actions
+    await user.click(screen.getByRole('button', { name: 'Curtir clipe' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Remover curtida' })).toHaveTextContent('10');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Favoritar clipe' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Remover dos favoritos' })).toBeInTheDocument();
     });
 
     // Edit flow

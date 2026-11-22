@@ -1,0 +1,480 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { AlertTriangle, Edit3, FolderKanban, Trash2, X } from 'lucide-react';
+import { AddToCollectionModal } from '@/components/collections/AddToCollectionModal';
+import { CreateCollectionModal } from '@/components/collections/CreateCollectionModal';
+import { DeleteCollectionDialog } from '@/components/collections/DeleteCollectionDialog';
+import { ClipQueueList } from '@/components/dashboard/ClipQueueList';
+import { CollectionsFanWidget } from '@/components/dashboard/CollectionsFanWidget';
+import { HeroPlayerBento } from '@/components/dashboard/HeroPlayerBento';
+import { LiquidSidebar, type DashboardSection } from '@/components/dashboard/LiquidSidebar';
+import {
+  QuickFiltersCard,
+  type QuickFilterSelection,
+} from '@/components/dashboard/QuickFiltersCard';
+import { UploadClipModal } from '@/components/upload/UploadClipModal';
+import { Button } from '@/components/ui/Button';
+import { useToast } from '@/contexts/toast-context';
+import { useAuth } from '@/hooks/useAuth';
+import { useClipSocial, type SocialMutationPatch } from '@/hooks/useClipSocial';
+import { ApiClientError } from '@/lib/api-client';
+import { authService } from '@/services/auth-service';
+import { clipsService } from '@/services/clips-service';
+import { collectionsService } from '@/services/collections-service';
+import { getClipShareSlug, type Clip, type ClipSummary, type Game, type Tag } from '@/types/clip';
+import type { Collection } from '@/types/collection';
+
+const QUEUE_PAGE_SIZE = 6;
+const SEARCH_DEBOUNCE_MS = 300;
+
+export function BentoDashboardWorkspace() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const { success, error: showErrorToast } = useToast();
+
+  const quickFiltersRef = useRef<HTMLDivElement | null>(null);
+  const viewedClipIdsRef = useRef<Set<string>>(new Set());
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [activeSection, setActiveSection] = useState<DashboardSection>('home');
+  const [quickFilter, setQuickFilter] = useState<QuickFilterSelection>({});
+  const [activeCollection, setActiveCollection] = useState<Collection | null>(null);
+
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [games, setGames] = useState<Game[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [clips, setClips] = useState<ClipSummary[]>([]);
+  const [activeClip, setActiveClip] = useState<ClipSummary | null>(null);
+  const [isLoadingClips, setIsLoadingClips] = useState(true);
+
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [isLoadingCollections, setIsLoadingCollections] = useState(true);
+
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isCreateCollectionOpen, setIsCreateCollectionOpen] = useState(false);
+  const [editingCollection, setEditingCollection] = useState<Collection | null>(null);
+  const [isDeleteCollectionOpen, setIsDeleteCollectionOpen] = useState(false);
+  const [isDeletingCollection, setIsDeletingCollection] = useState(false);
+  const [saveCollectionClip, setSaveCollectionClip] = useState<ClipSummary | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+
+  // Debounce da busca
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchInput.trim());
+      setPage(1);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Carrega jogos e tags populares para os Filtros Rápidos 3x3
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadCatalog() {
+      const [gamesRes, tagsRes] = await Promise.all([
+        clipsService.listGames({ page_size: 20 }).catch(() => null),
+        clipsService.listTags({ limit: 12 }).catch(() => null),
+      ]);
+      if (!isActive) return;
+      if (gamesRes) setGames(gamesRes.items);
+      if (tagsRes) setTags(tagsRes.items);
+    }
+
+    void loadCatalog();
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  // Carrega coleções do usuário
+  const loadCollections = useCallback(async () => {
+    setIsLoadingCollections(true);
+    try {
+      const response = await collectionsService.listCollections({ mine: true, page_size: 12 });
+      setCollections(response.items);
+    } catch {
+      setCollections([]);
+    } finally {
+      setIsLoadingCollections(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCollections();
+  }, [loadCollections]);
+
+  // Carrega clipes filtrados
+  const loadClips = useCallback(async () => {
+    setIsLoadingClips(true);
+    try {
+      const response = await clipsService.listClips({
+        q: debouncedQuery || undefined,
+        game_slug: quickFilter.gameSlug,
+        tag: quickFilter.tagSlug,
+        favorited: activeSection === 'favorites' ? true : undefined,
+        collection_id: activeCollection?.id,
+        sort: activeSection === 'featured' ? 'popular' : 'recent',
+        page,
+        page_size: QUEUE_PAGE_SIZE,
+      });
+
+      setClips(response.items);
+      setTotalPages(Math.max(1, response.total_pages));
+      setActiveClip((prev) => {
+        if (prev && response.items.some((item) => item.id === prev.id)) {
+          return response.items.find((item) => item.id === prev.id) ?? response.items[0] ?? null;
+        }
+        return response.items[0] ?? null;
+      });
+    } catch {
+      setClips([]);
+      setActiveClip(null);
+      setTotalPages(1);
+    } finally {
+      setIsLoadingClips(false);
+    }
+  }, [debouncedQuery, quickFilter, activeSection, activeCollection, page]);
+
+  useEffect(() => {
+    void loadClips();
+  }, [loadClips]);
+
+  const patchClipInState = useCallback((clipId: string, patch: SocialMutationPatch) => {
+    setClips((prev) => prev.map((item) => (item.id === clipId ? { ...item, ...patch } : item)));
+    setActiveClip((prev) => (prev && prev.id === clipId ? { ...prev, ...patch } : prev));
+  }, []);
+
+  const { toggleLike, toggleFavorite, isLikePending, isFavoritePending } =
+    useClipSocial(patchClipInState);
+
+  const handlePlayStart = useCallback((clip: ClipSummary) => {
+    if (viewedClipIdsRef.current.has(clip.id)) {
+      return;
+    }
+    viewedClipIdsRef.current.add(clip.id);
+    void clipsService
+      .registerView(clip.id)
+      .then((res) => {
+        setClips((prev) =>
+          prev.map((item) =>
+            item.id === clip.id ? { ...item, views_count: res.views_count } : item,
+          ),
+        );
+        setActiveClip((prev) =>
+          prev && prev.id === clip.id ? { ...prev, views_count: res.views_count } : prev,
+        );
+      })
+      .catch(() => {
+        viewedClipIdsRef.current.delete(clip.id);
+      });
+  }, []);
+
+  const handleCopyLink = useCallback(
+    async (clip: ClipSummary) => {
+      const shareUrl = `${window.location.origin}/c/${getClipShareSlug(clip)}`;
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        success('Link copiado para a área de transferência!');
+      } catch {
+        showErrorToast('Não foi possível copiar o link automaticamente.');
+      }
+    },
+    [success, showErrorToast],
+  );
+
+  const handleSelectSection = (section: DashboardSection) => {
+    setActiveSection(section);
+    setPage(1);
+    if (section !== 'collections') {
+      setActiveCollection(null);
+    } else if (!activeCollection && collections.length > 0) {
+      setActiveCollection(collections[0] ?? null);
+    }
+  };
+
+  const handleSelectCollection = (collection: Collection) => {
+    setActiveCollection(collection);
+    setActiveSection('collections');
+    setPage(1);
+  };
+
+  const handleDeleteActiveCollection = async () => {
+    if (!activeCollection) return;
+    setIsDeletingCollection(true);
+    try {
+      await collectionsService.deleteCollection(activeCollection.id);
+      success(`Coleção "${activeCollection.title}" excluída.`);
+      setCollections((prev) => prev.filter((item) => item.id !== activeCollection.id));
+      setIsDeleteCollectionOpen(false);
+      setActiveCollection(null);
+      setActiveSection('home');
+    } catch (err: unknown) {
+      const message =
+        err instanceof ApiClientError ? err.message : 'Não foi possível excluir a coleção.';
+      showErrorToast(message);
+    } finally {
+      setIsDeletingCollection(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      success('Você saiu da sua conta com segurança.');
+      router.replace('/login');
+    } catch {
+      showErrorToast('Erro ao encerrar a sessão.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!user?.email) return;
+    setIsResendingVerification(true);
+    try {
+      const res = await authService.resendVerification(user.email);
+      success(res.message);
+    } catch (err: unknown) {
+      const message =
+        err instanceof ApiClientError
+          ? err.message
+          : 'Não foi possível reenviar o e-mail de verificação.';
+      showErrorToast(message);
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
+  const handleUploadSuccess = (newClip: Clip) => {
+    setClips((prev) => [newClip, ...prev.filter((item) => item.id !== newClip.id)]);
+    setActiveClip(newClip);
+  };
+
+  if (!user) {
+    return null;
+  }
+
+  const isCollectionOwner = Boolean(activeCollection && activeCollection.owner.id === user.id);
+
+  return (
+    <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary lg:flex-row">
+      <LiquidSidebar
+        activeSection={activeSection}
+        onSelectSection={handleSelectSection}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+        user={user}
+        isLoggingOut={isLoggingOut}
+        onLogout={() => void handleLogout()}
+      />
+
+      <main className="min-w-0 flex-1 p-4 md:p-6">
+        <div className="mx-auto max-w-[1440px] space-y-4">
+          {!user.is_email_verified && (
+            <div
+              data-testid="email-pending-banner"
+              className="flex flex-col justify-between gap-3 rounded-card border border-warning bg-bg-surface px-4 py-3 sm:flex-row sm:items-center"
+            >
+              <div className="flex items-center gap-2.5 font-mono text-mono-meta text-text-primary">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
+                <span>
+                  Confirme seu e-mail (<strong>{user.email}</strong>) para liberar uploads e
+                  interações sociais.
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                isLoading={isResendingVerification}
+                loadingText="Reenviando..."
+                onClick={() => void handleResendVerification()}
+              >
+                Reenviar verificação
+              </Button>
+            </div>
+          )}
+
+          {activeCollection && (
+            <div
+              data-testid="active-collection-banner"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-success bg-bg-surface px-4 py-2.5"
+            >
+              <div className="flex items-center gap-2.5">
+                <FolderKanban className="h-4 w-4 text-success" aria-hidden="true" />
+                <span className="font-mono text-mono-meta text-text-secondary">Coleção ativa:</span>
+                <span className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+                  {activeCollection.title}
+                </span>
+                <span className="rounded-control bg-bg-deep px-2 py-0.5 font-mono text-mono-badge text-success">
+                  {activeCollection.clips_count}{' '}
+                  {activeCollection.clips_count === 1 ? 'clipe' : 'clipes'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {isCollectionOwner && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCollection(activeCollection);
+                        setIsCreateCollectionOpen(true);
+                      }}
+                      aria-label="Editar coleção ativa"
+                      className="inline-flex items-center gap-1 rounded-control border border-border-muted bg-bg-elevated px-2.5 py-1 font-mono text-mono-badge text-text-primary hover:border-success"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsDeleteCollectionOpen(true)}
+                      aria-label="Excluir coleção ativa"
+                      className="inline-flex items-center gap-1 rounded-control border border-danger bg-danger-surface px-2.5 py-1 font-mono text-mono-badge text-danger-text hover:bg-danger hover:text-text-primary"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Excluir
+                    </button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveCollection(null);
+                    setActiveSection('home');
+                    setPage(1);
+                  }}
+                  aria-label="Remover filtro de coleção"
+                  className="inline-flex items-center gap-1 rounded-control border border-border-muted bg-bg-deep px-2.5 py-1 font-mono text-mono-badge text-text-secondary hover:text-text-primary"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  Limpar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Grid Principal Bento */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+            {/* Coluna Central: Hero Player em formato "L" + Filtros Rápidos 3x3 encaixados */}
+            <HeroPlayerBento
+              clip={activeClip}
+              isLoading={isLoadingClips}
+              isFeaturedHighlight={activeSection === 'featured'}
+              isSidebarCollapsed={isSidebarCollapsed}
+              isLikePending={activeClip ? isLikePending(activeClip.id) : false}
+              isFavoritePending={activeClip ? isFavoritePending(activeClip.id) : false}
+              onToggleSidebar={() => setIsSidebarCollapsed((prev) => !prev)}
+              onPlayStart={handlePlayStart}
+              onToggleLike={(clip) => void toggleLike(clip)}
+              onToggleFavorite={(clip) => void toggleFavorite(clip)}
+              onOpenSaveCollection={(clip) => setSaveCollectionClip(clip)}
+              onCopyLink={(clip) => void handleCopyLink(clip)}
+              onOpenUpload={() => setIsUploadOpen(true)}
+              cutoutRef={quickFiltersRef}
+              quickFiltersSlot={
+                <QuickFiltersCard
+                  cardRef={quickFiltersRef}
+                  games={games}
+                  tags={tags}
+                  activeFilter={quickFilter}
+                  onSelectFilter={(next) => {
+                    setQuickFilter(next);
+                    setPage(1);
+                  }}
+                  onClearFilters={() => {
+                    setQuickFilter({});
+                    setPage(1);
+                  }}
+                />
+              }
+            />
+
+            {/* Coluna Direita: Busca + NA FILA / RECENTES + COLEÇÕES em leque */}
+            <div className="flex flex-col gap-4">
+              <ClipQueueList
+                clips={clips}
+                activeClipId={activeClip?.id ?? null}
+                isLoading={isLoadingClips}
+                searchValue={searchInput}
+                page={page}
+                totalPages={totalPages}
+                onSearchChange={setSearchInput}
+                onOpenUpload={() => setIsUploadOpen(true)}
+                onSelectClip={(selected) => setActiveClip(selected)}
+                onPageChange={setPage}
+              />
+
+              <CollectionsFanWidget
+                collections={collections}
+                activeCollectionId={activeCollection?.id ?? null}
+                isLoading={isLoadingCollections}
+                onOpenCreate={() => {
+                  setEditingCollection(null);
+                  setIsCreateCollectionOpen(true);
+                }}
+                onSelectCollection={handleSelectCollection}
+              />
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <UploadClipModal
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
+        onUploadSuccess={handleUploadSuccess}
+      />
+
+      <CreateCollectionModal
+        isOpen={isCreateCollectionOpen}
+        initialCollection={editingCollection}
+        onClose={() => {
+          setIsCreateCollectionOpen(false);
+          setEditingCollection(null);
+        }}
+        onSaved={(saved) => {
+          setCollections((prev) => {
+            const exists = prev.some((item) => item.id === saved.id);
+            if (exists) {
+              return prev.map((item) => (item.id === saved.id ? saved : item));
+            }
+            return [saved, ...prev];
+          });
+          if (activeCollection?.id === saved.id) {
+            setActiveCollection(saved);
+          }
+        }}
+      />
+
+      {saveCollectionClip && (
+        <AddToCollectionModal
+          clipId={saveCollectionClip.id}
+          clipTitle={saveCollectionClip.title}
+          isOpen
+          onClose={() => setSaveCollectionClip(null)}
+          onMembershipChanged={() => void loadCollections()}
+        />
+      )}
+
+      <DeleteCollectionDialog
+        isOpen={Boolean(activeCollection && isDeleteCollectionOpen)}
+        collectionTitle={activeCollection?.title ?? ''}
+        isDeleting={isDeletingCollection}
+        onCancel={() => setIsDeleteCollectionOpen(false)}
+        onConfirm={() => void handleDeleteActiveCollection()}
+      />
+    </div>
+  );
+}

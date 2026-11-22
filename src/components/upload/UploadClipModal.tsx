@@ -23,7 +23,13 @@ import {
   validateClipTitle,
 } from '@/lib/validators';
 import { clipsService } from '@/services/clips-service';
-import type { Clip, ClipUploadStage, Game, PrivacyLevel } from '@/types/clip';
+import {
+  getClipShareSlug,
+  type Clip,
+  type ClipUploadStage,
+  type Game,
+  type PrivacyLevel,
+} from '@/types/clip';
 
 export interface UploadClipModalProps {
   isOpen: boolean;
@@ -281,7 +287,7 @@ export function UploadClipModal({
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Link href={`/c/${uploadedClip.id}`} className="block">
+              <Link href={`/c/${getClipShareSlug(uploadedClip)}`} className="block">
                 <Button type="button" variant="primary" fullWidth>
                   IR PARA O CLIPE
                 </Button>

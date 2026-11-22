@@ -10,6 +10,8 @@ export interface ClipPlayerProps {
   title: string;
   initialDuration?: number;
   resolutionLabel?: string;
+  borderless?: boolean;
+  onPlayStart?: () => void;
   onQualifiedView?: () => void;
 }
 
@@ -19,11 +21,14 @@ export function ClipPlayer({
   title,
   initialDuration = 0,
   resolutionLabel,
+  borderless = false,
+  onPlayStart,
   onQualifiedView,
 }: Readonly<ClipPlayerProps>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hasReportedViewRef = useRef(false);
+  const hasReportedPlayStartRef = useRef(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -35,6 +40,7 @@ export function ClipPlayer({
 
   useEffect(() => {
     hasReportedViewRef.current = false;
+    hasReportedPlayStartRef.current = false;
     setCurrentTime(0);
     setIsPlaying(false);
   }, [src]);
@@ -117,11 +123,12 @@ export function ClipPlayer({
 
   const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
+  const frameClasses = borderless
+    ? 'group relative aspect-video w-full overflow-hidden bg-bg-deep'
+    : 'group relative aspect-video w-full overflow-hidden rounded-bento border-[1.5px] border-border-muted bg-bg-deep';
+
   return (
-    <div
-      ref={containerRef}
-      className="group relative aspect-video w-full overflow-hidden rounded-bento border-[1.5px] border-border-muted bg-bg-deep"
-    >
+    <div ref={containerRef} className={frameClasses}>
       <video
         ref={videoRef}
         src={src}
@@ -130,7 +137,13 @@ export function ClipPlayer({
         preload="metadata"
         aria-label={`Player de vídeo: ${title}`}
         onClick={() => void togglePlay()}
-        onPlay={() => setIsPlaying(true)}
+        onPlay={() => {
+          setIsPlaying(true);
+          if (!hasReportedPlayStartRef.current) {
+            hasReportedPlayStartRef.current = true;
+            onPlayStart?.();
+          }
+        }}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
         onWaiting={() => setIsBuffering(true)}

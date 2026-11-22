@@ -310,13 +310,22 @@ describe('Auth Pages & Route Guards', () => {
       }
       if (url.includes('/games')) {
         return new Response(
-          JSON.stringify({ items: [], page: 1, page_size: 50, total: 0, total_pages: 0 }),
+          JSON.stringify({ items: [], page: 1, page_size: 20, total: 0, total_pages: 0 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes('/tags')) {
+        return new Response(JSON.stringify({ items: [] }), { status: 200 });
+      }
+      if (url.includes('/collections')) {
+        return new Response(
+          JSON.stringify({ items: [], page: 1, page_size: 12, total: 0, total_pages: 0 }),
           { status: 200 },
         );
       }
       if (url.includes('/clips')) {
         return new Response(
-          JSON.stringify({ items: [], page: 1, page_size: 12, total: 0, total_pages: 0 }),
+          JSON.stringify({ items: [], page: 1, page_size: 6, total: 0, total_pages: 0 }),
           { status: 200 },
         );
       }
@@ -329,16 +338,15 @@ describe('Auth Pages & Route Guards', () => {
     renderWithProviders(<ProvisionalDashboardPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('@fallen_br')).toBeInTheDocument();
+      expect(screen.getAllByText('@fallen_br').length).toBeGreaterThan(0);
     });
-    expect(screen.getByText('gabriel@clipai.com.br')).toBeInTheDocument();
-    expect(screen.getByTestId('email-pending-badge')).toBeInTheDocument();
+    expect(screen.getByTestId('email-pending-banner')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText('NENHUM CLIPE ENCONTRADO')).toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole('button', { name: /ENVIAR CLIPE/i }));
+    await user.click(screen.getByRole('button', { name: 'ENVIAR' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Fechar modal de upload' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

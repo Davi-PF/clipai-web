@@ -10,7 +10,7 @@ export type VideoMimeType = 'video/mp4' | 'video/webm';
 
 export type ThumbnailMimeType = 'image/webp' | 'image/jpeg' | 'image/png';
 
-export type ClipSortOption = 'recent' | 'popular';
+export type ClipSortOption = 'recent' | 'popular' | 'featured';
 
 export type ApiErrorCode =
   | 'BAD_REQUEST'
@@ -192,14 +192,16 @@ export interface PresignedPutTarget {
 
 export interface PresignedUploadResponse {
   clip_id: string;
+  slug?: string;
   status: 'pending_upload';
   expires_in: number;
   video_upload: PresignedPutTarget;
-  thumbnail_upload: PresignedPutTarget;
+  thumbnail_upload: PresignedPutTarget | null;
 }
 
 export interface ClipSummary {
   id: string;
+  slug?: string;
   title: string;
   privacy: PrivacyLevel;
   video_url: string;
@@ -208,6 +210,8 @@ export interface ClipSummary {
   views_count: number;
   likes_count: number;
   favorites_count: number;
+  is_liked?: boolean;
+  is_favorited?: boolean;
   is_liked_by_me: boolean;
   is_favorited_by_me: boolean;
   author: ClipAuthorSummary;
@@ -227,12 +231,14 @@ export interface Clip extends ClipSummary {
 
 export interface ClipLikeResponse {
   clip_id: string;
+  liked?: boolean;
   likes_count: number;
   is_liked_by_me: boolean;
 }
 
 export interface ClipFavoriteResponse {
   clip_id: string;
+  favorited?: boolean;
   favorites_count: number;
   is_favorited_by_me: boolean;
 }
@@ -257,7 +263,9 @@ export interface Collection {
   title: string;
   description: string | null;
   privacy: PrivacyLevel;
-  clips_count?: number;
+  accent_color?: string | null;
+  clips_count: number;
+  preview_thumbnails?: string[];
   owner: CollectionOwnerSummary;
   created_at: string;
   updated_at: string;
@@ -268,14 +276,23 @@ export interface CollectionClipItem {
   added_at: string;
   clip: {
     id: string;
+    slug?: string;
     title: string;
+    video_url?: string;
     thumbnail_url: string;
     duration_seconds: number;
     views_count: number;
     likes_count: number;
+    is_liked?: boolean;
+    is_favorited?: boolean;
+    is_liked_by_me?: boolean;
+    is_favorited_by_me?: boolean;
   };
 }
 
-export interface CollectionDetail extends Omit<Collection, 'clips_count'> {
+export interface CollectionDetail extends Collection {
   clips: CollectionClipItem[];
+  page?: number;
+  page_size?: number;
+  total_pages?: number;
 }

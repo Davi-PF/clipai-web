@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
+  BookmarkPlus,
   Calendar,
   Copy,
   Edit3,
@@ -15,20 +16,23 @@ import {
   Heart,
   Link2,
   Lock,
+  Star,
   Trash2,
   User as UserIcon,
   Users,
 } from 'lucide-react';
+import { AddToCollectionModal } from '@/components/collections/AddToCollectionModal';
 import { ClipPlayer } from '@/components/player/ClipPlayer';
 import { DeleteClipDialog } from '@/components/player/DeleteClipDialog';
 import { EditClipModal } from '@/components/player/EditClipModal';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
+import { useClipSocial, type SocialMutationPatch } from '@/hooks/useClipSocial';
 import { ApiClientError } from '@/lib/api-client';
 import { formatDurationBadge, formatFileSizeMb } from '@/lib/validators';
 import { clipsService } from '@/services/clips-service';
-import type { Clip, PrivacyLevel } from '@/types/clip';
+import { isClipFavorited, isClipLiked, type Clip, type PrivacyLevel } from '@/types/clip';
 
 type DetailLoadState = 'loading' | 'ready' | 'not_found' | 'restricted' | 'error';
 
@@ -53,7 +57,7 @@ function formatCreatedDatePtBr(isoDate: string): string {
 export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { success, error: showErrorToast } = useToast();
+  const { success, error: showErrorToast, warning } = useToast();
 
   const [loadState, setLoadState] = useState<DetailLoadState>('loading');
   const [clip, setClip] = useState<Clip | null>(null);
@@ -62,6 +66,14 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+  const hasRegisteredViewRef = useRef(false);
+
+  const patchClip = useCallback((clipId: string, patch: SocialMutationPatch) => {
+    setClip((prev) => (prev && prev.id === clipId ? { ...prev, ...patch } : prev));
+  }, []);
+
+  const { toggleLike, toggleFavorite, isLikePending, isFavoritePending } = useClipSocial(patchClip);
 
   const fetchClip = useCallback(async () => {
     setLoadState('loading');
@@ -107,15 +119,26 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
     }
   };
 
-  const handleQualifiedView = useCallback(() => {
-    if (!clip) return;
+  const handleRegisterView = useCallback(() => {
+    if (!clip || hasRegisteredViewRef.current) return;
+    hasRegisteredViewRef.current = true;
     void clipsService
       .registerView(clip.id)
       .then((res) => {
         setClip((prev) => (prev ? { ...prev, views_count: res.views_count } : prev));
       })
-      .catch(() => undefined);
+      .catch(() => {
+        hasRegisteredViewRef.current = false;
+      });
   }, [clip]);
+
+  const handleSocialAction = (action: () => void) => {
+    if (!user) {
+      warning('Faça login para curtir, favoritar ou salvar em coleções.');
+      return;
+    }
+    action();
+  };
 
   const handleConfirmDelete = async () => {
     if (!clip) return;
@@ -134,6 +157,8 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
   };
 
   const isOwner = Boolean(user && clip && user.id === clip.author.id);
+  const liked = clip ? isClipLiked(clip) : false;
+  const favorited = clip ? isClipFavorited(clip) : false;
 
   return (
     <main className="min-h-screen bg-bg-deep px-4 py-8 text-text-primary md:px-8">
@@ -229,7 +254,8 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
               title={clip.title}
               initialDuration={clip.duration_seconds}
               resolutionLabel={clip.technical_metadata.resolution_label}
-              onQualifiedView={handleQualifiedView}
+              onPlayStart={handleRegisterView}
+              onQualifiedView={handleRegisterView}
             />
 
             <section className="space-y-5 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6">
@@ -259,6 +285,54 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    disabled={isLikePending(clip.id)}
+                    aria-pressed={liked}
+                    aria-label={liked ? 'Remover curtida' : 'Curtir clipe'}
+                    onClick={() => handleSocialAction(() => void toggleLike(clip))}
+                    className={`inline-flex h-11 items-center gap-2 rounded-control border px-3.5 font-mono text-mono-meta transition-colors ${
+                      liked
+                        ? 'border-danger bg-danger-surface text-text-primary'
+                        : 'border-border-muted bg-bg-elevated text-text-primary hover:border-danger'
+                    }`}
+                  >
+                    <Heart
+                      className={`h-4 w-4 ${liked ? 'fill-danger text-danger' : 'text-text-secondary'}`}
+                      aria-hidden="true"
+                    />
+                    <span>{clip.likes_count}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={isFavoritePending(clip.id)}
+                    aria-pressed={favorited}
+                    aria-label={favorited ? 'Remover dos favoritos' : 'Favoritar clipe'}
+                    onClick={() => handleSocialAction(() => void toggleFavorite(clip))}
+                    className={`inline-flex h-11 items-center gap-2 rounded-control border px-3.5 font-mono text-mono-meta transition-colors ${
+                      favorited
+                        ? 'border-warning bg-bg-deep text-warning'
+                        : 'border-border-muted bg-bg-elevated text-text-primary hover:border-warning'
+                    }`}
+                  >
+                    <Star
+                      className={`h-4 w-4 ${favorited ? 'fill-warning text-warning' : 'text-text-secondary'}`}
+                      aria-hidden="true"
+                    />
+                    <span>{favorited ? 'Favorito' : 'Favoritar'}</span>
+                  </button>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    leftIcon={<BookmarkPlus className="h-4 w-4" />}
+                    onClick={() => handleSocialAction(() => setIsCollectionModalOpen(true))}
+                  >
+                    Salvar em Coleção
+                  </Button>
+
                   <Button
                     type="button"
                     variant="primary"
@@ -374,6 +448,13 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
               isDeleting={isDeleting}
               onCancel={() => setIsDeleteOpen(false)}
               onConfirm={() => void handleConfirmDelete()}
+            />
+
+            <AddToCollectionModal
+              clipId={clip.id}
+              clipTitle={clip.title}
+              isOpen={isCollectionModalOpen}
+              onClose={() => setIsCollectionModalOpen(false)}
             />
           </>
         )}

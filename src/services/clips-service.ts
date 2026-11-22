@@ -1,6 +1,8 @@
 import { apiClient } from '@/lib/api-client';
 import type {
   Clip,
+  ClipFavoriteResponse,
+  ClipLikeResponse,
   ClipSummary,
   ClipViewResponse,
   Game,
@@ -15,7 +17,7 @@ import type {
   UpdateClipRequest,
 } from '@/types/clip';
 
-function buildQueryString(params: Record<string, string | number | undefined>): string {
+function buildQueryString(params: Record<string, string | number | boolean | undefined>): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== '') {
@@ -61,9 +63,14 @@ export const clipsService = {
   async listClips(params: ListClipsParams = {}): Promise<PaginatedResponse<ClipSummary>> {
     const query = buildQueryString({
       q: params.q,
+      game: params.game,
       game_slug: params.game_slug,
       game_id: params.game_id,
       tag: params.tag,
+      author: params.author,
+      mine: params.mine ? 'true' : undefined,
+      favorited: params.favorited ? 'true' : undefined,
+      collection_id: params.collection_id,
       sort: params.sort,
       page: params.page,
       page_size: params.page_size,
@@ -105,5 +112,21 @@ export const clipsService = {
         skipRefresh: true,
       },
     );
+  },
+
+  async toggleLike(clipId: string, currentlyLiked: boolean): Promise<ClipLikeResponse> {
+    const path = `/api/v1/clips/${encodeURIComponent(clipId)}/like`;
+    if (currentlyLiked) {
+      return apiClient.delete<ClipLikeResponse>(path);
+    }
+    return apiClient.post<ClipLikeResponse>(path);
+  },
+
+  async toggleFavorite(clipId: string, currentlyFavorited: boolean): Promise<ClipFavoriteResponse> {
+    const path = `/api/v1/clips/${encodeURIComponent(clipId)}/favorite`;
+    if (currentlyFavorited) {
+      return apiClient.delete<ClipFavoriteResponse>(path);
+    }
+    return apiClient.post<ClipFavoriteResponse>(path);
   },
 };

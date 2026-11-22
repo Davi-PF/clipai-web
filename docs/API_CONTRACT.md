@@ -50,8 +50,8 @@
 | :---: | :--- | :---: | :--- |
 | `POST` | `/api/v1/clips/upload-url` | Bearer JWT (Verificado) | Valida metadados, cria clipe `pending_upload` e retorna Presigned `PUT` URLs do R2. |
 | `POST` | `/api/v1/clips/{clip_id}/confirm-upload` | Bearer JWT (Autor) | Executa `HeadObject` no R2 e promove o clipe para `status = 'ready'`. |
-| `GET` | `/api/v1/clips` | Opcional | Lista paginada de clipes públicos (`q`, `game_slug`, `game_id`, `tag`, `sort`, `page`, `page_size`). |
-| `GET` | `/api/v1/clips/{clip_id}` | Opcional | Detalhes completos do clipe (`public`, `unlisted`, ou `friends` para o autor). |
+| `GET` | `/api/v1/clips` | Opcional | Lista paginada de clipes (`q`, `game`, `game_slug`, `game_id`, `tag`, `author`, `mine`, `favorited`, `collection_id`, `sort`, `page`, `page_size`). |
+| `GET` | `/api/v1/clips/{slug}` | Opcional | Detalhes completos do clipe por `slug` ou `clip_id` (`public`, `unlisted`, ou `friends` para autenticados). |
 | `PATCH` | `/api/v1/clips/{clip_id}` | Bearer JWT (Autor) | Atualiza `title`, `description`, `game_id`, `privacy` ou `tags`. |
 | `DELETE` | `/api/v1/clips/{clip_id}` | Bearer JWT (Autor) | Remove o clipe do PostgreSQL e deleta vídeo/thumbnail no Cloudflare R2 (`204`). |
 | `POST` | `/api/v1/clips/{clip_id}/views` | Opcional | Incrementa `views_count` (rate-limited a 1 view / 10 min por usuário/IP + clipe). |
@@ -61,7 +61,8 @@
 ### 2.4. Coleções (`/collections`)
 | Método | Rota | Auth | Descrição |
 | :---: | :--- | :---: | :--- |
-| `POST` | `/api/v1/collections` | Bearer JWT (Verificado) | Cria uma nova coleção (`title`, `description`, `privacy`). |
+| `GET` | `/api/v1/collections` | Opcional | Lista paginada de coleções (`mine`, `author`, `page`, `page_size`) com `clips_count` e `preview_thumbnails`. |
+| `POST` | `/api/v1/collections` | Bearer JWT (Verificado) | Cria uma nova coleção (`title`, `description`, `privacy`, `accent_color`). |
 | `GET` | `/api/v1/users/{username}/collections` | Opcional | Lista paginada das coleções de um usuário. |
 | `GET` | `/api/v1/collections/{collection_id}` | Opcional | Detalhes da coleção e lista ordenada de clipes (`position`). |
 | `PATCH` | `/api/v1/collections/{collection_id}` | Bearer JWT (Dono) | Atualiza título, descrição ou privacidade da coleção. |
