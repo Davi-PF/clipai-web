@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Film, Heart, Layers, Palette, ShieldCheck, Star, Terminal, Type } from 'lucide-react';
 import { ApiHealthStatusCard } from '@/components/ui/ApiHealthStatusCard';
 import { BASE_COLOR_TOKENS, SEMANTIC_COLOR_TOKENS } from '@/lib/design-tokens';
@@ -31,6 +32,24 @@ export default function DiagnosticHomePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/login"
+              className="rounded-control border border-border-muted bg-bg-elevated px-3.5 py-2 font-mono text-mono-meta text-text-primary transition-colors hover:border-success"
+            >
+              Entrar
+            </Link>
+            <Link
+              href="/register"
+              className="rounded-control border border-border-muted bg-bg-elevated px-3.5 py-2 font-mono text-mono-meta text-text-primary transition-colors hover:border-success"
+            >
+              Criar conta
+            </Link>
+            <Link
+              href="/dashboard"
+              className="rounded-control border border-border-muted bg-bg-elevated px-3.5 py-2 font-mono text-mono-meta text-text-primary transition-colors hover:border-success"
+            >
+              Dashboard
+            </Link>
             <span className="inline-flex items-center gap-2 rounded-control border border-border-muted bg-bg-elevated px-3 py-1.5 font-mono text-mono-meta text-text-primary">
               <ShieldCheck className="h-4 w-4 text-success" aria-hidden="true" />
               TypeScript Strict
