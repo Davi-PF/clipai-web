@@ -234,7 +234,10 @@ export function BentoDashboardWorkspace() {
     }
     setActiveSection(section);
     setPage(1);
-    if (typeof window !== 'undefined') {
+    if (
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).has('section')
+    ) {
       const nextUrl = section === 'home' ? '/dashboard' : `/dashboard?section=${section}`;
       window.history.replaceState(null, '', nextUrl);
     }

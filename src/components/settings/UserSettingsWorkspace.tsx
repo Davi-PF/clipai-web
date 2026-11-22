@@ -85,6 +85,7 @@ export function UserSettingsWorkspace() {
         onSelectSection={handleSelectSection}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={toggleSidebarCollapsed}
+        showInlineCollapseToggle
         user={user}
         isLoggingOut={isLoggingOut}
         onLogout={() => void handleLogout()}

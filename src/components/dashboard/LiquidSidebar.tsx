@@ -39,6 +39,7 @@ export interface LiquidSidebarProps {
   onSelectSection: (section: DashboardSection) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  showInlineCollapseToggle?: boolean;
   user: User;
   isLoggingOut: boolean;
   onLogout: () => void;
@@ -49,6 +50,7 @@ export function LiquidSidebar({
   onSelectSection,
   isCollapsed,
   onToggleCollapse,
+  showInlineCollapseToggle = false,
   user,
   isLoggingOut,
   onLogout,
@@ -141,11 +143,28 @@ export function LiquidSidebar({
           <div
             className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between pr-4'}`}
           >
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
-                <Film className="h-5 w-5 text-success" aria-hidden="true" />
-              </span>
-              {!isCollapsed && (
+            {isCollapsed ? (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                aria-label="Expandir sidebar"
+                title="Expandir sidebar"
+                className="group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep transition-colors hover:border-success hover:bg-bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
+              >
+                <Film
+                  className="h-5 w-5 text-success transition-opacity duration-150 group-hover:opacity-0"
+                  aria-hidden="true"
+                />
+                <ChevronRight
+                  className="absolute h-5 w-5 text-success opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                  aria-hidden="true"
+                />
+              </button>
+            ) : (
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
+                  <Film className="h-5 w-5 text-success" aria-hidden="true" />
+                </span>
                 <div className="flex items-center gap-2">
                   <span className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
                     CLIPAÍ
@@ -154,10 +173,10 @@ export function LiquidSidebar({
                     BETA
                   </span>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {!isCollapsed && (
+            {!isCollapsed && showInlineCollapseToggle && (
               <button
                 type="button"
                 onClick={onToggleCollapse}
@@ -169,18 +188,6 @@ export function LiquidSidebar({
               </button>
             )}
           </div>
-
-          {isCollapsed && (
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              aria-label="Expandir sidebar"
-              title="Expandir sidebar"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-border-muted bg-bg-elevated text-text-secondary transition-colors hover:border-success hover:text-text-primary"
-            >
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </button>
-          )}
 
           {/* Lista de Itens Líquidos */}
           <nav
