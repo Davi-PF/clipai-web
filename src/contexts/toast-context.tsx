@@ -43,6 +43,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [toasts, setToasts] = useState<ToastItemData[]>([]);
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const nextIdRef = useRef(0);
 
   const dismissToast = useCallback((id: string) => {
     const existingTimer = timersRef.current.get(id);
@@ -60,10 +61,8 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
       message,
       durationMs = DEFAULT_TOAST_DURATION_MS,
     }: ShowToastOptions): string => {
-      const id =
-        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-          ? crypto.randomUUID()
-          : `toast_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      nextIdRef.current += 1;
+      const id = `toast_${nextIdRef.current}`;
 
       setToasts((prev) => [...prev, { id, type, title, message }]);
 
