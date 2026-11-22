@@ -15,3 +15,32 @@ if (typeof URL.revokeObjectURL !== 'function') {
     configurable: true,
   });
 }
+
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class MockResizeObserver {
+    private readonly callback: ResizeObserverCallback;
+
+    constructor(callback: ResizeObserverCallback) {
+      this.callback = callback;
+    }
+
+    observe() {
+      // Trigger callback asynchronously only when explicitly needed
+      void this.callback;
+    }
+
+    unobserve() {
+      // noop
+    }
+
+    disconnect() {
+      // noop
+    }
+  }
+
+  Object.defineProperty(globalThis, 'ResizeObserver', {
+    value: MockResizeObserver,
+    writable: true,
+    configurable: true,
+  });
+}

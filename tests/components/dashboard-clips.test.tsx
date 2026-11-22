@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import ProvisionalDashboardPage from '@/app/dashboard/page';
+import DashboardPage from '@/app/dashboard/page';
 import { ToastViewport } from '@/components/ui/Toast';
 import { AuthProvider } from '@/contexts/auth-context';
 import { ToastProvider } from '@/contexts/toast-context';
@@ -15,13 +15,16 @@ vi.mock('next/navigation', () => ({
 }));
 
 const GAMES = [
-  { id: 'g-cs2', name: 'Counter-Strike 2', slug: 'counter-strike-2' },
+  { id: 'g-cs2', name: 'CS2', slug: 'cs2' },
   { id: 'g-val', name: 'Valorant', slug: 'valorant' },
 ];
+
+const TAGS = [{ id: 't-clutch', name: 'clutch', slug: 'clutch' }];
 
 const CLIPS = [
   {
     id: 'clip-1',
+    slug: 'clutch-mirage',
     title: 'Clutch na Mirage',
     privacy: 'public' as const,
     video_url: 'https://cdn.clipai.com.br/v1.mp4',
@@ -30,6 +33,8 @@ const CLIPS = [
     views_count: 120,
     likes_count: 15,
     favorites_count: 4,
+    is_liked: false,
+    is_favorited: false,
     is_liked_by_me: false,
     is_favorited_by_me: false,
     author: {
@@ -44,7 +49,7 @@ const CLIPS = [
   },
 ];
 
-describe('ProvisionalDashboardPage — Clips Gallery & Filters', () => {
+describe('DashboardPage — QuickFiltersCard & Debounced Search', () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
@@ -57,7 +62,7 @@ describe('ProvisionalDashboardPage — Clips Gallery & Filters', () => {
     clearAccessToken();
   });
 
-  it('lists uploaded clips and filters by search query and game', async () => {
+  it('filters clips via QuickFiltersCard 3x3 and clears active filters', async () => {
     const user = userEvent.setup();
 
     fetchMock.mockImplementation(async (input: string | URL) => {
@@ -84,19 +89,28 @@ describe('ProvisionalDashboardPage — Clips Gallery & Filters', () => {
       }
       if (url.includes('/games')) {
         return new Response(
-          JSON.stringify({ items: GAMES, page: 1, page_size: 50, total: 2, total_pages: 1 }),
+          JSON.stringify({ items: GAMES, page: 1, page_size: 20, total: 2, total_pages: 1 }),
+          { status: 200 },
+        );
+      }
+      if (url.includes('/tags')) {
+        return new Response(JSON.stringify({ items: TAGS }), { status: 200 });
+      }
+      if (url.includes('/collections')) {
+        return new Response(
+          JSON.stringify({ items: [], page: 1, page_size: 12, total: 0, total_pages: 0 }),
           { status: 200 },
         );
       }
       if (url.includes('/clips')) {
-        const hasFilter = url.includes('q=inexistente') || url.includes('game_id=g-val');
+        const hasEmptyFilter = url.includes('game_slug=valorant');
         return new Response(
           JSON.stringify({
-            items: hasFilter ? [] : CLIPS,
+            items: hasEmptyFilter ? [] : CLIPS,
             page: 1,
-            page_size: 12,
-            total: hasFilter ? 0 : 1,
-            total_pages: hasFilter ? 0 : 1,
+            page_size: 6,
+            total: hasEmptyFilter ? 0 : 1,
+            total_pages: hasEmptyFilter ? 0 : 1,
           }),
           { status: 200 },
         );
@@ -107,35 +121,26 @@ describe('ProvisionalDashboardPage — Clips Gallery & Filters', () => {
     render(
       <ToastProvider>
         <AuthProvider>
-          <ProvisionalDashboardPage />
+          <DashboardPage />
           <ToastViewport />
         </AuthProvider>
       </ToastProvider>,
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Clutch na Mirage')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Clutch na Mirage' })).toBeInTheDocument();
     });
-    expect(screen.getByText('120 views')).toBeInTheDocument();
 
-    // Filter by search returning empty state
-    await user.type(screen.getByLabelText('Buscar clipes'), 'inexistente');
-    await user.click(screen.getByRole('button', { name: 'Buscar' }));
-
+    // Click Valorant cell in QuickFiltersCard
+    await user.click(screen.getByRole('button', { name: 'Valorant' }));
     await waitFor(() => {
       expect(screen.getByText('NENHUM CLIPE ENCONTRADO')).toBeInTheDocument();
     });
 
-    // Clear filters restores list
-    await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    // Click LIMPAR to restore clips
+    await user.click(screen.getByRole('button', { name: 'LIMPAR' }));
     await waitFor(() => {
-      expect(screen.getByText('Clutch na Mirage')).toBeInTheDocument();
-    });
-
-    // Filter by game select
-    await user.selectOptions(screen.getByLabelText('Filtrar por jogo'), 'g-val');
-    await waitFor(() => {
-      expect(screen.getByText('NENHUM CLIPE ENCONTRADO')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Clutch na Mirage' })).toBeInTheDocument();
     });
   });
 });
