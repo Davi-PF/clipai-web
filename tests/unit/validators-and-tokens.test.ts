@@ -1,16 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { BASE_COLOR_TOKENS, SEMANTIC_COLOR_TOKENS, isOfficialHexColor } from '@/lib/design-tokens';
 import {
+  MAX_AVATAR_SIZE_BYTES,
+  MAX_BIO_LENGTH,
   MAX_VIDEO_SIZE_BYTES,
   formatDurationBadge,
   formatFileSizeMb,
   normalizeTagSlug,
+  validateAvatarFileMeta,
+  validateBio,
   validateClipDuration,
   validateDisplayName,
   validateEmail,
   validateLoginPassword,
   validatePasswordConfirmation,
   validatePasswordStrength,
+  validateTwoFactorCode,
   validateUsername,
   validateVideoFileMeta,
 } from '@/lib/validators';
@@ -60,6 +65,45 @@ describe('validators & formatters', () => {
     });
     expect(tooLarge.valid).toBe(false);
     expect(tooLarge.errorMessage).toContain('100 MB');
+  });
+
+  it('validates avatar image MIME types (.jpg/.png/.webp) and 5 MB size limit', () => {
+    expect(validateAvatarFileMeta({ type: 'image/jpeg', size: 250_000 })).toEqual({
+      valid: true,
+      errorMessage: null,
+    });
+    expect(validateAvatarFileMeta({ type: 'image/png', size: 1_200_000 })).toEqual({
+      valid: true,
+      errorMessage: null,
+    });
+    expect(validateAvatarFileMeta({ type: 'image/webp', size: MAX_AVATAR_SIZE_BYTES })).toEqual({
+      valid: true,
+      errorMessage: null,
+    });
+
+    const invalidMime = validateAvatarFileMeta({ type: 'image/gif', size: 50_000 });
+    expect(invalidMime.valid).toBe(false);
+    expect(invalidMime.errorMessage).toContain('JPG, PNG ou WebP');
+
+    const oversized = validateAvatarFileMeta({
+      type: 'image/webp',
+      size: MAX_AVATAR_SIZE_BYTES + 1,
+    });
+    expect(oversized.valid).toBe(false);
+    expect(oversized.errorMessage).toContain('5 MB');
+  });
+
+  it('validates bio length up to 240 characters and 2FA / backup codes', () => {
+    expect(validateBio('AWPer e criador de conteúdo.').valid).toBe(true);
+    expect(validateBio('a'.repeat(MAX_BIO_LENGTH)).valid).toBe(true);
+    const tooLongBio = validateBio('a'.repeat(MAX_BIO_LENGTH + 1));
+    expect(tooLongBio.valid).toBe(false);
+    expect(tooLongBio.errorMessage).toContain('240 caracteres');
+
+    expect(validateTwoFactorCode('482910', false).valid).toBe(true);
+    expect(validateTwoFactorCode('12345', false).valid).toBe(false);
+    expect(validateTwoFactorCode('7K4M-9P2X', true).valid).toBe(true);
+    expect(validateTwoFactorCode('bad', true).valid).toBe(false);
   });
 
   it('validates clip duration between 1 and 120 seconds', () => {
