@@ -17,9 +17,12 @@ import {
 } from 'lucide-react';
 import { ClipPlayer } from '@/components/player/ClipPlayer';
 import { Button } from '@/components/ui/Button';
+import { DiscordBadge } from '@/components/ui/DiscordBadge';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useLShapePath } from '@/hooks/useLShapePath';
 import { formatDurationBadge } from '@/lib/validators';
 import { getClipShareSlug, isClipFavorited, isClipLiked, type ClipSummary } from '@/types/clip';
+import { getUserDisplayName } from '@/types/user';
 
 export interface HeroPlayerBentoProps {
   clip: ClipSummary | null;
@@ -173,9 +176,22 @@ export function HeroPlayerBento({
                       <Gamepad2 className="h-3.5 w-3.5" aria-hidden="true" />
                       {clip.game.name}
                     </span>
-                    <span className="rounded-control border border-border-muted bg-bg-deep px-2.5 py-0.5 font-mono text-mono-badge text-text-primary">
-                      @{clip.author.username}
-                    </span>
+                    <Link
+                      href={`/u/${clip.author.username}`}
+                      className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 py-0.5 font-mono text-mono-badge text-text-primary transition-colors hover:border-success"
+                    >
+                      <UserAvatar
+                        username={clip.author.username}
+                        displayName={clip.author.display_name}
+                        avatarUrl={clip.author.avatar_url}
+                        size="xs"
+                      />
+                      <span>{getUserDisplayName(clip.author)}</span>
+                      <span className="text-text-muted">@{clip.author.username}</span>
+                    </Link>
+                    {clip.author.discord_linked && (
+                      <DiscordBadge discordUsername={clip.author.discord_username} compact />
+                    )}
                   </div>
 
                   <h1 className="line-clamp-2 font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
