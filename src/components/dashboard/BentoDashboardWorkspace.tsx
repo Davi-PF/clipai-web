@@ -29,6 +29,24 @@ import type { Collection } from '@/types/collection';
 
 const QUEUE_PAGE_SIZE = 6;
 const SEARCH_DEBOUNCE_MS = 300;
+const DASHBOARD_SECTIONS: readonly DashboardSection[] = [
+  'home',
+  'recent',
+  'featured',
+  'favorites',
+  'collections',
+] as const;
+
+function resolveInitialDashboardSection(): DashboardSection {
+  if (typeof window === 'undefined') {
+    return 'home';
+  }
+  const param = new URLSearchParams(window.location.search).get('section');
+  if (param && (DASHBOARD_SECTIONS as readonly string[]).includes(param)) {
+    return param as DashboardSection;
+  }
+  return 'home';
+}
 
 export function BentoDashboardWorkspace() {
   const router = useRouter();
@@ -40,7 +58,9 @@ export function BentoDashboardWorkspace() {
 
   const { isCollapsed: isSidebarCollapsed, toggleCollapsed: toggleSidebarCollapsed } =
     useSidebarState();
-  const [activeSection, setActiveSection] = useState<DashboardSection>('home');
+  const [activeSection, setActiveSection] = useState<DashboardSection>(
+    resolveInitialDashboardSection,
+  );
   const [quickFilter, setQuickFilter] = useState<QuickFilterSelection>({});
   const [activeCollection, setActiveCollection] = useState<Collection | null>(null);
 
@@ -112,6 +132,12 @@ export function BentoDashboardWorkspace() {
   useEffect(() => {
     void loadCollections();
   }, [loadCollections]);
+
+  useEffect(() => {
+    if (activeSection === 'collections' && !activeCollection && collections.length > 0) {
+      setActiveCollection(collections[0] ?? null);
+    }
+  }, [activeSection, activeCollection, collections]);
 
   // Carrega clipes filtrados
   const loadClips = useCallback(async () => {
@@ -199,6 +225,10 @@ export function BentoDashboardWorkspace() {
     }
     setActiveSection(section);
     setPage(1);
+    if (typeof window !== 'undefined') {
+      const nextUrl = section === 'home' ? '/dashboard' : `/dashboard?section=${section}`;
+      window.history.replaceState(null, '', nextUrl);
+    }
     if (section !== 'collections') {
       setActiveCollection(null);
     } else if (!activeCollection && collections.length > 0) {

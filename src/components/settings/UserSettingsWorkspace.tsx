@@ -54,7 +54,7 @@ export function UserSettingsWorkspace() {
     if (section === 'settings') {
       return;
     }
-    router.push('/dashboard');
+    router.push(section === 'home' ? '/dashboard' : `/dashboard?section=${section}`);
   };
 
   const handleLogout = async () => {
