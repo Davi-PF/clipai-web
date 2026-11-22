@@ -488,10 +488,10 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
                   </p>
                 </div>
 
-                <div className="flex flex-col items-center gap-4 sm:flex-row">
+                <div className="flex flex-col items-start gap-4">
                   <div
                     data-testid="local-2fa-qrcode"
-                    className="inline-flex shrink-0 items-center justify-center rounded-card border border-border-muted bg-text-primary p-3.5"
+                    className="inline-flex shrink-0 items-center justify-center self-center rounded-card border border-border-muted bg-text-primary p-3.5 sm:self-start"
                   >
                     <QRCodeSVG
                       value={setupData.otpauth_uri}
@@ -502,13 +502,13 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
                     />
                   </div>
 
-                  <div className="min-w-0 flex-1 space-y-2.5">
+                  <div className="w-full min-w-0 space-y-2.5">
                     <span className="block font-mono text-mono-badge uppercase text-text-muted">
                       CHAVE SECRETA MANUAL (BASE32)
                     </span>
                     <code
                       data-testid="manual-2fa-secret"
-                      className="block break-all rounded-control border border-border-muted bg-bg-surface px-3 py-2 font-mono text-mono-body font-semibold text-text-primary"
+                      className="block w-full break-all rounded-control border border-border-muted bg-bg-surface px-3 py-2 font-mono text-mono-body font-semibold text-text-primary"
                     >
                       {setupData.manual_secret || setupData.secret}
                     </code>

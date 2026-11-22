@@ -30,7 +30,7 @@ export function DiscordBadge({
           ? `Conta Discord vinculada: @${normalizedUsername}`
           : 'Conta Discord vinculada'
       }
-      className={`inline-flex items-center gap-1.5 rounded-control border border-success bg-bg-deep px-2.5 py-0.5 font-mono text-mono-badge font-medium text-text-primary ${className}`.trim()}
+      className={`inline-flex h-6 items-center gap-1.5 rounded-control border border-success bg-bg-deep px-2.5 font-mono text-mono-badge font-medium leading-none text-text-primary ${className}`.trim()}
     >
       <DiscordIcon className="h-3.5 w-3.5 shrink-0 text-success" />
       <span className="truncate">{label}</span>
