@@ -1,6 +1,8 @@
 import type {
   Clip,
   ClipAuthorSummary,
+  ClipFavoriteResponse,
+  ClipLikeResponse,
   ClipSortOption,
   ClipStatus,
   ClipSummary,
@@ -20,6 +22,8 @@ import type {
 export type {
   Clip,
   ClipAuthorSummary,
+  ClipFavoriteResponse,
+  ClipLikeResponse,
   ClipSortOption,
   ClipStatus,
   ClipSummary,
@@ -38,9 +42,14 @@ export type {
 
 export interface ListClipsParams {
   q?: string;
+  game?: string;
   game_slug?: string;
   game_id?: string;
   tag?: string;
+  author?: string;
+  mine?: boolean;
+  favorited?: boolean;
+  collection_id?: string;
   sort?: ClipSortOption;
   page?: number;
   page_size?: number;
@@ -100,3 +109,17 @@ export type ClipUploadStage =
   | 'confirming'
   | 'success'
   | 'error';
+
+export function isClipLiked(clip: Pick<ClipSummary, 'is_liked' | 'is_liked_by_me'>): boolean {
+  return Boolean(clip.is_liked ?? clip.is_liked_by_me);
+}
+
+export function isClipFavorited(
+  clip: Pick<ClipSummary, 'is_favorited' | 'is_favorited_by_me'>,
+): boolean {
+  return Boolean(clip.is_favorited ?? clip.is_favorited_by_me);
+}
+
+export function getClipShareSlug(clip: Pick<ClipSummary, 'id' | 'slug'>): string {
+  return clip.slug || clip.id;
+}

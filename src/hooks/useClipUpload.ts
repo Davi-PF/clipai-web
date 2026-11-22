@@ -143,14 +143,16 @@ export function useClipUpload(): UseClipUploadResult {
           controller.signal,
         );
 
-        setStage('uploading_thumbnail');
-        await uploadFileToPresignedUrl(
-          presigned.thumbnail_upload.url,
-          extractedMeta.thumbnailBlob,
-          presigned.thumbnail_upload.headers['Content-Type'] || extractedMeta.thumbnailMimeType,
-          () => undefined,
-          controller.signal,
-        );
+        if (presigned.thumbnail_upload) {
+          setStage('uploading_thumbnail');
+          await uploadFileToPresignedUrl(
+            presigned.thumbnail_upload.url,
+            extractedMeta.thumbnailBlob,
+            presigned.thumbnail_upload.headers['Content-Type'] || extractedMeta.thumbnailMimeType,
+            () => undefined,
+            controller.signal,
+          );
+        }
 
         setStage('confirming');
         const confirmedClip = await clipsService.confirmUpload(presigned.clip_id);
