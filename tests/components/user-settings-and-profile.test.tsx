@@ -415,7 +415,9 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
       expect(screen.getByLabelText('Sidebar Líquida de navegação')).toBeInTheDocument();
     });
 
+    // On Dashboard, inline sidebar collapse toggle is hidden (Hero Player notch handles it)
     const collapseButtons = screen.getAllByRole('button', { name: 'Recolher sidebar' });
+    expect(collapseButtons).toHaveLength(1);
     await user.click(collapseButtons[0]!);
     expect(screen.getByLabelText('Sidebar Líquida de navegação')).toHaveAttribute(
       'data-collapsed',
@@ -435,6 +437,19 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
       expect(screen.getByRole('heading', { name: 'CONFIGURAÇÕES DA CONTA' })).toBeInTheDocument();
     });
 
+    expect(screen.getByLabelText('Sidebar Líquida de navegação')).toHaveAttribute(
+      'data-collapsed',
+      'true',
+    );
+
+    // Clicking the logo expands the sidebar when collapsed; inline collapse chevron appears only on Settings
+    await user.click(screen.getByRole('button', { name: 'Expandir sidebar' }));
+    expect(screen.getByLabelText('Sidebar Líquida de navegação')).toHaveAttribute(
+      'data-collapsed',
+      'false',
+    );
+    const settingsCollapseBtn = screen.getByRole('button', { name: 'Recolher sidebar' });
+    await user.click(settingsCollapseBtn);
     expect(screen.getByLabelText('Sidebar Líquida de navegação')).toHaveAttribute(
       'data-collapsed',
       'true',
