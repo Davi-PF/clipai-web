@@ -81,3 +81,84 @@ export function formatFileSizeMb(bytes: number): string {
   const megabytes = bytes / (1024 * 1024);
   return `${megabytes.toFixed(1)} MB`;
 }
+
+const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,30}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UPPERCASE_REGEX = /[A-Z]/;
+const LOWERCASE_REGEX = /[a-z]/;
+const DIGIT_REGEX = /\d/;
+const SPECIAL_CHAR_REGEX = /[^A-Za-z0-9]/;
+
+export function validateEmail(email: string): ValidationResult {
+  const trimmed = email.trim();
+  if (!trimmed || !EMAIL_REGEX.test(trimmed)) {
+    return {
+      valid: false,
+      errorMessage: 'Informe um endereço de e-mail válido.',
+    };
+  }
+  return { valid: true, errorMessage: null };
+}
+
+export function validateUsername(username: string): ValidationResult {
+  const trimmed = username.trim();
+  if (!USERNAME_REGEX.test(trimmed)) {
+    return {
+      valid: false,
+      errorMessage: 'Use de 3 a 30 caracteres (apenas letras, números e sublinhado).',
+    };
+  }
+  return { valid: true, errorMessage: null };
+}
+
+export function validateDisplayName(displayName: string): ValidationResult {
+  const trimmed = displayName.trim();
+  if (trimmed.length < 2 || trimmed.length > 50) {
+    return {
+      valid: false,
+      errorMessage: 'Informe um nome de exibição entre 2 e 50 caracteres.',
+    };
+  }
+  return { valid: true, errorMessage: null };
+}
+
+export function validatePasswordStrength(password: string): ValidationResult {
+  const hasMinLength = password.length >= 8 && password.length <= 128;
+  const hasRequiredChars =
+    UPPERCASE_REGEX.test(password) &&
+    LOWERCASE_REGEX.test(password) &&
+    DIGIT_REGEX.test(password) &&
+    SPECIAL_CHAR_REGEX.test(password);
+
+  if (!hasMinLength || !hasRequiredChars) {
+    return {
+      valid: false,
+      errorMessage:
+        'A senha deve ter entre 8 e 128 caracteres, incluindo maiúscula, minúscula, número e símbolo.',
+    };
+  }
+  return { valid: true, errorMessage: null };
+}
+
+export function validatePasswordConfirmation(
+  password: string,
+  confirmation: string,
+): ValidationResult {
+  if (!confirmation || password !== confirmation) {
+    return {
+      valid: false,
+      errorMessage: 'As senhas não coincidem.',
+    };
+  }
+  return { valid: true, errorMessage: null };
+}
+
+export function validateLoginPassword(password: string): ValidationResult {
+  if (!password) {
+    return {
+      valid: false,
+      errorMessage: 'Informe sua senha.',
+    };
+  }
+  return { valid: true, errorMessage: null };
+}

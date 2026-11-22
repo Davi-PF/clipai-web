@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Bebas_Neue, JetBrains_Mono } from 'next/font/google';
+import { AppProviders } from '@/components/providers/AppProviders';
 import './globals.css';
 
 const bebasNeue = Bebas_Neue({
@@ -29,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${bebasNeue.variable} ${jetbrainsMono.variable}`}>
       <body className="min-h-screen bg-bg-deep font-mono text-mono-body text-text-primary antialiased">
-        {children}
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );
