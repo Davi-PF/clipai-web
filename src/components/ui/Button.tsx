@@ -28,9 +28,9 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
-  sm: 'h-9 px-3.5 text-mono-meta',
-  md: 'h-11 px-5',
-  lg: 'h-12 px-6',
+  sm: 'min-h-9 px-3.5 py-2 text-mono-meta',
+  md: 'min-h-11 px-5 py-2.5',
+  lg: 'min-h-12 px-6 py-3',
 };
 
 function resolveTypographyClass(variant: ButtonVariant, typography: ButtonTypography): string {
@@ -74,7 +74,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       type={type}
       disabled={isDisabled}
       aria-busy={isLoading}
-      className={`inline-flex items-center justify-center gap-2 rounded-control transition-colors duration-150 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-55 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${typographyClass} ${widthClass} ${className}`.trim()}
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control transition-colors duration-150 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-55 ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${typographyClass} ${widthClass} ${className}`.trim()}
       {...rest}
     >
       {isLoading ? (

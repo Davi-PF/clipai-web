@@ -280,8 +280,8 @@ export function UploadClipModal({
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href={`/c/${uploadedClip.id}`} className="flex-1">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Link href={`/c/${uploadedClip.id}`} className="block">
                 <Button type="button" variant="primary" fullWidth>
                   IR PARA O CLIPE
                 </Button>

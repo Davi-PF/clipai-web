@@ -213,7 +213,7 @@ function ProvisionalDashboardContent() {
               leftIcon={<Plus className="h-4 w-4" />}
               onClick={() => setIsUploadModalOpen(true)}
             >
-              + ENVIAR CLIPE
+              ENVIAR CLIPE
             </Button>
 
             <Button

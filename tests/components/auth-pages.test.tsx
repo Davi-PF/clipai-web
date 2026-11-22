@@ -338,7 +338,7 @@ describe('Auth Pages & Route Guards', () => {
       expect(screen.getByText('NENHUM CLIPE ENCONTRADO')).toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole('button', { name: /\+ ENVIAR CLIPE/i }));
+    await user.click(screen.getByRole('button', { name: /ENVIAR CLIPE/i }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Fechar modal de upload' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
