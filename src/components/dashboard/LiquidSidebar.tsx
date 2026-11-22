@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  BarChart3,
   Bookmark,
   ChevronLeft,
   ChevronRight,
@@ -17,7 +18,7 @@ import type { User } from '@/types/api';
 import { getUserDisplayName } from '@/types/user';
 
 export type DashboardSection =
-  'home' | 'recent' | 'featured' | 'favorites' | 'collections' | 'settings';
+  'home' | 'recent' | 'featured' | 'favorites' | 'collections' | 'studio' | 'settings';
 
 interface NavItemConfig {
   id: DashboardSection;
@@ -31,6 +32,7 @@ const NAV_ITEMS: readonly NavItemConfig[] = [
   { id: 'featured', label: 'Destaques', Icon: Flame },
   { id: 'favorites', label: 'Favoritos', Icon: Bookmark },
   { id: 'collections', label: 'Coleções', Icon: FolderKanban },
+  { id: 'studio', label: 'Estúdio', Icon: BarChart3 },
   { id: 'settings', label: 'Ajustes', Icon: Settings },
 ] as const;
 

@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import type { DashboardSection } from '@/components/dashboard/LiquidSidebar';
 
-export type DashboardContentSection = Exclude<DashboardSection, 'settings'>;
+export type DashboardContentSection = Exclude<DashboardSection, 'settings' | 'studio'>;
 
 export interface SidebarContextValue {
   isCollapsed: boolean;

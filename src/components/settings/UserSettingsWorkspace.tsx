@@ -57,6 +57,10 @@ export function UserSettingsWorkspace() {
     if (section === 'settings') {
       return;
     }
+    if (section === 'studio') {
+      router.push('/studio');
+      return;
+    }
     setActiveSection(section);
     router.push(section === 'home' ? '/dashboard' : `/dashboard?section=${section}`);
   };

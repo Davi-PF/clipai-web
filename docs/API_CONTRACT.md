@@ -865,6 +865,38 @@ Registra uma visualização no clipe e incrementa `views_count` atomicamente.
 
 ---
 
+### 7.9. `POST /api/v1/clips/{clip_id}/telemetry`
+Registra ou atualiza de forma idempotente (upsert por `(clip_id, session_token)`) uma sessão de visualização e seus checkpoints de retenção em múltiplos de 10%. Aceita apenas clipes com `status = 'ready'` e respeita a privacidade do clipe (`friends` exige autenticação).
+- **Auth:** Opcional (Rate limit: 30 req/min por `(user_id ou IP) + clip_id`)
+- **Request Body:**
+```json
+{
+  "session_token": "8d7a6f30-5a4c-4c3b-9b7a-1c2d3e4f5a6b",
+  "watched_seconds": 27.5,
+  "max_progress_pct": 92,
+  "reached_buckets": [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
+}
+```
+> Regras de validação e merge:
+> - `session_token` deve ser um UUID válido gerado no cliente.
+> - `watched_seconds` (`>= 0`) é limitado com segurança no servidor a `duration_seconds * 3`.
+> - `reached_buckets` aceita exclusivamente múltiplos de 10 entre `0` e `100`.
+> - Em envios subsequentes para o mesmo `(clip_id, session_token)`, faz a união ordenada de `reached_buckets`, mantém `max(watched_seconds)` e `max(max_progress_pct)`, e recalcula `completed = (max_progress_pct >= 90)`.
+- **Response `200 OK`:**
+```json
+{
+  "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "clip_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "session_token": "8d7a6f30-5a4c-4c3b-9b7a-1c2d3e4f5a6b",
+  "watched_seconds": 27.5,
+  "max_progress_pct": 92,
+  "reached_buckets": [0, 10, 20, 30, 40, 50, 60, 70, 80, 90],
+  "completed": true
+}
+```
+
+---
+
 ## 8. Endpoints — Coleções (`/api/v1/collections`)
 
 ### 8.1. `GET /api/v1/collections`
@@ -992,3 +1024,147 @@ Adiciona um clipe (`status = 'ready'`) a uma coleção do usuário de forma idem
 Remove um clipe específico da coleção (idempotente).
 - **Auth:** Bearer JWT obrigatório (apenas o dono da coleção)
 - **Response `204 No Content`**
+
+---
+
+## 9. Endpoints — Analytics do Criador (`/api/v1/analytics`)
+
+Todas as rotas abaixo são **100% autenticadas** e restritas exclusivamente aos clipes pertencentes ao `current_user`. Todas aceitam o query param `period` (`7d` | `30d` | `90d` | `all`, padrão `30d`).
+
+### 9.1. `GET /api/v1/analytics/overview`
+Retorna os KPIs consolidados do criador, série diária contínua (`views_by_day` preenchendo dias sem atividade com `0`), resumo agrupado por jogo (`by_game`) e o top 5 de clipes (`top_clips`) no período.
+- **Auth:** Bearer JWT obrigatório
+- **Query Params:** `period` (`7d` | `30d` | `90d` | `all`, default: `30d`)
+- **Response `200 OK` (`AnalyticsOverviewResponse`):**
+```json
+{
+  "period": "30d",
+  "total_clips": 12,
+  "total_views": 1840,
+  "total_likes": 310,
+  "total_favorites": 74,
+  "total_watch_time_seconds": 14250,
+  "avg_retention_pct": 74.2,
+  "completion_rate_pct": 58.5,
+  "total_sessions": 410,
+  "views_by_day": [
+    {
+      "date": "2026-11-21",
+      "sessions": 0,
+      "watch_time_seconds": 0
+    },
+    {
+      "date": "2026-11-22",
+      "sessions": 24,
+      "watch_time_seconds": 612
+    }
+  ],
+  "by_game": [
+    {
+      "game_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "game_name": "CS2",
+      "clips_count": 8,
+      "total_views": 1420,
+      "avg_retention_pct": 76.4
+    }
+  ],
+  "top_clips": [
+    {
+      "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      "slug": "xK9mP2qR7zA",
+      "title": "Clutch 1v4 de AWP na Mirage",
+      "thumbnail_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../thumb.webp",
+      "game_name": "CS2",
+      "views_count": 480,
+      "likes_count": 92,
+      "avg_retention_pct": 81.5,
+      "completion_rate_pct": 68.0
+    }
+  ]
+}
+```
+
+---
+
+### 9.2. `GET /api/v1/analytics/clips`
+Lista paginada de **todos os clipes prontos do criador** (`public`, `friends` e `unlisted`), enriquecidos com métricas de engajamento e retenção do período sem consultas N+1.
+- **Auth:** Bearer JWT obrigatório
+- **Query Params:**
+  - `q` (opcional): busca textual por título
+  - `privacy` (opcional): `public` | `friends` | `unlisted`
+  - `game_id` (opcional): UUID do jogo
+  - `period` (`7d` | `30d` | `90d` | `all`, default: `30d`)
+  - `sort` (`views` | `retention` | `likes` | `recent`, default: `recent`)
+  - `page` (default: `1`), `page_size` (default: `20`, máx: `50`)
+- **Response `200 OK` (`PaginatedResponse[CreatorClipAnalyticsItem]`):**
+```json
+{
+  "items": [
+    {
+      "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      "slug": "xK9mP2qR7zA",
+      "title": "Clutch 1v4 de AWP na Mirage",
+      "privacy": "public",
+      "status": "ready",
+      "thumbnail_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../thumb.webp",
+      "duration_seconds": 34.5,
+      "game_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "game_name": "CS2",
+      "views_count": 480,
+      "likes_count": 92,
+      "favorites_count": 21,
+      "sessions_count": 120,
+      "avg_retention_pct": 81.5,
+      "completion_rate_pct": 68.0,
+      "created_at": "2026-11-21T22:05:00Z"
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 1,
+  "total_pages": 1
+}
+```
+
+---
+
+### 9.3. `GET /api/v1/analytics/clips/{clip_id}/retention`
+Retorna a curva de retenção completa de 11 pontos (`0%` a `100%`), o ponto de maior queda entre faixas consecutivas (`biggest_drop_bucket_pct`) e a série diária de sessões do clipe. Retorna `403 FORBIDDEN` caso o clipe pertença a outro usuário.
+- **Auth:** Bearer JWT obrigatório (somente dono do clipe)
+- **Query Params:** `period` (`7d` | `30d` | `90d` | `all`, default: `30d`)
+- **Response `200 OK` (`ClipRetentionResponse`):**
+```json
+{
+  "clip_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "slug": "xK9mP2qR7zA",
+  "title": "Clutch 1v4 de AWP na Mirage",
+  "duration_seconds": 34.5,
+  "period": "30d",
+  "total_sessions": 40,
+  "avg_watch_seconds": 24.8,
+  "avg_retention_pct": 72.5,
+  "completion_rate_pct": 55.0,
+  "biggest_drop_bucket_pct": 30,
+  "views_by_day": [
+    {
+      "date": "2026-11-22",
+      "sessions": 12,
+      "watch_time_seconds": 298
+    }
+  ],
+  "curve": [
+    { "bucket_pct": 0, "retention_pct": 100.0, "sessions": 40 },
+    { "bucket_pct": 10, "retention_pct": 95.0, "sessions": 38 },
+    { "bucket_pct": 20, "retention_pct": 90.0, "sessions": 36 },
+    { "bucket_pct": 30, "retention_pct": 65.0, "sessions": 26 },
+    { "bucket_pct": 40, "retention_pct": 62.5, "sessions": 25 },
+    { "bucket_pct": 50, "retention_pct": 60.0, "sessions": 24 },
+    { "bucket_pct": 60, "retention_pct": 57.5, "sessions": 23 },
+    { "bucket_pct": 70, "retention_pct": 55.0, "sessions": 22 },
+    { "bucket_pct": 80, "retention_pct": 55.0, "sessions": 22 },
+    { "bucket_pct": 90, "retention_pct": 55.0, "sessions": 22 },
+    { "bucket_pct": 100, "retention_pct": 50.0, "sessions": 20 }
+  ]
+}
+```
+> Quando `total_sessions == 0`, os 11 pontos de `curve` são retornados com `retention_pct: 0.0` e `sessions: 0`, e `biggest_drop_bucket_pct` é `null`.

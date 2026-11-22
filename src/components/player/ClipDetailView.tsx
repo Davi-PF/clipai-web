@@ -251,6 +251,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
         {loadState === 'ready' && clip && (
           <>
             <ClipPlayer
+              clipId={clip.id}
               src={clip.video_url}
               poster={clip.thumbnail_url}
               title={clip.title}
