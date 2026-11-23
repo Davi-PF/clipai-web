@@ -34,17 +34,17 @@ export function DeleteCollectionDialog({
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-danger-surface text-danger-text">
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />
           </div>
-          <div className="space-y-1.5">
+          <div className="min-w-0 flex-1 space-y-1.5">
             <h2
               id="delete-collection-title"
               className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary"
             >
               EXCLUIR COLEÇÃO PERMANENTEMENTE?
             </h2>
-            <p className="font-mono text-mono-meta text-text-secondary">
+            <p className="break-words font-mono text-mono-meta text-text-secondary">
               Tem certeza que deseja excluir a coleção{' '}
-              <strong className="text-text-primary">{collectionTitle}</strong>? Os clipes salvos
-              nela não serão apagados da sua conta.
+              <strong className="break-words text-text-primary">{collectionTitle}</strong>? Os
+              clipes salvos nela não serão apagados da sua conta.
             </p>
           </div>
         </div>

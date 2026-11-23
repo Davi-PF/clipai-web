@@ -66,7 +66,7 @@ export function TagsChipInput({ tags, onChange, disabled = false }: Readonly<Tag
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex h-11 flex-1 items-center gap-2 rounded-control border border-border-muted bg-bg-elevated px-3 focus-within:border-success">
+        <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-control border border-border-muted bg-bg-elevated px-3 focus-within:border-success">
           <Hash className="h-4 w-4 shrink-0 text-text-muted" aria-hidden="true" />
           <input
             id="clip-tags-input"
@@ -81,7 +81,7 @@ export function TagsChipInput({ tags, onChange, disabled = false }: Readonly<Tag
               }
             }}
             onKeyDown={handleKeyDown}
-            className="h-full w-full bg-transparent font-mono text-mono-body text-text-primary placeholder:text-text-muted focus:outline-none disabled:cursor-not-allowed"
+            className="h-full min-w-0 w-full bg-transparent font-mono text-mono-body text-text-primary placeholder:text-text-muted focus:outline-none disabled:cursor-not-allowed"
           />
         </div>
         <button
@@ -89,10 +89,10 @@ export function TagsChipInput({ tags, onChange, disabled = false }: Readonly<Tag
           disabled={disabled || !draftTag.trim()}
           onClick={() => addTag(draftTag)}
           aria-label="Adicionar tag"
-          className="inline-flex h-11 items-center gap-1.5 rounded-control border border-border-muted bg-bg-elevated px-3.5 font-mono text-mono-meta text-text-primary transition-colors hover:border-success hover:bg-bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-control border border-border-muted bg-bg-elevated px-3 font-mono text-mono-meta text-text-primary transition-colors hover:border-success hover:bg-bg-surface disabled:cursor-not-allowed disabled:opacity-50 sm:px-3.5"
         >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          Adicionar
+          <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>Adicionar</span>
         </button>
       </div>
 
@@ -107,15 +107,15 @@ export function TagsChipInput({ tags, onChange, disabled = false }: Readonly<Tag
           {tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 py-1 font-mono text-mono-badge text-text-primary"
+              className="inline-flex max-w-full items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 py-1 font-mono text-mono-badge text-text-primary"
             >
-              <span>#{tag}</span>
+              <span className="break-all">#{tag}</span>
               <button
                 type="button"
                 disabled={disabled}
                 onClick={() => handleRemoveTag(tag)}
                 aria-label={`Remover tag ${tag}`}
-                className="rounded-control text-text-muted transition-colors hover:text-danger-text disabled:cursor-not-allowed"
+                className="shrink-0 rounded-control text-text-muted transition-colors hover:text-danger-text disabled:cursor-not-allowed"
               >
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>

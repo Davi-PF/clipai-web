@@ -231,7 +231,7 @@ export function CreatorStudioWorkspace() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary lg:flex-row">
+    <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary md:flex-row">
       <LiquidSidebar
         activeSection="studio"
         onSelectSection={handleSelectSection}
@@ -243,7 +243,7 @@ export function CreatorStudioWorkspace() {
         onLogout={() => void handleLogout()}
       />
 
-      <main className="min-w-0 flex-1 p-4 md:p-6">
+      <main className="min-w-0 flex-1 p-4 pb-20 md:p-6">
         <div className="mx-auto max-w-[1440px] space-y-5">
           {/* Cabeçalho do Estúdio */}
           <header className="flex flex-col justify-between gap-4 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 md:flex-row md:items-center">

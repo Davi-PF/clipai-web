@@ -83,7 +83,7 @@ export function UserSettingsWorkspace() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary lg:flex-row">
+    <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary md:flex-row">
       <LiquidSidebar
         activeSection="settings"
         onSelectSection={handleSelectSection}
@@ -95,7 +95,7 @@ export function UserSettingsWorkspace() {
         onLogout={() => void handleLogout()}
       />
 
-      <main className="min-w-0 flex-1 p-4 md:p-6 lg:p-8">
+      <main className="min-w-0 flex-1 p-4 pb-20 md:p-6 lg:p-8">
         <div className="mx-auto max-w-4xl space-y-6">
           {/* Cabeçalho da Página de Configurações */}
           <header className="flex flex-col justify-between gap-4 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6 sm:flex-row sm:items-center">

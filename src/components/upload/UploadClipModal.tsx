@@ -244,20 +244,20 @@ export function UploadClipModal({
       aria-labelledby="upload-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-bg-deep/85 p-4 backdrop-blur-sm"
     >
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6 text-text-primary shadow-2xl">
-        <header className="mb-5 flex items-center justify-between border-b border-border-muted pb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4 text-text-primary shadow-2xl sm:p-6">
+        <header className="mb-5 flex items-start justify-between gap-3 border-b border-border-muted pb-4 sm:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
               <Film className="h-5 w-5 text-success" aria-hidden="true" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <h2
                 id="upload-modal-title"
                 className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary"
               >
                 ENVIAR CLIPE
               </h2>
-              <p className="font-mono text-mono-meta text-text-secondary">
+              <p className="break-words font-mono text-mono-meta text-text-secondary">
                 Upload direto para o Cloudflare R2 • MP4 ou WebM até 100 MB e 120s
               </p>
             </div>
@@ -267,7 +267,7 @@ export function UploadClipModal({
             type="button"
             onClick={handleClose}
             aria-label="Fechar modal de upload"
-            className="rounded-control p-2 text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary"
+            className="shrink-0 rounded-control p-2 text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -277,11 +277,11 @@ export function UploadClipModal({
           <div className="space-y-5 py-2">
             <div className="flex items-start gap-3 rounded-card border border-success bg-success-surface p-4">
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" aria-hidden="true" />
-              <div className="space-y-1 font-mono text-mono-body text-text-primary">
+              <div className="min-w-0 flex-1 space-y-1 font-mono text-mono-body text-text-primary">
                 <p className="font-semibold">Seu clipe está no ar!</p>
-                <p className="text-mono-meta">
-                  <strong>{uploadedClip.title}</strong> foi processado e já pode ser reproduzido e
-                  compartilhado.
+                <p className="break-words text-mono-meta">
+                  <strong className="break-words">{uploadedClip.title}</strong> foi processado e já
+                  pode ser reproduzido e compartilhado.
                 </p>
               </div>
             </div>
@@ -405,7 +405,9 @@ export function UploadClipModal({
                 className="flex items-start gap-2 rounded-card border border-danger bg-danger-surface p-3 font-mono text-mono-meta text-danger-text"
               >
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{inspectionError ?? formErrors.file}</span>
+                <span className="min-w-0 flex-1 break-words">
+                  {inspectionError ?? formErrors.file}
+                </span>
               </div>
             )}
 
@@ -503,9 +505,9 @@ export function UploadClipModal({
                 role="alert"
                 className="flex flex-col gap-3 rounded-card border border-danger bg-danger-surface p-4 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex items-start gap-2 font-mono text-mono-meta text-danger-text">
+                <div className="flex min-w-0 flex-1 items-start gap-2 font-mono text-mono-meta text-danger-text">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span>{uploadError}</span>
+                  <span className="min-w-0 flex-1 break-words">{uploadError}</span>
                 </div>
                 <Button
                   type="button"
