@@ -261,20 +261,20 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
               onQualifiedView={handleRegisterView}
             />
 
-            <section className="space-y-5 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6">
+            <section className="space-y-5 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4 sm:p-6">
               <div className="flex flex-col justify-between gap-4 border-b border-border-muted pb-5 lg:flex-row lg:items-start">
-                <div className="space-y-2">
+                <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 py-1 font-mono text-mono-badge uppercase text-success">
-                      <Gamepad2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      {clip.game.name}
+                    <span className="inline-flex max-w-full items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 py-1 font-mono text-mono-badge uppercase text-success">
+                      <Gamepad2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{clip.game.name}</span>
                     </span>
 
                     {(() => {
                       const PrivacyMeta = PRIVACY_LABELS[clip.privacy];
                       const PrivacyIcon = PrivacyMeta.Icon;
                       return (
-                        <span className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-elevated px-2.5 py-1 font-mono text-mono-badge uppercase text-text-primary">
+                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-control border border-border-muted bg-bg-elevated px-2.5 py-1 font-mono text-mono-badge uppercase text-text-primary">
                           <PrivacyIcon className="h-3.5 w-3.5" aria-hidden="true" />
                           {PrivacyMeta.label}
                         </span>
@@ -282,12 +282,12 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
                     })()}
                   </div>
 
-                  <h1 className="font-display text-display-hero uppercase tracking-[0.06em] text-text-primary">
+                  <h1 className="break-words font-display text-display-hero uppercase tracking-[0.06em] text-text-primary">
                     {clip.title}
                   </h1>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2.5 lg:justify-end">
                   <button
                     type="button"
                     disabled={isLikePending(clip.id)}
@@ -372,7 +372,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
               </div>
 
               {clip.description && (
-                <p className="whitespace-pre-line font-mono text-mono-body text-text-secondary">
+                <p className="break-words whitespace-pre-line font-mono text-mono-body text-text-secondary">
                   {clip.description}
                 </p>
               )}
@@ -382,7 +382,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
                   {clip.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-control border border-border-muted bg-bg-deep px-2.5 py-1 font-mono text-mono-badge text-text-secondary"
+                      className="max-w-full break-all rounded-control border border-border-muted bg-bg-deep px-2.5 py-1 font-mono text-mono-badge text-text-secondary"
                     >
                       #{tag}
                     </span>
@@ -391,7 +391,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
               )}
 
               <div className="grid grid-cols-1 gap-4 border-t border-border-muted pt-5 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-card bg-bg-deep p-3.5">
+                <div className="min-w-0 rounded-card bg-bg-deep p-3.5">
                   <span className="flex items-center gap-1.5 font-mono text-mono-badge uppercase text-text-muted">
                     <UserIcon className="h-3.5 w-3.5" aria-hidden="true" />
                     AUTOR
@@ -417,7 +417,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
                   </div>
                 </div>
 
-                <div className="rounded-card bg-bg-deep p-3.5">
+                <div className="min-w-0 rounded-card bg-bg-deep p-3.5">
                   <span className="flex items-center gap-1.5 font-mono text-mono-badge uppercase text-text-muted">
                     <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
                     PUBLICADO EM
@@ -427,7 +427,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
                   </p>
                 </div>
 
-                <div className="rounded-card bg-bg-deep p-3.5">
+                <div className="min-w-0 rounded-card bg-bg-deep p-3.5">
                   <span className="flex items-center gap-1.5 font-mono text-mono-badge uppercase text-text-muted">
                     <Eye className="h-3.5 w-3.5" aria-hidden="true" />
                     ENGAJAMENTO
@@ -441,7 +441,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
                   </p>
                 </div>
 
-                <div className="rounded-card bg-bg-deep p-3.5">
+                <div className="min-w-0 rounded-card bg-bg-deep p-3.5">
                   <span className="block font-mono text-mono-badge uppercase text-text-muted">
                     METADADOS TÉCNICOS
                   </span>

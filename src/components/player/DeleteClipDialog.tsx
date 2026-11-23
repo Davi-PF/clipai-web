@@ -34,16 +34,16 @@ export function DeleteClipDialog({
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-danger-surface text-danger-text">
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />
           </div>
-          <div className="space-y-1.5">
+          <div className="min-w-0 flex-1 space-y-1.5">
             <h2
               id="delete-clip-title"
               className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary"
             >
               EXCLUIR CLIPE PERMANENTEMENTE?
             </h2>
-            <p className="font-mono text-mono-meta text-text-secondary">
-              O clipe <strong className="text-text-primary">{clipTitle}</strong> e seus arquivos no
-              armazenamento serão removidos de forma irreversível.
+            <p className="break-words font-mono text-mono-meta text-text-secondary">
+              O clipe <strong className="break-words text-text-primary">{clipTitle}</strong> e seus
+              arquivos no armazenamento serão removidos de forma irreversível.
             </p>
           </div>
         </div>

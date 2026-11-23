@@ -199,14 +199,20 @@ export function ClipPlayer({
           type="button"
           onClick={() => void togglePlay()}
           aria-label="Reproduzir vídeo"
-          className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[1.5px] border-success bg-bg-surface/90 text-success transition-transform hover:scale-105 hover:bg-success hover:text-bg-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
+          className="absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-[65%] items-center justify-center rounded-full border-[1.5px] border-success bg-bg-surface/90 text-success transition-transform hover:scale-105 hover:bg-success hover:text-bg-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success sm:h-16 sm:w-16 sm:-translate-y-1/2"
         >
-          <Play className="ml-1 h-7 w-7 fill-current" aria-hidden="true" />
+          <Play className="ml-0.5 h-5 w-5 fill-current sm:ml-1 sm:h-7 sm:w-7" aria-hidden="true" />
         </button>
       )}
 
       {/* Barra de controles inferiores */}
-      <div className="absolute inset-x-0 bottom-0 space-y-2 bg-bg-deep/90 px-4 py-3 backdrop-blur-sm">
+      <div
+        className={`absolute inset-x-0 bottom-0 space-y-1.5 bg-bg-deep/90 px-2.5 py-2 backdrop-blur-sm transition-opacity duration-200 sm:space-y-2 sm:px-4 sm:py-3 ${
+          isPlaying
+            ? 'opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
+            : 'opacity-100'
+        }`}
+      >
         <div className="relative flex items-center">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-surface">
             <div className="h-full bg-success" style={{ width: `${progressPercent}%` }} />
@@ -263,7 +269,7 @@ export function ClipPlayer({
               />
             </div>
 
-            <span className="font-mono text-mono-meta text-text-secondary">
+            <span className="whitespace-nowrap font-mono text-mono-badge text-text-secondary sm:text-mono-meta">
               {formatDurationBadge(currentTime)} / {formatDurationBadge(duration)}
             </span>
           </div>
