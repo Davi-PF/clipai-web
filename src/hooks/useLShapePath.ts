@@ -130,7 +130,7 @@ export function useLShapePath(
       const width = Math.round(containerRect.width);
       const height = Math.round(containerRect.height);
 
-      if (width < 520 || height < 280) {
+      if (width < 640 || height < 280) {
         setPaths({
           width,
           height,

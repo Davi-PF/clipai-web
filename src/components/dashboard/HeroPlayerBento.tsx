@@ -85,7 +85,7 @@ export function HeroPlayerBento({
           aria-label={isSidebarCollapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
           title={isSidebarCollapsed ? 'Expandir sidebar' : 'Recolher sidebar'}
           style={isReady && notchY > 0 ? { top: `${notchY}px` } : { top: '44%' }}
-          className="absolute -left-4 z-30 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border-[1.5px] border-border-muted bg-bg-surface text-text-primary shadow-md transition-colors hover:border-success hover:bg-bg-elevated hover:text-success lg:flex"
+          className="absolute -left-4 z-30 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border-[1.5px] border-border-muted bg-bg-surface text-text-primary shadow-md transition-colors hover:border-success hover:bg-bg-elevated hover:text-success md:flex"
         >
           {isSidebarCollapsed ? (
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -94,7 +94,7 @@ export function HeroPlayerBento({
           )}
         </button>
 
-        {/* Superfície recortada em "L" no desktop (ou retangular em < lg) */}
+        {/* Superfície recortada em "L" quando há largura >= 640px (ou retangular em telas menores) */}
         <div
           style={isReady ? { clipPath: `path('${clipPath}')` } : undefined}
           className={`relative overflow-hidden bg-bg-surface ${
@@ -105,10 +105,17 @@ export function HeroPlayerBento({
             <div
               aria-busy="true"
               aria-label="Carregando player em destaque"
-              className="flex min-h-[420px] flex-col justify-between p-5 lg:min-h-[540px]"
+              className="flex min-h-[380px] flex-col justify-between p-5 lg:min-h-[540px]"
             >
               <div className="aspect-video w-full animate-pulse rounded-card bg-bg-elevated" />
-              <div className="mt-4 max-w-md space-y-2.5 lg:pr-8">
+              <div
+                style={
+                  isReady && cutoutHeight > 0 ? { minHeight: `${cutoutHeight + 20}px` } : undefined
+                }
+                className={`mt-4 space-y-2.5 ${
+                  isReady ? 'max-w-[calc(100%-340px)] pr-4' : 'max-w-md'
+                }`}
+              >
                 <div className="h-7 w-3/4 animate-pulse rounded-control bg-bg-elevated" />
                 <div className="h-4 w-1/2 animate-pulse rounded-control bg-bg-elevated" />
                 <div className="flex gap-2 pt-2">
@@ -120,7 +127,14 @@ export function HeroPlayerBento({
           )}
 
           {!isLoading && !clip && (
-            <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-8 text-center lg:min-h-[540px] lg:pb-36">
+            <div
+              style={
+                isReady && cutoutHeight > 0
+                  ? { paddingBottom: `${cutoutHeight + 28}px` }
+                  : undefined
+              }
+              className="flex min-h-[380px] flex-col items-center justify-center gap-4 p-6 text-center sm:p-8 lg:min-h-[540px]"
+            >
               <div className="flex h-14 w-14 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
                 <Film className="h-7 w-7 text-text-muted" aria-hidden="true" />
               </div>
@@ -159,27 +173,29 @@ export function HeroPlayerBento({
                 />
               </div>
 
-              {/* Perna inferior esquerda do "L": altura mínima = cutoutHeight + 20px (18px do raio do canto) para o vídeo nunca ser cortado */}
+              {/* Perna inferior esquerda do "L": largura limitada apenas quando o recorte SVG está ativo */}
               <div
                 style={
                   isReady && cutoutHeight > 0 ? { minHeight: `${cutoutHeight + 20}px` } : undefined
                 }
-                className="flex flex-col justify-center space-y-2.5 p-5 lg:max-w-[calc(100%-340px)]"
+                className={`flex min-w-0 flex-col justify-center space-y-2.5 p-4 sm:p-5 ${
+                  isReady ? 'max-w-[calc(100%-340px)]' : 'w-full'
+                }`}
               >
-                <div className="space-y-1.5">
+                <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     {showFeaturedBadge && (
-                      <span className="inline-flex h-6 items-center gap-1 rounded-control bg-warning px-2 font-mono text-mono-badge font-bold uppercase leading-none text-bg-deep">
+                      <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-control bg-warning px-2 font-mono text-mono-badge font-bold uppercase leading-none text-bg-deep">
                         ★ DESTAQUE
                       </span>
                     )}
-                    <span className="inline-flex h-6 items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 font-mono text-mono-badge uppercase leading-none text-success">
+                    <span className="inline-flex h-6 max-w-full items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 font-mono text-mono-badge uppercase leading-none text-success">
                       <Gamepad2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                      <span>{clip.game.name}</span>
+                      <span className="truncate">{clip.game.name}</span>
                     </span>
                     <Link
                       href={`/u/${clip.author.username}`}
-                      className="inline-flex h-6 items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 font-mono text-mono-badge leading-none text-text-primary transition-colors hover:border-success"
+                      className="inline-flex h-6 max-w-full min-w-0 items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 font-mono text-mono-badge leading-none text-text-primary transition-colors hover:border-success"
                     >
                       <UserAvatar
                         username={clip.author.username}
@@ -187,15 +203,15 @@ export function HeroPlayerBento({
                         avatarUrl={clip.author.avatar_url}
                         size="xs"
                       />
-                      <span>{getUserDisplayName(clip.author)}</span>
-                      <span className="text-text-muted">@{clip.author.username}</span>
+                      <span className="truncate">{getUserDisplayName(clip.author)}</span>
+                      <span className="shrink-0 text-text-muted">@{clip.author.username}</span>
                     </Link>
                     {clip.author.discord_linked && (
                       <DiscordBadge discordUsername={clip.author.discord_username} compact />
                     )}
                   </div>
 
-                  <h1 className="line-clamp-2 font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
+                  <h1 className="line-clamp-2 break-words font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
                     {clip.title}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 font-mono text-mono-badge text-text-secondary">
@@ -208,7 +224,7 @@ export function HeroPlayerBento({
                     {clip.tags.slice(0, 3).map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-control border border-border-muted bg-bg-deep px-2 py-0.5 text-text-secondary"
+                        className="max-w-full truncate rounded-control border border-border-muted bg-bg-deep px-2 py-0.5 text-text-secondary"
                       >
                         #{tag}
                       </span>
@@ -297,7 +313,7 @@ export function HeroPlayerBento({
             width={width}
             height={height}
             viewBox={`0 0 ${width} ${height}`}
-            className="pointer-events-none absolute inset-0 z-20 hidden lg:block"
+            className="pointer-events-none absolute inset-0 z-20"
           >
             <path
               d={strokePath}
@@ -309,8 +325,8 @@ export function HeroPlayerBento({
           </svg>
         )}
 
-        {/* Encaixe do Card Filtros Rápidos 3x3 no recorte inferior direito do "L" (desktop lg+) */}
-        <div className="mt-3 lg:absolute lg:bottom-0 lg:right-0 lg:z-20 lg:mt-0 lg:w-[324px]">
+        {/* Encaixe do Card Filtros Rápidos 3x3: absoluto somente quando o recorte em "L" está ativo */}
+        <div className={isReady ? 'absolute bottom-0 right-0 z-20 mt-0 w-[324px]' : 'mt-3 w-full'}>
           {quickFiltersSlot}
         </div>
       </div>

@@ -61,83 +61,91 @@ export function LiquidSidebar({
 
   return (
     <>
-      {/* Navegação compacta Mobile/Tablet (< lg) */}
-      <header className="flex flex-col gap-3 border-b border-border-muted bg-bg-surface px-4 py-3 lg:hidden">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
-              <Film className="h-4 w-4 text-success" aria-hidden="true" />
-            </span>
-            <span className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
-              CLIPAÍ
-            </span>
-            <span className="rounded-control bg-warning px-2 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep">
-              BETA
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => onSelectSection('settings')}
-              aria-label="Abrir configurações do perfil"
-              className="inline-flex items-center gap-2 rounded-control border border-border-muted bg-bg-elevated px-2.5 py-1 text-left transition-colors hover:border-success"
-            >
-              <UserAvatar
-                username={user.username}
-                displayName={user.display_name}
-                avatarUrl={user.avatar_url}
-                size="xs"
-              />
-              <span className="hidden font-mono text-mono-meta text-text-primary sm:inline">
-                @{user.username}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={onLogout}
-              disabled={isLoggingOut}
-              aria-label="Sair da conta"
-              className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-elevated px-3 py-1.5 font-mono text-mono-badge text-danger-text transition-colors hover:border-danger hover:bg-danger-surface"
-            >
-              <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
-              Sair
-            </button>
-          </div>
+      {/* Cabeçalho compacto Mobile (< 768px) */}
+      <header className="flex items-center justify-between gap-2 border-b border-border-muted bg-bg-surface px-3 py-2.5 md:hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
+            <Film className="h-4 w-4 text-success" aria-hidden="true" />
+          </span>
+          <span className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
+            CLIPAÍ
+          </span>
+          <span className="hidden rounded-control bg-warning px-1.5 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep sm:inline-flex">
+            BETA
+          </span>
         </div>
 
-        <nav aria-label="Navegação principal mobile" className="flex gap-2 overflow-x-auto pb-1">
-          {NAV_ITEMS.map(({ id, label, Icon }) => {
-            const isActive = activeSection === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-current={isActive ? 'page' : undefined}
-                onClick={() => onSelectSection(id)}
-                className={`inline-flex shrink-0 items-center gap-1.5 rounded-control border px-3 py-1.5 font-mono text-mono-meta transition-colors ${
-                  isActive
-                    ? 'border-success bg-bg-deep text-text-primary'
-                    : 'border-border-muted bg-bg-elevated text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                <Icon
-                  className={`h-3.5 w-3.5 ${isActive ? 'text-success' : 'text-text-muted'}`}
-                  aria-hidden="true"
-                />
-                <span>{label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onSelectSection('settings')}
+            aria-label="Abrir configurações do perfil"
+            className="inline-flex items-center gap-2 rounded-control border border-border-muted bg-bg-elevated px-2 py-1 text-left transition-colors hover:border-success"
+          >
+            <UserAvatar
+              username={user.username}
+              displayName={user.display_name}
+              avatarUrl={user.avatar_url}
+              size="xs"
+            />
+            <span className="hidden max-w-[110px] truncate font-mono text-mono-meta text-text-primary sm:inline">
+              @{user.username}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={onLogout}
+            disabled={isLoggingOut}
+            aria-label="Sair da conta"
+            className="inline-flex items-center gap-1 rounded-control border border-border-muted bg-bg-elevated px-2.5 py-1.5 font-mono text-mono-badge text-danger-text transition-colors hover:border-danger hover:bg-danger-surface"
+          >
+            <LogOut className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>Sair</span>
+          </button>
+        </div>
       </header>
 
-      {/* Sidebar Líquida Colapsável Desktop (lg+) */}
+      {/* Bottom Navigation Bar fixa Mobile (< 768px) conforme DESIGN_SYSTEM.md */}
+      <nav
+        aria-label="Navegação principal mobile"
+        className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-center gap-1 overflow-x-auto border-t border-border-muted bg-bg-surface px-1.5 md:hidden"
+      >
+        {NAV_ITEMS.map(({ id, label, Icon }) => {
+          const isActive = activeSection === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-current={isActive ? 'page' : undefined}
+              onClick={() => onSelectSection(id)}
+              className={`relative flex min-w-[60px] flex-1 shrink-0 flex-col items-center justify-center gap-1 rounded-control px-1.5 py-1.5 font-mono text-[10px] leading-none transition-colors ${
+                isActive
+                  ? 'bg-bg-deep font-semibold text-text-primary'
+                  : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
+              }`}
+            >
+              {isActive && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-0 h-[2.5px] w-7 rounded-full bg-success"
+                />
+              )}
+              <Icon
+                className={`h-4 w-4 shrink-0 ${isActive ? 'text-success' : 'text-text-muted'}`}
+                aria-hidden="true"
+              />
+              <span className="max-w-full truncate">{label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Sidebar Líquida Colapsável Tablet/Desktop (>= 768px) */}
       <aside
         aria-label="Sidebar Líquida de navegação"
         data-collapsed={isCollapsed ? 'true' : 'false'}
-        className={`relative z-20 hidden shrink-0 flex-col justify-between border-r border-border-muted bg-bg-surface py-6 shadow-[10px_0_28px_-2px_rgba(2,10,18,0.8),3px_0_10px_rgba(2,10,18,0.55)] transition-[width] duration-300 ease-out lg:flex ${
-          isCollapsed ? 'w-[76px] items-center px-2' : 'w-[232px] pl-4 pr-0'
+        className={`relative z-20 hidden shrink-0 flex-col justify-between border-r border-border-muted bg-bg-surface py-6 shadow-[10px_0_28px_-2px_rgba(2,10,18,0.8),3px_0_10px_rgba(2,10,18,0.55)] transition-[width] duration-300 ease-out md:flex ${
+          isCollapsed ? 'w-[76px] items-center px-2' : 'w-[240px] pl-4 pr-0'
         }`}
       >
         <div className={`w-full space-y-8 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
@@ -194,7 +202,7 @@ export function LiquidSidebar({
           {/* Lista de Itens Líquidos */}
           <nav
             aria-label="Navegação do dashboard"
-            className={`w-full ${isCollapsed ? 'flex flex-col items-center gap-3' : 'space-y-1.5'}`}
+            className={`w-full ${isCollapsed ? 'flex flex-col items-center gap-3' : 'space-y-2 py-2'}`}
           >
             {NAV_ITEMS.map(({ id, label, Icon }) => {
               const isActive = activeSection === id;

@@ -319,7 +319,7 @@ export function BentoDashboardWorkspace() {
   const isCollectionOwner = Boolean(activeCollection && activeCollection.owner.id === user.id);
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary lg:flex-row">
+    <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary md:flex-row">
       <LiquidSidebar
         activeSection={activeSection}
         onSelectSection={handleSelectSection}
@@ -330,18 +330,21 @@ export function BentoDashboardWorkspace() {
         onLogout={() => void handleLogout()}
       />
 
-      <main className="min-w-0 flex-1 p-4 md:p-6">
+      <main className="min-w-0 flex-1 p-4 pb-20 md:p-6 md:pl-7">
         <div className="mx-auto max-w-[1440px] space-y-4">
           {!user.is_email_verified && (
             <div
               data-testid="email-pending-banner"
               className="flex flex-col justify-between gap-3 rounded-card border border-warning bg-bg-surface px-4 py-3 sm:flex-row sm:items-center"
             >
-              <div className="flex items-center gap-2.5 font-mono text-mono-meta text-text-primary">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-                <span>
-                  Confirme seu e-mail (<strong>{user.email}</strong>) para liberar uploads e
-                  interações sociais.
+              <div className="flex min-w-0 flex-1 items-start gap-2.5 font-mono text-mono-meta text-text-primary sm:items-center">
+                <AlertTriangle
+                  className="mt-0.5 h-4 w-4 shrink-0 text-warning sm:mt-0"
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 break-words">
+                  Confirme seu e-mail (<strong className="break-all">{user.email}</strong>) para
+                  liberar uploads e interações sociais.
                 </span>
               </div>
               <Button
@@ -362,13 +365,15 @@ export function BentoDashboardWorkspace() {
               data-testid="active-collection-banner"
               className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-success bg-bg-surface px-4 py-2.5"
             >
-              <div className="flex items-center gap-2.5">
-                <FolderKanban className="h-4 w-4 text-success" aria-hidden="true" />
-                <span className="font-mono text-mono-meta text-text-secondary">Coleção ativa:</span>
-                <span className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
+                <FolderKanban className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+                <span className="shrink-0 font-mono text-mono-meta text-text-secondary">
+                  Coleção ativa:
+                </span>
+                <span className="min-w-0 break-words font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
                   {activeCollection.title}
                 </span>
-                <span className="rounded-control bg-bg-deep px-2 py-0.5 font-mono text-mono-badge text-success">
+                <span className="shrink-0 rounded-control bg-bg-deep px-2 py-0.5 font-mono text-mono-badge text-success">
                   {activeCollection.clips_count}{' '}
                   {activeCollection.clips_count === 1 ? 'clipe' : 'clipes'}
                 </span>
@@ -417,8 +422,8 @@ export function BentoDashboardWorkspace() {
             </div>
           )}
 
-          {/* Grid Principal Bento */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          {/* Grid Principal Bento: 2 colunas completas em Desktop (>= 1280px); 2x1 inferior em Tablet/Compacto */}
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
             {/* Coluna Central: Hero Player em formato "L" + Filtros Rápidos 3x3 encaixados */}
             <HeroPlayerBento
               clip={activeClip}
@@ -454,7 +459,7 @@ export function BentoDashboardWorkspace() {
             />
 
             {/* Coluna Direita: Busca + NA FILA / RECENTES + COLEÇÕES em leque */}
-            <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start xl:flex xl:flex-col">
               <ClipQueueList
                 clips={clips}
                 activeClipId={activeClip?.id ?? null}

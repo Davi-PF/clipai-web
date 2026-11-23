@@ -1,6 +1,14 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { DashboardSection } from '@/components/dashboard/LiquidSidebar';
 
 export type DashboardContentSection = Exclude<DashboardSection, 'settings' | 'studio'>;
@@ -18,6 +26,16 @@ const SidebarContext = createContext<SidebarContextValue | null>(null);
 export function SidebarProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState<DashboardContentSection>('home');
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+    const compactMedia = window.matchMedia('(min-width: 768px) and (max-width: 1279px)');
+    if (compactMedia.matches) {
+      setIsCollapsed(true);
+    }
+  }, []);
 
   const toggleCollapsed = useCallback(() => {
     setIsCollapsed((prev) => !prev);
