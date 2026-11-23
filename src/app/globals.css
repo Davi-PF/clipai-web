@@ -57,25 +57,25 @@
   content: '';
   position: absolute;
   right: 0;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   pointer-events: none;
 }
 
 .liquid-nav-active::before {
-  top: -14px;
-  border-bottom-right-radius: 14px;
+  top: -12px;
+  border-bottom-right-radius: 12px;
   border-right: 1px solid var(--border-muted);
   border-bottom: 1px solid var(--border-muted);
-  box-shadow: 6px 6px 0 6px rgba(4, 19, 30, 1);
+  box-shadow: 5px 5px 0 5px rgba(4, 19, 30, 1);
   clip-path: inset(0);
 }
 
 .liquid-nav-active::after {
-  bottom: -14px;
-  border-top-right-radius: 14px;
+  bottom: -12px;
+  border-top-right-radius: 12px;
   border-right: 1px solid var(--border-muted);
   border-top: 1px solid var(--border-muted);
-  box-shadow: 6px -6px 0 6px rgba(4, 19, 30, 1);
+  box-shadow: 5px -5px 0 5px rgba(4, 19, 30, 1);
   clip-path: inset(0);
 }
