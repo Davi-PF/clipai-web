@@ -63,7 +63,7 @@ export function ToastViewport() {
   return (
     <section
       aria-label="Notificações"
-      className="pointer-events-none fixed bottom-4 right-4 z-50 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2.5"
+      className="pointer-events-none fixed bottom-20 right-4 z-50 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2.5 md:bottom-4"
     >
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onDismiss={dismissToast} />

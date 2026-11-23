@@ -201,7 +201,7 @@ function DisableTwoFactorModal({
       aria-labelledby="disable-2fa-dialog-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-bg-deep/85 p-4"
     >
-      <div className="w-full max-w-md rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6 shadow-xl">
+      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 shadow-xl sm:p-6">
         <div className="flex items-center justify-between border-b border-border-muted pb-4">
           <h3
             id="disable-2fa-dialog-title"
@@ -261,7 +261,7 @@ function DisableTwoFactorModal({
             />
           )}
 
-          <div className="flex items-center justify-end gap-2.5 pt-2">
+          <div className="flex flex-col-reverse gap-2.5 pt-2 sm:flex-row sm:items-center sm:justify-end">
             <Button type="button" variant="secondary" disabled={isSubmitting} onClick={onClose}>
               Cancelar
             </Button>

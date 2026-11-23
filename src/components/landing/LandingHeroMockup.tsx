@@ -103,7 +103,7 @@ export function LandingHeroMockup() {
 
       {/* Superfície Bento Player simulado */}
       <div className="relative overflow-hidden rounded-card border-[1.5px] border-border-muted bg-bg-deep">
-        <div className="relative flex aspect-video flex-col justify-between p-4">
+        <div className="relative flex min-h-[210px] flex-col justify-between gap-2 p-3 sm:aspect-video sm:min-h-0 sm:p-4">
           {/* Grade tática sutil no fundo do player */}
           <svg
             aria-hidden="true"
@@ -118,22 +118,25 @@ export function LandingHeroMockup() {
           </svg>
 
           {/* Metadados técnicos no topo */}
-          <div className="relative z-10 flex items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-surface/90 px-2.5 py-0.5 font-mono text-mono-badge uppercase text-success">
-              <Gamepad2 className="h-3.5 w-3.5" aria-hidden="true" />
-              {clip.game}
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-2">
+            <span className="inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-control border border-border-muted bg-bg-surface/90 px-2.5 py-0.5 font-mono text-mono-badge uppercase text-success">
+              <Gamepad2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">{clip.game}</span>
             </span>
-            <span className="rounded-control border border-border-muted bg-bg-surface/90 px-2 py-0.5 font-mono text-mono-badge text-text-primary">
+            <span className="shrink-0 rounded-control border border-border-muted bg-bg-surface/90 px-2 py-0.5 font-mono text-mono-badge text-text-primary">
               {clip.resolution}
             </span>
           </div>
 
           {/* Botão play central decorativo */}
-          <div className="relative z-10 flex flex-col items-center justify-center gap-2 py-2">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full border-[1.5px] border-success bg-bg-surface/90 text-success shadow-lg">
-              <Play className="ml-1 h-6 w-6 fill-current" aria-hidden="true" />
+          <div className="relative z-10 flex flex-col items-center justify-center gap-1.5 py-1 sm:gap-2 sm:py-2">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-success bg-bg-surface/90 text-success shadow-lg sm:h-14 sm:w-14">
+              <Play
+                className="ml-0.5 h-5 w-5 fill-current sm:ml-1 sm:h-6 sm:w-6"
+                aria-hidden="true"
+              />
             </span>
-            <span className="rounded-control bg-bg-surface/90 px-2.5 py-0.5 font-mono text-mono-badge text-text-secondary">
+            <span className="max-w-full truncate rounded-control bg-bg-surface/90 px-2.5 py-0.5 font-mono text-mono-badge text-text-secondary">
               clipai.com.br/c/xK9mP2qR • {clip.duration}
             </span>
           </div>
