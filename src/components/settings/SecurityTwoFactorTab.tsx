@@ -57,7 +57,7 @@ function BackupCodesStep({ backupCodes, username, onFinish }: Readonly<BackupCod
     anchor.download = `clipai-backup-codes-${username}.txt`;
     document.body.appendChild(anchor);
     anchor.click();
-    document.body.removeChild(anchor);
+    anchor.remove();
     URL.revokeObjectURL(objectUrl);
     success('Arquivo .TXT com códigos de backup baixado!');
   };
