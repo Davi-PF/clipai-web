@@ -166,8 +166,8 @@ describe('BentoDashboardWorkspace — Sprint 3 Signature Components', () => {
     vi.spyOn(clipsService, 'listClips').mockResolvedValue({
       items: CLIPS,
       page: 1,
-      page_size: 6,
-      total: 2,
+      page_size: 4,
+      total: 8,
       total_pages: 2,
     });
     vi.spyOn(collectionsService, 'listCollections').mockResolvedValue({
@@ -214,7 +214,16 @@ describe('BentoDashboardWorkspace — Sprint 3 Signature Components', () => {
     const listClipsSpy = vi.spyOn(clipsService, 'listClips');
     await user.click(screen.getAllByRole('button', { name: 'Destaques' })[0]!);
     await waitFor(() => {
-      expect(listClipsSpy).toHaveBeenCalledWith(expect.objectContaining({ sort: 'popular' }));
+      expect(listClipsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: 'popular', page_size: 4 }),
+      );
+    });
+
+    // Pagination controls in ClipQueueList header remain accessible and functional
+    expect(screen.getByText('1/2')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Próxima página da fila' }));
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenCalledWith(expect.objectContaining({ page: 2, page_size: 4 }));
     });
 
     await user.click(screen.getAllByRole('button', { name: 'Favoritos' })[0]!);
