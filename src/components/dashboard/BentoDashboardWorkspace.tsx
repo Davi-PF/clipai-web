@@ -27,7 +27,7 @@ import { collectionsService } from '@/services/collections-service';
 import { getClipShareSlug, type Clip, type ClipSummary, type Game, type Tag } from '@/types/clip';
 import type { Collection } from '@/types/collection';
 
-const QUEUE_PAGE_SIZE = 6;
+const QUEUE_PAGE_SIZE = 4;
 const SEARCH_DEBOUNCE_MS = 300;
 const DASHBOARD_SECTIONS: readonly DashboardContentSection[] = [
   'home',
@@ -340,8 +340,8 @@ export function BentoDashboardWorkspace() {
         onLogout={() => void handleLogout()}
       />
 
-      <main className="min-w-0 flex-1 p-4 pb-24 md:p-6 md:pl-7">
-        <div className="mx-auto max-w-[1440px] space-y-4">
+      <main className="min-w-0 flex-1 overflow-x-hidden p-4 pb-24 md:px-7 md:py-6">
+        <div className="mx-auto w-full max-w-[1440px] space-y-4">
           {!user.is_email_verified && (
             <div
               data-testid="email-pending-banner"
@@ -433,7 +433,7 @@ export function BentoDashboardWorkspace() {
           )}
 
           {/* Grid Principal Bento: 2 colunas completas em Desktop (>= 1280px); 2x1 inferior em Tablet/Compacto */}
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
+          <div className="grid w-full min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-stretch">
             {/* Coluna Central: Hero Player em formato "L" + Filtros Rápidos 3x3 encaixados */}
             <HeroPlayerBento
               clip={activeClip}
@@ -468,31 +468,33 @@ export function BentoDashboardWorkspace() {
               }
             />
 
-            {/* Coluna Direita: Busca + NA FILA / RECENTES + COLEÇÕES em leque */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start xl:flex xl:flex-col">
-              <ClipQueueList
-                clips={clips}
-                activeClipId={activeClip?.id ?? null}
-                isLoading={isLoadingClips}
-                searchValue={searchInput}
-                page={page}
-                totalPages={totalPages}
-                onSearchChange={setSearchInput}
-                onOpenUpload={() => setIsUploadOpen(true)}
-                onSelectClip={(selected) => setActiveClip(selected)}
-                onPageChange={setPage}
-              />
+            {/* Coluna Direita: Busca + NA FILA / RECENTES + COLEÇÕES em leque (alinhada à altura do Hero em xl+) */}
+            <div className="w-full min-w-0 xl:relative xl:min-h-[590px]">
+              <div className="grid w-full min-w-0 grid-cols-1 gap-4 md:grid-cols-2 md:items-start xl:absolute xl:inset-0 xl:flex xl:flex-col xl:items-stretch">
+                <ClipQueueList
+                  clips={clips}
+                  activeClipId={activeClip?.id ?? null}
+                  isLoading={isLoadingClips}
+                  searchValue={searchInput}
+                  page={page}
+                  totalPages={totalPages}
+                  onSearchChange={setSearchInput}
+                  onOpenUpload={() => setIsUploadOpen(true)}
+                  onSelectClip={(selected) => setActiveClip(selected)}
+                  onPageChange={setPage}
+                />
 
-              <CollectionsFanWidget
-                collections={collections}
-                activeCollectionId={activeCollection?.id ?? null}
-                isLoading={isLoadingCollections}
-                onOpenCreate={() => {
-                  setEditingCollection(null);
-                  setIsCreateCollectionOpen(true);
-                }}
-                onSelectCollection={handleSelectCollection}
-              />
+                <CollectionsFanWidget
+                  collections={collections}
+                  activeCollectionId={activeCollection?.id ?? null}
+                  isLoading={isLoadingCollections}
+                  onOpenCreate={() => {
+                    setEditingCollection(null);
+                    setIsCreateCollectionOpen(true);
+                  }}
+                  onSelectCollection={handleSelectCollection}
+                />
+              </div>
             </div>
           </div>
         </div>

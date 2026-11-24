@@ -71,7 +71,7 @@ export function HeroPlayerBento({
   const showFeaturedBadge = Boolean(clip && (isFeaturedHighlight || clip.likes_count >= 10));
 
   return (
-    <div className="relative flex flex-col gap-3">
+    <div className="relative flex w-full min-w-0 flex-col gap-3">
       {/* Container principal com geometria em "L" no desktop (lg+) */}
       <div
         ref={containerRef}
@@ -129,9 +129,7 @@ export function HeroPlayerBento({
           {!isLoading && !clip && (
             <div
               style={
-                isReady && cutoutHeight > 0
-                  ? { paddingBottom: `${cutoutHeight + 28}px` }
-                  : undefined
+                isReady && cutoutHeight > 0 ? { paddingBottom: `${cutoutHeight + 28}px` } : undefined
               }
               className="flex min-h-[380px] flex-col items-center justify-center gap-4 p-6 text-center sm:p-8 lg:min-h-[540px]"
             >
@@ -326,7 +324,11 @@ export function HeroPlayerBento({
         )}
 
         {/* Encaixe do Card Filtros Rápidos 3x3: absoluto somente quando o recorte em "L" está ativo */}
-        <div className={isReady ? 'absolute bottom-0 right-0 z-20 mt-0 w-[324px]' : 'mt-3 w-full'}>
+        <div
+          className={
+            isReady ? 'absolute bottom-0 right-0 z-20 mt-0 w-[324px]' : 'mt-3 w-full'
+          }
+        >
           {quickFiltersSlot}
         </div>
       </div>

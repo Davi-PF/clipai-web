@@ -79,7 +79,7 @@ export function CollectionsFanWidget({
   return (
     <section
       aria-label="Widget de coleções"
-      className="flex flex-col gap-3 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4"
+      className="flex w-full min-w-0 shrink-0 flex-col gap-3 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4"
     >
       <header className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -147,7 +147,7 @@ export function CollectionsFanWidget({
         </div>
       ) : (
         <div
-          className={`relative mx-auto flex w-full max-w-[320px] items-end justify-center pb-2 pt-3 ${stackContainerHeight}`}
+          className={`relative mx-auto flex w-full max-w-[328px] items-end justify-center pb-2 pt-3 ${stackContainerHeight}`}
         >
           {orderedCollections.map((collection, index) => {
             const isFront = index === 0;

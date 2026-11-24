@@ -44,11 +44,11 @@ export function ClipQueueList({
   return (
     <section
       aria-label="Busca e fila de clipes"
-      className="flex flex-col gap-4 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4"
+      className="flex w-full min-w-0 flex-col gap-3.5 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4 xl:min-h-0 xl:flex-1"
     >
       {/* Topo: Busca + CTA + ENVIAR */}
-      <div className="flex items-center gap-2">
-        <div className="flex h-11 flex-1 items-center gap-2 rounded-control border border-border-muted bg-bg-elevated px-3 focus-within:border-success">
+      <div className="flex w-full min-w-0 shrink-0 items-center gap-2">
+        <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-control border border-border-muted bg-bg-elevated px-3 focus-within:border-success">
           <Search className="h-4 w-4 shrink-0 text-text-muted" aria-hidden="true" />
           <input
             type="search"
@@ -56,7 +56,7 @@ export function ClipQueueList({
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Buscar clipes..."
             aria-label="Buscar clipes na fila"
-            className="h-full w-full bg-transparent font-mono text-mono-meta text-text-primary placeholder:text-text-muted focus:outline-none"
+            className="h-full min-w-0 w-full bg-transparent font-mono text-mono-meta text-text-primary placeholder:text-text-muted focus:outline-none"
           />
         </div>
 
@@ -64,6 +64,7 @@ export function ClipQueueList({
           type="button"
           variant="primary"
           size="md"
+          className="shrink-0"
           leftIcon={<Plus className="h-4 w-4" />}
           onClick={onOpenUpload}
         >
@@ -72,13 +73,13 @@ export function ClipQueueList({
       </div>
 
       {/* Cabeçalho da fila com paginação */}
-      <div className="flex items-center justify-between gap-2 border-b border-border-muted pb-2.5">
-        <h2 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+      <div className="flex w-full min-w-0 shrink-0 items-center justify-between gap-2 border-b border-border-muted pb-2.5">
+        <h2 className="min-w-0 truncate font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
           NA FILA / RECENTES
         </h2>
 
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono text-mono-badge text-text-muted">
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="whitespace-nowrap font-mono text-mono-badge text-text-muted">
             {page}/{safeTotalPages}
           </span>
           <button
@@ -86,7 +87,7 @@ export function ClipQueueList({
             disabled={page <= 1 || isLoading}
             onClick={() => onPageChange(page - 1)}
             aria-label="Página anterior da fila"
-            className="flex h-7 w-7 items-center justify-center rounded-control border border-border-muted bg-bg-elevated text-text-secondary transition-colors hover:border-success hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control border border-border-muted bg-bg-elevated text-text-secondary transition-colors hover:border-success hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -95,32 +96,36 @@ export function ClipQueueList({
             disabled={page >= safeTotalPages || isLoading}
             onClick={() => onPageChange(page + 1)}
             aria-label="Próxima página da fila"
-            className="flex h-7 w-7 items-center justify-center rounded-control border border-border-muted bg-bg-elevated text-text-secondary transition-colors hover:border-success hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control border border-border-muted bg-bg-elevated text-text-secondary transition-colors hover:border-success hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45"
           >
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      {/* Lista limpa vertical (gap: 10px, zero sobreposição) */}
+      {/* Lista limpa vertical (gap: 10px, zero sobreposição) com scroll interno sutil em xl+ */}
       {isLoading ? (
-        <div className="flex flex-col gap-[10px]" aria-busy="true" aria-label="Carregando fila">
+        <div
+          className="flex flex-col gap-[10px] xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-0.5"
+          aria-busy="true"
+          aria-label="Carregando fila"
+        >
           {[1, 2, 3, 4].map((skeletonItem) => (
             <div
               key={skeletonItem}
-              className="h-[76px] w-full animate-pulse rounded-card border border-border-muted bg-bg-elevated"
+              className="h-[76px] w-full shrink-0 animate-pulse rounded-card border border-border-muted bg-bg-elevated"
             />
           ))}
         </div>
       ) : clips.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-6 text-center">
+        <div className="flex flex-col items-center justify-center gap-2 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-6 text-center xl:min-h-0 xl:flex-1">
           <Film className="h-7 w-7 text-text-muted" aria-hidden="true" />
           <p className="font-mono text-mono-meta text-text-secondary">
             Nenhum clipe na fila para este filtro.
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-[10px]">
+        <div className="flex flex-col gap-[10px] xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-0.5">
           {clips.map((clip) => {
             const isActive = clip.id === activeClipId;
             const accentClass = getAccentBarColor(clip, isActive);
@@ -132,7 +137,7 @@ export function ClipQueueList({
                 type="button"
                 aria-current={isActive ? 'true' : undefined}
                 onClick={() => onSelectClip(clip)}
-                className={`group flex h-[76px] w-full overflow-hidden rounded-card border text-left transition-colors ${
+                className={`group flex h-[76px] w-full shrink-0 overflow-hidden rounded-card border text-left transition-colors ${
                   isActive
                     ? 'border-success bg-bg-deep'
                     : 'border-border-muted bg-bg-elevated/60 hover:border-text-secondary hover:bg-bg-elevated'
