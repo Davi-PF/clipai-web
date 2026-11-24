@@ -23,10 +23,14 @@ import { clipsService } from '@/services/clips-service';
 import {
   getClipShareSlug,
   type Clip,
+  type ClipEditEstimate,
+  type ClipEditSettings,
   type ClipUploadStage,
+  type ExtractedVideoResult,
   type Game,
   type PrivacyLevel,
 } from '@/types/clip';
+import type { CapturedThumbnailResult } from '@/lib/video-utils';
 
 export interface UploadClipModalProps {
   isOpen: boolean;
@@ -62,6 +66,473 @@ function getStageStatusLabel(
   }
 }
 
+function getUploadProgressPercent(
+  stage: ClipUploadStage,
+  renderProgress: number,
+  videoProgress: number,
+): number {
+  return stage === 'rendering'
+    ? Math.max(2, renderProgress)
+    : stage === 'preparing'
+      ? 5
+      : stage === 'uploading_video'
+        ? Math.max(8, Math.round(videoProgress * 0.85))
+        : stage === 'uploading_thumbnail'
+          ? 92
+          : stage === 'confirming'
+            ? 98
+            : 100;
+}
+
+function isActiveUploadStage(stage: ClipUploadStage): boolean {
+  return (
+    stage === 'rendering' ||
+    stage === 'preparing' ||
+    stage === 'uploading_video' ||
+    stage === 'uploading_thumbnail' ||
+    stage === 'confirming'
+  );
+}
+
+function resolveNextTitleOnFilePick(currentTitle: string, fileName: string): string {
+  if (currentTitle.trim()) {
+    return currentTitle;
+  }
+  const baseName = fileName
+    .replace(/\.[^/.]+$/, '')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+  return baseName.length >= 3 ? baseName.slice(0, 120) : currentTitle;
+}
+
+function buildUploadFormErrors(params: {
+  hasValidMedia: boolean;
+  title: string;
+  description: string;
+  gameId: string;
+}): FormErrors {
+  const nextErrors: FormErrors = {};
+  if (!params.hasValidMedia) {
+    nextErrors.file = 'Selecione um vídeo MP4 ou WebM válido para continuar.';
+  }
+
+  const titleCheck = validateClipTitle(params.title);
+  if (!titleCheck.valid && titleCheck.errorMessage) {
+    nextErrors.title = titleCheck.errorMessage;
+  }
+
+  const descCheck = validateClipDescription(params.description);
+  if (!descCheck.valid && descCheck.errorMessage) {
+    nextErrors.description = descCheck.errorMessage;
+  }
+
+  if (!params.gameId) {
+    nextErrors.gameId = 'Selecione o jogo do clipe.';
+  }
+
+  return nextErrors;
+}
+
+async function fetchAvailableGames(): Promise<Game[]> {
+  try {
+    const res = await clipsService.listGames({ page_size: 50 });
+    return res.items;
+  } catch {
+    return [];
+  }
+}
+
+function useAvailableGames(isOpen: boolean): { games: Game[]; isLoadingGames: boolean } {
+  const [games, setGames] = useState<Game[]>([]);
+  const [isLoadingGames, setIsLoadingGames] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let isActive = true;
+    setIsLoadingGames(true);
+    void fetchAvailableGames().then((items) => {
+      if (isActive) {
+        setGames(items);
+        setIsLoadingGames(false);
+      }
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isOpen]);
+
+  return { games, isLoadingGames };
+}
+
+function getDropzoneContainerClass(
+  hasReadyEditor: boolean,
+  isDragging: boolean,
+  hasFileError: boolean,
+): string {
+  return hasReadyEditor
+    ? `rounded-card transition-colors ${isDragging ? 'ring-2 ring-success' : ''}`
+    : `rounded-card border-[1.5px] border-dashed p-4 transition-colors ${
+        isDragging
+          ? 'border-success bg-bg-elevated'
+          : hasFileError
+            ? 'border-danger bg-bg-deep'
+            : 'border-border-muted bg-bg-deep'
+      }`;
+}
+
+interface UploadSuccessPanelProps {
+  uploadedClip: Clip;
+  onClose: () => void;
+}
+
+function UploadSuccessPanel({ uploadedClip, onClose }: Readonly<UploadSuccessPanelProps>) {
+  return (
+    <div className="space-y-5 py-2">
+      <div className="flex items-start gap-3 rounded-card border border-success bg-success-surface p-4">
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" aria-hidden="true" />
+        <div className="min-w-0 flex-1 space-y-1 font-mono text-mono-body text-text-primary">
+          <p className="font-semibold">Seu clipe está no ar!</p>
+          <p className="break-words text-mono-meta">
+            <strong className="break-words">{uploadedClip.title}</strong> foi processado e já pode
+            ser reproduzido e compartilhado.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Link href={`/c/${getClipShareSlug(uploadedClip)}`} className="block">
+          <Button type="button" variant="primary" fullWidth>
+            IR PARA O CLIPE
+          </Button>
+        </Link>
+        <Button type="button" variant="secondary" fullWidth onClick={onClose}>
+          Fechar e atualizar lista
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+interface UploadDropzoneSectionProps {
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  selectedFile: File | null;
+  videoPreviewUrl: string | null;
+  extractedMeta: ExtractedVideoResult | null;
+  editSettings: ClipEditSettings | null;
+  editEstimate: ClipEditEstimate | null;
+  isInspecting: boolean;
+  isUploading: boolean;
+  isDragging: boolean;
+  inspectionError: string | null;
+  fileError?: string;
+  onSetDragging: (dragging: boolean) => void;
+  onDrop: (event: DragEvent<HTMLDivElement>) => void;
+  onFileInputChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onUpdateEditSettings: (
+    updater: Partial<ClipEditSettings> | ((prev: ClipEditSettings) => ClipEditSettings),
+  ) => void;
+  onCaptureThumbnail: (captured: CapturedThumbnailResult, capturedAtSeconds: number) => void;
+}
+
+function UploadDropzoneSection({
+  fileInputRef,
+  selectedFile,
+  videoPreviewUrl,
+  extractedMeta,
+  editSettings,
+  editEstimate,
+  isInspecting,
+  isUploading,
+  isDragging,
+  inspectionError,
+  fileError,
+  onSetDragging,
+  onDrop,
+  onFileInputChange,
+  onUpdateEditSettings,
+  onCaptureThumbnail,
+}: Readonly<UploadDropzoneSectionProps>) {
+  const activeFileError = inspectionError ?? fileError;
+  const hasReadyEditor = Boolean(extractedMeta && !isInspecting);
+  const canRenderEditor = Boolean(
+    !isInspecting &&
+    extractedMeta &&
+    selectedFile &&
+    videoPreviewUrl &&
+    editSettings &&
+    editEstimate,
+  );
+
+  return (
+    <>
+      <div
+        onDragOver={(event) => {
+          event.preventDefault();
+          if (!isUploading) onSetDragging(true);
+        }}
+        onDragLeave={() => onSetDragging(false)}
+        onDrop={onDrop}
+        className={getDropzoneContainerClass(hasReadyEditor, isDragging, Boolean(activeFileError))}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="video/mp4,video/webm,.mp4,.webm"
+          onChange={onFileInputChange}
+          disabled={isUploading}
+          data-testid="clip-file-input"
+          className="sr-only"
+        />
+
+        {isInspecting && (
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+            <Loader2 className="h-7 w-7 animate-spin text-warning" aria-hidden="true" />
+            <p className="font-mono text-mono-body text-text-primary">
+              Analisando vídeo e capturando thumbnail...
+            </p>
+          </div>
+        )}
+
+        {canRenderEditor &&
+          extractedMeta &&
+          selectedFile &&
+          videoPreviewUrl &&
+          editSettings &&
+          editEstimate && (
+            <ClipVideoEditor
+              fileName={selectedFile.name}
+              videoPreviewUrl={videoPreviewUrl}
+              extractedMeta={extractedMeta}
+              editSettings={editSettings}
+              editEstimate={editEstimate}
+              disabled={isUploading}
+              onChangeFileClick={() => fileInputRef.current?.click()}
+              onUpdateEditSettings={onUpdateEditSettings}
+              onCaptureThumbnail={onCaptureThumbnail}
+            />
+          )}
+
+        {!isInspecting && !extractedMeta && (
+          <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
+            <UploadCloud className="h-9 w-9 text-text-muted" aria-hidden="true" />
+            <div className="space-y-1">
+              <p className="font-mono text-mono-body text-text-primary">
+                Arraste seu clipe aqui ou selecione do computador
+              </p>
+              <p className="font-mono text-mono-meta text-text-muted">
+                Formatos: .mp4 ou .webm • Máx. 100 MB • Máx. 120 segundos
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Selecionar vídeo
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {activeFileError && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-card border border-danger bg-danger-surface p-3 font-mono text-mono-meta text-danger-text"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1 break-words">{activeFileError}</span>
+        </div>
+      )}
+    </>
+  );
+}
+
+interface UploadMetadataFieldsProps {
+  title: string;
+  description: string;
+  gameId: string;
+  tags: string[];
+  privacy: PrivacyLevel;
+  games: Game[];
+  isLoadingGames: boolean;
+  isUploading: boolean;
+  formErrors: FormErrors;
+  onChangeTitle: (value: string) => void;
+  onChangeDescription: (value: string) => void;
+  onChangeGameId: (value: string) => void;
+  onChangeTags: (tags: string[]) => void;
+  onChangePrivacy: (privacy: PrivacyLevel) => void;
+}
+
+function UploadMetadataFields({
+  title,
+  description,
+  gameId,
+  tags,
+  privacy,
+  games,
+  isLoadingGames,
+  isUploading,
+  formErrors,
+  onChangeTitle,
+  onChangeDescription,
+  onChangeGameId,
+  onChangeTags,
+  onChangePrivacy,
+}: Readonly<UploadMetadataFieldsProps>) {
+  return (
+    <>
+      <Input
+        label="Título do clipe"
+        name="title"
+        placeholder="Ex: Clutch 1v4 de AWP na Mirage"
+        value={title}
+        onChange={(event) => onChangeTitle(event.target.value)}
+        error={formErrors.title}
+        disabled={isUploading}
+      />
+
+      <div className="space-y-1.5">
+        <label
+          htmlFor="clip-description-input"
+          className="block font-mono text-mono-meta font-medium text-text-secondary"
+        >
+          Descrição (opcional)
+        </label>
+        <textarea
+          id="clip-description-input"
+          rows={3}
+          value={description}
+          disabled={isUploading}
+          onChange={(event) => onChangeDescription(event.target.value)}
+          placeholder="Conte o contexto da jogada..."
+          className="w-full rounded-control border border-border-muted bg-bg-elevated p-3 font-mono text-mono-body text-text-primary placeholder:text-text-muted focus:border-success focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        />
+        {formErrors.description && (
+          <p role="alert" className="font-mono text-mono-meta text-danger-text">
+            {formErrors.description}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-1.5">
+        <label
+          htmlFor="clip-game-select"
+          className="block font-mono text-mono-meta font-medium text-text-secondary"
+        >
+          Jogo
+        </label>
+        <select
+          id="clip-game-select"
+          value={gameId}
+          disabled={isUploading || isLoadingGames}
+          onChange={(event) => onChangeGameId(event.target.value)}
+          className="h-11 w-full rounded-control border border-border-muted bg-bg-elevated px-3 font-mono text-mono-body text-text-primary focus:border-success focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <option value="">{isLoadingGames ? 'Carregando jogos...' : 'Selecione o jogo'}</option>
+          {games.map((game) => (
+            <option key={game.id} value={game.id}>
+              {game.name}
+            </option>
+          ))}
+        </select>
+        {formErrors.gameId && (
+          <p role="alert" className="font-mono text-mono-meta text-danger-text">
+            {formErrors.gameId}
+          </p>
+        )}
+      </div>
+
+      <TagsChipInput tags={tags} onChange={onChangeTags} disabled={isUploading} />
+
+      <PrivacySelector value={privacy} onChange={onChangePrivacy} disabled={isUploading} />
+    </>
+  );
+}
+
+interface UploadProgressPanelProps {
+  isRendering: boolean;
+  stageLabel: string;
+  progressPercent: number;
+}
+
+function UploadProgressPanel({
+  isRendering,
+  stageLabel,
+  progressPercent,
+}: Readonly<UploadProgressPanelProps>) {
+  return (
+    <div
+      aria-live="polite"
+      data-testid={isRendering ? 'render-progress-panel' : 'upload-progress-panel'}
+      className="space-y-2 rounded-card border border-border-muted bg-bg-deep p-4"
+    >
+      <div className="flex items-center justify-between font-mono text-mono-meta">
+        <span className="font-semibold text-text-primary">{stageLabel}</span>
+        <span className={isRendering ? 'text-warning' : 'text-success'}>{progressPercent}%</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-bg-surface">
+        <div
+          role="progressbar"
+          aria-valuenow={progressPercent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          className={`h-full transition-all duration-150 ${
+            isRendering ? 'bg-warning' : 'bg-success'
+          }`}
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+      <p className="font-mono text-mono-badge text-text-muted">
+        {isRendering
+          ? 'Etapa 1 de 2: Otimizando e cortando no navegador antes do envio.'
+          : 'Etapa 2 de 2: Enviando mídia direto para o Cloudflare R2.'}
+      </p>
+    </div>
+  );
+}
+
+interface UploadModalFooterProps {
+  isRendering: boolean;
+  isUploading: boolean;
+  isInspecting: boolean;
+  exceedsMaxSize: boolean;
+  stageLabel: string;
+  onCancel: () => void;
+}
+
+function UploadModalFooter({
+  isRendering,
+  isUploading,
+  isInspecting,
+  exceedsMaxSize,
+  stageLabel,
+  onCancel,
+}: Readonly<UploadModalFooterProps>) {
+  return (
+    <div className="flex flex-col-reverse gap-3 border-t border-border-muted pt-4 sm:flex-row sm:justify-end">
+      <Button type="button" variant="secondary" onClick={onCancel}>
+        {isRendering ? 'Cancelar renderização' : isUploading ? 'Cancelar envio' : 'Cancelar'}
+      </Button>
+      <Button
+        type="submit"
+        variant="primary"
+        disabled={isInspecting || exceedsMaxSize}
+        isLoading={isUploading}
+        loadingText={stageLabel || 'ENVIANDO...'}
+      >
+        PUBLICAR CLIPE
+      </Button>
+    </div>
+  );
+}
+
 export function UploadClipModal({
   isOpen,
   onClose,
@@ -91,8 +562,7 @@ export function UploadClipModal({
     resetUploadState,
   } = useClipUpload();
 
-  const [games, setGames] = useState<Game[]>([]);
-  const [isLoadingGames, setIsLoadingGames] = useState(false);
+  const { games, isLoadingGames } = useAvailableGames(isOpen);
   const [isDragging, setIsDragging] = useState(false);
 
   const [title, setTitle] = useState('');
@@ -102,47 +572,12 @@ export function UploadClipModal({
   const [privacy, setPrivacy] = useState<PrivacyLevel>('public');
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    let isActive = true;
-    async function loadGames() {
-      setIsLoadingGames(true);
-      try {
-        const res = await clipsService.listGames({ page_size: 50 });
-        if (isActive) {
-          setGames(res.items);
-        }
-      } catch {
-        if (isActive) {
-          setGames([]);
-        }
-      } finally {
-        if (isActive) {
-          setIsLoadingGames(false);
-        }
-      }
-    }
-
-    void loadGames();
-    return () => {
-      isActive = false;
-    };
-  }, [isOpen]);
-
   if (!isOpen) {
     return null;
   }
 
   const isRendering = stage === 'rendering';
-  const isUploading =
-    stage === 'rendering' ||
-    stage === 'preparing' ||
-    stage === 'uploading_video' ||
-    stage === 'uploading_thumbnail' ||
-    stage === 'confirming';
+  const isUploading = isActiveUploadStage(stage);
 
   const handleClose = () => {
     if (isUploading) {
@@ -163,15 +598,7 @@ export function UploadClipModal({
       return;
     }
     setFormErrors((prev) => ({ ...prev, file: undefined }));
-    if (!title.trim()) {
-      const baseName = file.name
-        .replace(/\.[^/.]+$/, '')
-        .replace(/[_-]+/g, ' ')
-        .trim();
-      if (baseName.length >= 3) {
-        setTitle(baseName.slice(0, 120));
-      }
-    }
+    setTitle((prev) => resolveNextTitleOnFilePick(prev, file.name));
     void selectVideoFile(file);
   };
 
@@ -188,32 +615,15 @@ export function UploadClipModal({
     }
   };
 
-  const validateForm = (): boolean => {
-    const nextErrors: FormErrors = {};
-    if (!selectedFile || !extractedMeta) {
-      nextErrors.file = 'Selecione um vídeo MP4 ou WebM válido para continuar.';
-    }
-
-    const titleCheck = validateClipTitle(title);
-    if (!titleCheck.valid && titleCheck.errorMessage) {
-      nextErrors.title = titleCheck.errorMessage;
-    }
-
-    const descCheck = validateClipDescription(description);
-    if (!descCheck.valid && descCheck.errorMessage) {
-      nextErrors.description = descCheck.errorMessage;
-    }
-
-    if (!gameId) {
-      nextErrors.gameId = 'Selecione o jogo do clipe.';
-    }
-
-    setFormErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
   const executeUpload = async () => {
-    if (!validateForm()) {
+    const nextErrors = buildUploadFormErrors({
+      hasValidMedia: Boolean(selectedFile && extractedMeta),
+      title,
+      description,
+      gameId,
+    });
+    setFormErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -237,18 +647,7 @@ export function UploadClipModal({
   };
 
   const stageLabel = getStageStatusLabel(stage, renderProgress, videoProgress);
-  const progressPercent =
-    stage === 'rendering'
-      ? Math.max(2, renderProgress)
-      : stage === 'preparing'
-        ? 5
-        : stage === 'uploading_video'
-          ? Math.max(8, Math.round(videoProgress * 0.85))
-          : stage === 'uploading_thumbnail'
-            ? 92
-            : stage === 'confirming'
-              ? 98
-              : 100;
+  const progressPercent = getUploadProgressPercent(stage, renderProgress, videoProgress);
 
   return (
     <div
@@ -287,222 +686,51 @@ export function UploadClipModal({
         </header>
 
         {stage === 'success' && uploadedClip ? (
-          <div className="space-y-5 py-2">
-            <div className="flex items-start gap-3 rounded-card border border-success bg-success-surface p-4">
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" aria-hidden="true" />
-              <div className="min-w-0 flex-1 space-y-1 font-mono text-mono-body text-text-primary">
-                <p className="font-semibold">Seu clipe está no ar!</p>
-                <p className="break-words text-mono-meta">
-                  <strong className="break-words">{uploadedClip.title}</strong> foi processado e já
-                  pode ser reproduzido e compartilhado.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Link href={`/c/${getClipShareSlug(uploadedClip)}`} className="block">
-                <Button type="button" variant="primary" fullWidth>
-                  IR PARA O CLIPE
-                </Button>
-              </Link>
-              <Button type="button" variant="secondary" fullWidth onClick={handleClose}>
-                Fechar e atualizar lista
-              </Button>
-            </div>
-          </div>
+          <UploadSuccessPanel uploadedClip={uploadedClip} onClose={handleClose} />
         ) : (
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
-            {/* Drag & Drop / Editor */}
-            <div
-              onDragOver={(event) => {
-                event.preventDefault();
-                if (!isUploading) setIsDragging(true);
-              }}
-              onDragLeave={() => setIsDragging(false)}
+            <UploadDropzoneSection
+              fileInputRef={fileInputRef}
+              selectedFile={selectedFile}
+              videoPreviewUrl={videoPreviewUrl}
+              extractedMeta={extractedMeta}
+              editSettings={editSettings}
+              editEstimate={editEstimate}
+              isInspecting={isInspecting}
+              isUploading={isUploading}
+              isDragging={isDragging}
+              inspectionError={inspectionError}
+              fileError={formErrors.file}
+              onSetDragging={setIsDragging}
               onDrop={handleDrop}
-              className={
-                extractedMeta && !isInspecting
-                  ? `rounded-card transition-colors ${isDragging ? 'ring-2 ring-success' : ''}`
-                  : `rounded-card border-[1.5px] border-dashed p-4 transition-colors ${
-                      isDragging
-                        ? 'border-success bg-bg-elevated'
-                        : inspectionError || formErrors.file
-                          ? 'border-danger bg-bg-deep'
-                          : 'border-border-muted bg-bg-deep'
-                    }`
-              }
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="video/mp4,video/webm,.mp4,.webm"
-                onChange={handleFileInputChange}
-                disabled={isUploading}
-                data-testid="clip-file-input"
-                className="sr-only"
-              />
-
-              {isInspecting && (
-                <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-                  <Loader2 className="h-7 w-7 animate-spin text-warning" aria-hidden="true" />
-                  <p className="font-mono text-mono-body text-text-primary">
-                    Analisando vídeo e capturando thumbnail...
-                  </p>
-                </div>
-              )}
-
-              {!isInspecting &&
-                extractedMeta &&
-                selectedFile &&
-                videoPreviewUrl &&
-                editSettings &&
-                editEstimate && (
-                  <ClipVideoEditor
-                    fileName={selectedFile.name}
-                    videoPreviewUrl={videoPreviewUrl}
-                    extractedMeta={extractedMeta}
-                    editSettings={editSettings}
-                    editEstimate={editEstimate}
-                    disabled={isUploading}
-                    onChangeFileClick={() => fileInputRef.current?.click()}
-                    onUpdateEditSettings={updateEditSettings}
-                    onCaptureThumbnail={updateThumbnailFromCapture}
-                  />
-                )}
-
-              {!isInspecting && !extractedMeta && (
-                <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
-                  <UploadCloud className="h-9 w-9 text-text-muted" aria-hidden="true" />
-                  <div className="space-y-1">
-                    <p className="font-mono text-mono-body text-text-primary">
-                      Arraste seu clipe aqui ou selecione do computador
-                    </p>
-                    <p className="font-mono text-mono-meta text-text-muted">
-                      Formatos: .mp4 ou .webm • Máx. 100 MB • Máx. 120 segundos
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    disabled={isUploading}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Selecionar vídeo
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {(inspectionError || formErrors.file) && (
-              <div
-                role="alert"
-                className="flex items-start gap-2 rounded-card border border-danger bg-danger-surface p-3 font-mono text-mono-meta text-danger-text"
-              >
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                <span className="min-w-0 flex-1 break-words">
-                  {inspectionError ?? formErrors.file}
-                </span>
-              </div>
-            )}
-
-            <Input
-              label="Título do clipe"
-              name="title"
-              placeholder="Ex: Clutch 1v4 de AWP na Mirage"
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              error={formErrors.title}
-              disabled={isUploading}
+              onFileInputChange={handleFileInputChange}
+              onUpdateEditSettings={updateEditSettings}
+              onCaptureThumbnail={updateThumbnailFromCapture}
             />
 
-            <div className="space-y-1.5">
-              <label
-                htmlFor="clip-description-input"
-                className="block font-mono text-mono-meta font-medium text-text-secondary"
-              >
-                Descrição (opcional)
-              </label>
-              <textarea
-                id="clip-description-input"
-                rows={3}
-                value={description}
-                disabled={isUploading}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Conte o contexto da jogada..."
-                className="w-full rounded-control border border-border-muted bg-bg-elevated p-3 font-mono text-mono-body text-text-primary placeholder:text-text-muted focus:border-success focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-              />
-              {formErrors.description && (
-                <p role="alert" className="font-mono text-mono-meta text-danger-text">
-                  {formErrors.description}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="clip-game-select"
-                className="block font-mono text-mono-meta font-medium text-text-secondary"
-              >
-                Jogo
-              </label>
-              <select
-                id="clip-game-select"
-                value={gameId}
-                disabled={isUploading || isLoadingGames}
-                onChange={(event) => setGameId(event.target.value)}
-                className="h-11 w-full rounded-control border border-border-muted bg-bg-elevated px-3 font-mono text-mono-body text-text-primary focus:border-success focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <option value="">
-                  {isLoadingGames ? 'Carregando jogos...' : 'Selecione o jogo'}
-                </option>
-                {games.map((game) => (
-                  <option key={game.id} value={game.id}>
-                    {game.name}
-                  </option>
-                ))}
-              </select>
-              {formErrors.gameId && (
-                <p role="alert" className="font-mono text-mono-meta text-danger-text">
-                  {formErrors.gameId}
-                </p>
-              )}
-            </div>
-
-            <TagsChipInput tags={tags} onChange={setTags} disabled={isUploading} />
-
-            <PrivacySelector value={privacy} onChange={setPrivacy} disabled={isUploading} />
+            <UploadMetadataFields
+              title={title}
+              description={description}
+              gameId={gameId}
+              tags={tags}
+              privacy={privacy}
+              games={games}
+              isLoadingGames={isLoadingGames}
+              isUploading={isUploading}
+              formErrors={formErrors}
+              onChangeTitle={setTitle}
+              onChangeDescription={setDescription}
+              onChangeGameId={setGameId}
+              onChangeTags={setTags}
+              onChangePrivacy={setPrivacy}
+            />
 
             {isUploading && (
-              <div
-                aria-live="polite"
-                data-testid={isRendering ? 'render-progress-panel' : 'upload-progress-panel'}
-                className="space-y-2 rounded-card border border-border-muted bg-bg-deep p-4"
-              >
-                <div className="flex items-center justify-between font-mono text-mono-meta">
-                  <span className="font-semibold text-text-primary">{stageLabel}</span>
-                  <span className={isRendering ? 'text-warning' : 'text-success'}>
-                    {progressPercent}%
-                  </span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-bg-surface">
-                  <div
-                    role="progressbar"
-                    aria-valuenow={progressPercent}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    className={`h-full transition-all duration-150 ${
-                      isRendering ? 'bg-warning' : 'bg-success'
-                    }`}
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <p className="font-mono text-mono-badge text-text-muted">
-                  {isRendering
-                    ? 'Etapa 1 de 2: Otimizando e cortando no navegador antes do envio.'
-                    : 'Etapa 2 de 2: Enviando mídia direto para o Cloudflare R2.'}
-                </p>
-              </div>
+              <UploadProgressPanel
+                isRendering={isRendering}
+                stageLabel={stageLabel}
+                progressPercent={progressPercent}
+              />
             )}
 
             {stage === 'error' && uploadError && (
@@ -526,24 +754,14 @@ export function UploadClipModal({
               </div>
             )}
 
-            <div className="flex flex-col-reverse gap-3 border-t border-border-muted pt-4 sm:flex-row sm:justify-end">
-              <Button type="button" variant="secondary" onClick={handleClose}>
-                {isRendering
-                  ? 'Cancelar renderização'
-                  : isUploading
-                    ? 'Cancelar envio'
-                    : 'Cancelar'}
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={isInspecting || Boolean(editEstimate?.exceedsMaxSize)}
-                isLoading={isUploading}
-                loadingText={stageLabel || 'ENVIANDO...'}
-              >
-                PUBLICAR CLIPE
-              </Button>
-            </div>
+            <UploadModalFooter
+              isRendering={isRendering}
+              isUploading={isUploading}
+              isInspecting={isInspecting}
+              exceedsMaxSize={Boolean(editEstimate?.exceedsMaxSize)}
+              stageLabel={stageLabel}
+              onCancel={handleClose}
+            />
           </form>
         )}
       </div>
