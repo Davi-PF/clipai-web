@@ -247,9 +247,9 @@ export function LandingPageContent() {
                 </p>
               </div>
               <div className="col-span-2 rounded-card border border-border-muted bg-bg-deep p-4">
-                <div className="flex items-center justify-between font-mono text-mono-badge">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 font-mono text-mono-badge">
                   <span className="text-text-secondary">INSIGHT AUTOMÁTICO DE QUEDA</span>
-                  <span className="font-semibold text-warning">Maior queda nos 40%</span>
+                  <span className="shrink-0 font-semibold text-warning">Maior queda nos 40%</span>
                 </div>
                 <div className="mt-3 grid grid-cols-10 gap-1.5">
                   {[100, 96, 92, 88, 70, 68, 66, 65, 64, 62].map((heightPct, idx) => (
