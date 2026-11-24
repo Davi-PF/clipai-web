@@ -26,6 +26,16 @@ const FAN_TRANSFORMS: readonly string[] = [
 
 const FAN_Z_INDEX: readonly number[] = [30, 20, 10] as const;
 
+function getStackContainerHeight(count: number): string {
+  if (count >= 3) {
+    return 'min-h-[236px]';
+  }
+  if (count === 2) {
+    return 'min-h-[198px]';
+  }
+  return 'min-h-[164px]';
+}
+
 export function CollectionsFanWidget({
   collections,
   activeCollectionId,
@@ -69,12 +79,7 @@ export function CollectionsFanWidget({
     onSelectCollection(collection);
   };
 
-  const stackContainerHeight =
-    orderedCollections.length >= 3
-      ? 'min-h-[236px]'
-      : orderedCollections.length === 2
-        ? 'min-h-[198px]'
-        : 'min-h-[164px]';
+  const stackContainerHeight = getStackContainerHeight(orderedCollections.length);
 
   return (
     <section
