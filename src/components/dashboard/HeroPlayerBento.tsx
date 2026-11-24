@@ -71,7 +71,7 @@ export function HeroPlayerBento({
   const showFeaturedBadge = Boolean(clip && (isFeaturedHighlight || clip.likes_count >= 10));
 
   return (
-    <div className="relative flex flex-col gap-3">
+    <div className="relative flex w-full min-w-0 flex-col gap-3">
       {/* Container principal com geometria em "L" no desktop (lg+) */}
       <div
         ref={containerRef}
