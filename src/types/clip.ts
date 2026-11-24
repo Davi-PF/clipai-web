@@ -84,6 +84,25 @@ export interface UpdateClipRequest {
   tags?: string[];
 }
 
+export type ClipExportPreset = 'original' | '720p' | '480p';
+
+export interface ClipEditSettings {
+  startTime: number;
+  endTime: number;
+  preset: ClipExportPreset;
+  muteAudio: boolean;
+  thumbnailTimeSeconds: number;
+}
+
+export interface ClipEditEstimate {
+  durationSeconds: number;
+  estimatedBytes: number;
+  originalBytes: number;
+  savingsPercent: number;
+  exceedsMaxSize: boolean;
+  requiresProcessing: boolean;
+}
+
 export interface ExtractedVideoResult {
   durationSeconds: number;
   width: number;
@@ -103,6 +122,7 @@ export interface ExtractedVideoResult {
 
 export type ClipUploadStage =
   | 'idle'
+  | 'rendering'
   | 'preparing'
   | 'uploading_video'
   | 'uploading_thumbnail'
