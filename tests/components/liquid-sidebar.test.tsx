@@ -180,4 +180,63 @@ describe('LiquidSidebar & MobileFloatingDock', () => {
     await user.click(screen.getByRole('button', { name: 'Recolher sidebar' }));
     expect(onToggleCollapse).toHaveBeenCalledTimes(1);
   });
+
+  it('restores the central FAB to its default visual style and blurs focus whenever the radial menu closes', async () => {
+    const user = userEvent.setup();
+    renderSidebar({ activeSection: 'home', onOpenUpload: vi.fn() });
+
+    const fab = screen.getByTestId('mobile-dock-fab');
+
+    // Initial closed state: dark fill, subtle green border, green + icon, soft floating shadow, no sticky hover
+    expect(fab).toHaveAttribute('aria-expanded', 'false');
+    expect(fab).toHaveClass(
+      'border-[rgba(46,184,134,0.6)]',
+      'bg-bg-deep',
+      'text-success',
+      'shadow-[0_6px_16px_rgba(0,0,0,0.45)]',
+    );
+    expect(fab).not.toHaveClass('bg-success', 'hover:bg-success');
+
+    // Open menu -> filled active green state
+    await user.click(fab);
+    expect(fab).toHaveAttribute('aria-expanded', 'true');
+    expect(fab).toHaveClass('border-success', 'bg-success', 'text-bg-deep');
+
+    // Close by clicking X (the FAB itself) -> returns to subtle green border style and blurs
+    await user.click(fab);
+    expect(fab).toHaveAttribute('aria-expanded', 'false');
+    expect(fab).toHaveClass(
+      'border-[rgba(46,184,134,0.6)]',
+      'bg-bg-deep',
+      'text-success',
+      'shadow-[0_6px_16px_rgba(0,0,0,0.45)]',
+    );
+    expect(fab).not.toHaveClass('bg-success');
+    expect(document.activeElement).not.toBe(fab);
+
+    // Reopen and close via backdrop -> returns to default style and blurs
+    await user.click(fab);
+    expect(fab).toHaveClass('bg-success');
+    await user.click(screen.getByTestId('mobile-dock-backdrop'));
+    expect(fab).toHaveClass(
+      'border-[rgba(46,184,134,0.6)]',
+      'bg-bg-deep',
+      'text-success',
+      'shadow-[0_6px_16px_rgba(0,0,0,0.45)]',
+    );
+    expect(fab).not.toHaveClass('bg-success');
+    expect(document.activeElement).not.toBe(fab);
+
+    // Reopen and close via radial option -> returns to default style and blurs
+    await user.click(fab);
+    await user.click(screen.getByRole('menuitem', { name: 'Favoritos' }));
+    expect(fab).toHaveClass(
+      'border-[rgba(46,184,134,0.6)]',
+      'bg-bg-deep',
+      'text-success',
+      'shadow-[0_6px_16px_rgba(0,0,0,0.45)]',
+    );
+    expect(fab).not.toHaveClass('bg-success');
+    expect(document.activeElement).not.toBe(fab);
+  });
 });
