@@ -151,6 +151,85 @@ function ViewsChartBody({
   );
 }
 
+function RetentionChartBody({
+  isLoadingRetention,
+  retention,
+  retentionChartData,
+}: Readonly<{
+  isLoadingRetention: boolean;
+  retention: ClipRetentionResponse | null;
+  retentionChartData: RetentionPointView[];
+}>) {
+  if (isLoadingRetention) {
+    return (
+      <div
+        aria-busy="true"
+        className="h-[260px] w-full animate-pulse rounded-card bg-bg-elevated"
+      />
+    );
+  }
+
+  if (!retention || retention.total_sessions === 0) {
+    return (
+      <div
+        data-testid="retention-chart-empty"
+        className="flex h-[260px] flex-col items-center justify-center gap-2.5 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-6 text-center"
+      >
+        <Activity className="h-8 w-8 text-text-muted" aria-hidden="true" />
+        <p className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+          AGUARDANDO SESSÕES DE RETENÇÃO
+        </p>
+        <p className="max-w-sm font-mono text-mono-meta text-text-secondary">
+          {retention
+            ? `O clipe "${retention.title}" ainda não possui sessões de telemetria registradas neste período.`
+            : 'Envie ou selecione um clipe para visualizar sua curva de retenção de 0% a 100%.'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-[260px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={retentionChartData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+          <defs>
+            <linearGradient id="clipaiRetentionGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#2EB886" stopOpacity={0.42} />
+              <stop offset="95%" stopColor="#2EB886" stopOpacity={0.04} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="#334B60" strokeDasharray="3 3" vertical={false} />
+          <XAxis
+            dataKey="bucket_label"
+            stroke="#91A1B2"
+            tick={{ fill: '#91A1B2', fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)' }}
+            tickLine={false}
+            axisLine={{ stroke: '#4F6478' }}
+          />
+          <YAxis
+            domain={[0, 100]}
+            tickFormatter={(val: number) => `${val}%`}
+            stroke="#91A1B2"
+            tick={{ fill: '#91A1B2', fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)' }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip content={<RetentionTooltip />} />
+          <Area
+            type="monotone"
+            dataKey="retention_pct"
+            name="Retenção"
+            stroke="#2EB886"
+            strokeWidth={2}
+            fill="url(#clipaiRetentionGradient)"
+            activeDot={{ r: 5, fill: '#2EB886', stroke: '#061C2C', strokeWidth: 2 }}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export interface StudioChartsGridProps {
   viewsByDay: ViewsByDayPoint[];
   isLoadingOverview: boolean;
@@ -253,69 +332,11 @@ export function StudioChartsGrid({
           )}
         </header>
 
-        {isLoadingRetention ? (
-          <div
-            aria-busy="true"
-            className="h-[260px] w-full animate-pulse rounded-card bg-bg-elevated"
-          />
-        ) : !retention || retention.total_sessions === 0 ? (
-          <div
-            data-testid="retention-chart-empty"
-            className="flex h-[260px] flex-col items-center justify-center gap-2.5 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-6 text-center"
-          >
-            <Activity className="h-8 w-8 text-text-muted" aria-hidden="true" />
-            <p className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
-              AGUARDANDO SESSÕES DE RETENÇÃO
-            </p>
-            <p className="max-w-sm font-mono text-mono-meta text-text-secondary">
-              {retention
-                ? `O clipe "${retention.title}" ainda não possui sessões de telemetria registradas neste período.`
-                : 'Envie ou selecione um clipe para visualizar sua curva de retenção de 0% a 100%.'}
-            </p>
-          </div>
-        ) : (
-          <div className="h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={retentionChartData}
-                margin={{ top: 8, right: 12, left: -16, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="clipaiRetentionGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2EB886" stopOpacity={0.42} />
-                    <stop offset="95%" stopColor="#2EB886" stopOpacity={0.04} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="#334B60" strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="bucket_label"
-                  stroke="#91A1B2"
-                  tick={{ fill: '#91A1B2', fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)' }}
-                  tickLine={false}
-                  axisLine={{ stroke: '#4F6478' }}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  tickFormatter={(val: number) => `${val}%`}
-                  stroke="#91A1B2"
-                  tick={{ fill: '#91A1B2', fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)' }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip content={<RetentionTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="retention_pct"
-                  name="Retenção"
-                  stroke="#2EB886"
-                  strokeWidth={2}
-                  fill="url(#clipaiRetentionGradient)"
-                  activeDot={{ r: 5, fill: '#2EB886', stroke: '#061C2C', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        <RetentionChartBody
+          isLoadingRetention={isLoadingRetention}
+          retention={retention}
+          retentionChartData={retentionChartData}
+        />
       </article>
     </section>
   );
