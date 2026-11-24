@@ -199,7 +199,7 @@ function DisableTwoFactorModal({
       open
       aria-modal="true"
       aria-labelledby="disable-2fa-dialog-title"
-      className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-bg-deep/85 p-4 text-text-primary"
+      className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
     >
       <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 shadow-xl sm:p-6">
         <div className="flex items-center justify-between border-b border-border-muted pb-4">

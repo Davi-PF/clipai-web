@@ -38,6 +38,13 @@
     line-height: 1.5;
   }
 
+  dialog {
+    margin: 0;
+    border-width: 0;
+    background-color: transparent;
+    color: inherit;
+  }
+
   /* Scrollbars globais unificadas — Dark Mode Frio CLIPAÍ */
   ::-webkit-scrollbar {
     width: 6px;

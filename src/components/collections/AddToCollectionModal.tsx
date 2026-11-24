@@ -222,7 +222,7 @@ export function AddToCollectionModal({
         open
         aria-modal="true"
         aria-labelledby="add-to-collection-title"
-        className="fixed inset-0 z-50 m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-bg-deep/85 p-4 text-text-primary backdrop-blur-sm"
+        className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
       >
         <div className="w-full max-w-md rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6 text-text-primary shadow-2xl">
           <header className="mb-4 flex items-center justify-between border-b border-border-muted pb-3.5">
