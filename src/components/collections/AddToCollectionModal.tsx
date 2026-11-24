@@ -67,20 +67,25 @@ function AddToCollectionListBody({
       {collections.map((collection) => {
         const checked = memberCollectionIds.has(collection.id);
         const isRowPending = pendingId === collection.id;
+        const checkboxId = `add-collection-checkbox-${collection.id}`;
 
         return (
           <li key={collection.id}>
-            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border-muted bg-bg-deep px-3.5 py-2.5 transition-colors hover:border-success">
-              <span className="flex min-w-0 items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={Boolean(pendingId)}
-                  onChange={() => onToggleCollection(collection)}
-                  className="sr-only"
-                />
+            <label
+              htmlFor={checkboxId}
+              className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border-muted bg-bg-deep px-3.5 py-2.5 transition-colors hover:border-success"
+            >
+              <span className="sr-only">Selecionar coleção {collection.title}</span>
+              <input
+                id={checkboxId}
+                type="checkbox"
+                checked={checked}
+                disabled={Boolean(pendingId)}
+                onChange={() => onToggleCollection(collection)}
+                className="sr-only"
+              />
+              <span aria-hidden="true" className="flex min-w-0 items-center gap-3">
                 <span
-                  aria-hidden="true"
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-control border transition-colors ${
                     checked
                       ? 'border-success bg-success text-bg-deep'
