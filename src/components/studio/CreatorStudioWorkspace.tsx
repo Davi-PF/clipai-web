@@ -235,6 +235,7 @@ export function CreatorStudioWorkspace() {
       <LiquidSidebar
         activeSection="studio"
         onSelectSection={handleSelectSection}
+        onOpenUpload={() => setIsUploadOpen(true)}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={toggleSidebarCollapsed}
         showInlineCollapseToggle
@@ -243,7 +244,7 @@ export function CreatorStudioWorkspace() {
         onLogout={() => void handleLogout()}
       />
 
-      <main className="min-w-0 flex-1 p-4 pb-20 md:p-6">
+      <main className="min-w-0 flex-1 p-4 pb-24 md:p-6">
         <div className="mx-auto max-w-[1440px] space-y-5">
           {/* Cabeçalho do Estúdio */}
           <header className="flex flex-col justify-between gap-4 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 md:flex-row md:items-center">
