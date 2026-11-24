@@ -176,15 +176,19 @@ function getDropzoneContainerClass(
   isDragging: boolean,
   hasFileError: boolean,
 ): string {
-  return hasReadyEditor
-    ? `rounded-card transition-colors ${isDragging ? 'ring-2 ring-success' : ''}`
-    : `rounded-card border-[1.5px] border-dashed p-4 transition-colors ${
-        isDragging
-          ? 'border-success bg-bg-elevated'
-          : hasFileError
-            ? 'border-danger bg-bg-deep'
-            : 'border-border-muted bg-bg-deep'
-      }`;
+  if (hasReadyEditor) {
+    const dragRingClass = isDragging ? 'ring-2 ring-success' : '';
+    return `rounded-card transition-colors ${dragRingClass}`;
+  }
+
+  let borderStateClass = 'border-border-muted bg-bg-deep';
+  if (isDragging) {
+    borderStateClass = 'border-success bg-bg-elevated';
+  } else if (hasFileError) {
+    borderStateClass = 'border-danger bg-bg-deep';
+  }
+
+  return `rounded-card border-[1.5px] border-dashed p-4 transition-colors ${borderStateClass}`;
 }
 
 interface UploadSuccessPanelProps {
