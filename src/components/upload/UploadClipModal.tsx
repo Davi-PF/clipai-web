@@ -71,17 +71,20 @@ function getUploadProgressPercent(
   renderProgress: number,
   videoProgress: number,
 ): number {
-  return stage === 'rendering'
-    ? Math.max(2, renderProgress)
-    : stage === 'preparing'
-      ? 5
-      : stage === 'uploading_video'
-        ? Math.max(8, Math.round(videoProgress * 0.85))
-        : stage === 'uploading_thumbnail'
-          ? 92
-          : stage === 'confirming'
-            ? 98
-            : 100;
+  switch (stage) {
+    case 'rendering':
+      return Math.max(2, renderProgress);
+    case 'preparing':
+      return 5;
+    case 'uploading_video':
+      return Math.max(8, Math.round(videoProgress * 0.85));
+    case 'uploading_thumbnail':
+      return 92;
+    case 'confirming':
+      return 98;
+    default:
+      return 100;
+  }
 }
 
 function isActiveUploadStage(stage: ClipUploadStage): boolean {
