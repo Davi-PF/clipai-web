@@ -20,6 +20,10 @@ export const metadata: Metadata = {
   title: 'CLIPAÍ — Plataforma Brasileira de Clipes de Jogadas',
   description:
     'Armazene, organize em coleções, analise a retenção e compartilhe seus melhores momentos e highlights de jogos com upload direto e alta performance.',
+  icons: {
+    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    shortcut: '/icon.svg',
+  },
   openGraph: {
     title: 'CLIPAÍ — Plataforma Brasileira de Clipes de Jogadas',
     description:

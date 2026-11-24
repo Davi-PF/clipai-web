@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { Film } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 
 export interface AuthCardLayoutProps {
   title: string;
@@ -21,17 +21,9 @@ export function AuthCardLayout({
         <div className="flex flex-col items-center text-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-3 rounded-control px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
+            className="inline-flex items-center rounded-control px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
           >
-            <span className="flex h-11 w-11 items-center justify-center rounded-card border border-border-muted bg-bg-surface">
-              <Film className="h-5 w-5 text-success" aria-hidden="true" />
-            </span>
-            <span className="font-display text-display-hero uppercase tracking-[0.06em] text-text-primary">
-              CLIPAÍ
-            </span>
-            <span className="rounded-control bg-warning px-2 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep">
-              BETA
-            </span>
+            <BrandLogo variant="horizontal" size="lg" showBeta />
           </Link>
         </div>
 

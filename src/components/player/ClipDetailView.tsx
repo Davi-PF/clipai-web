@@ -25,6 +25,7 @@ import { AddToCollectionModal } from '@/components/collections/AddToCollectionMo
 import { ClipPlayer } from '@/components/player/ClipPlayer';
 import { DeleteClipDialog } from '@/components/player/DeleteClipDialog';
 import { EditClipModal } from '@/components/player/EditClipModal';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import { Button } from '@/components/ui/Button';
 import { DiscordBadge } from '@/components/ui/DiscordBadge';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -174,13 +175,8 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
             Voltar
           </Link>
 
-          <Link href="/" className="inline-flex items-center gap-2.5">
-            <span className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
-              CLIPAÍ
-            </span>
-            <span className="rounded-control bg-warning px-2 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep">
-              BETA
-            </span>
+          <Link href="/" className="inline-flex items-center">
+            <BrandLogo variant="horizontal" size="md" showBeta />
           </Link>
         </header>
 

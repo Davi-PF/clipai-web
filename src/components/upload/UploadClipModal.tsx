@@ -9,10 +9,11 @@ import {
   type FormEvent,
 } from 'react';
 import Link from 'next/link';
-import { AlertCircle, CheckCircle2, Film, Loader2, RotateCcw, UploadCloud, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, RotateCcw, UploadCloud, X } from 'lucide-react';
 import { ClipVideoEditor } from '@/components/upload/ClipVideoEditor';
 import { PrivacySelector } from '@/components/upload/PrivacySelector';
 import { TagsChipInput } from '@/components/upload/TagsChipInput';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/contexts/toast-context';
@@ -260,7 +261,7 @@ export function UploadClipModal({
         <header className="mb-5 flex items-start justify-between gap-3 border-b border-border-muted pb-4 sm:items-center">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
-              <Film className="h-5 w-5 text-success" aria-hidden="true" />
+              <BrandLogo variant="icon" size="xs" />
             </div>
             <div className="min-w-0 flex-1">
               <h2
