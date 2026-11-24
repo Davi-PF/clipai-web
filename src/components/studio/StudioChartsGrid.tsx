@@ -71,6 +71,86 @@ function RetentionTooltip({ active, payload }: Readonly<CustomTooltipProps<Reten
   );
 }
 
+interface ViewsChartPoint extends ViewsByDayPoint {
+  date_label: string;
+}
+
+function ViewsChartBody({
+  isLoadingOverview,
+  hasViewsActivity,
+  viewsChartData,
+}: Readonly<{
+  isLoadingOverview: boolean;
+  hasViewsActivity: boolean;
+  viewsChartData: ViewsChartPoint[];
+}>) {
+  if (isLoadingOverview) {
+    return (
+      <div
+        aria-busy="true"
+        className="h-[260px] w-full animate-pulse rounded-card bg-bg-elevated"
+      />
+    );
+  }
+
+  if (!hasViewsActivity) {
+    return (
+      <div
+        data-testid="views-chart-empty"
+        className="flex h-[260px] flex-col items-center justify-center gap-2.5 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-6 text-center"
+      >
+        <BarChart3 className="h-8 w-8 text-text-muted" aria-hidden="true" />
+        <p className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+          SEM VISUALIZAÇÕES NO PERÍODO
+        </p>
+        <p className="max-w-sm font-mono text-mono-meta text-text-secondary">
+          Compartilhe o link dos seus clipes na call para acompanhar a curva diária aqui.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-[260px] w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={viewsChartData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+          <defs>
+            <linearGradient id="clipaiViewsGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#2EB886" stopOpacity={0.38} />
+              <stop offset="95%" stopColor="#2EB886" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid stroke="#334B60" strokeDasharray="3 3" vertical={false} />
+          <XAxis
+            dataKey="date_label"
+            stroke="#91A1B2"
+            tick={{ fill: '#91A1B2', fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)' }}
+            tickLine={false}
+            axisLine={{ stroke: '#4F6478' }}
+          />
+          <YAxis
+            allowDecimals={false}
+            stroke="#91A1B2"
+            tick={{ fill: '#91A1B2', fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)' }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <Tooltip content={<ViewsTooltip />} />
+          <Area
+            type="monotone"
+            dataKey="sessions"
+            name="Sessões"
+            stroke="#2EB886"
+            strokeWidth={2}
+            fill="url(#clipaiViewsGradient)"
+            activeDot={{ r: 5, fill: '#2EB886', stroke: '#061C2C', strokeWidth: 2 }}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export interface StudioChartsGridProps {
   viewsByDay: ViewsByDayPoint[];
   isLoadingOverview: boolean;
@@ -119,63 +199,11 @@ export function StudioChartsGrid({
           </div>
         </header>
 
-        {isLoadingOverview ? (
-          <div
-            aria-busy="true"
-            className="h-[260px] w-full animate-pulse rounded-card bg-bg-elevated"
-          />
-        ) : !hasViewsActivity ? (
-          <div
-            data-testid="views-chart-empty"
-            className="flex h-[260px] flex-col items-center justify-center gap-2.5 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-6 text-center"
-          >
-            <BarChart3 className="h-8 w-8 text-text-muted" aria-hidden="true" />
-            <p className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
-              SEM VISUALIZAÇÕES NO PERÍODO
-            </p>
-            <p className="max-w-sm font-mono text-mono-meta text-text-secondary">
-              Compartilhe o link dos seus clipes na call para acompanhar a curva diária aqui.
-            </p>
-          </div>
-        ) : (
-          <div className="h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={viewsChartData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="clipaiViewsGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2EB886" stopOpacity={0.38} />
-                    <stop offset="95%" stopColor="#2EB886" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="#334B60" strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="date_label"
-                  stroke="#91A1B2"
-                  tick={{ fill: '#91A1B2', fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)' }}
-                  tickLine={false}
-                  axisLine={{ stroke: '#4F6478' }}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  stroke="#91A1B2"
-                  tick={{ fill: '#91A1B2', fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)' }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip content={<ViewsTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="sessions"
-                  name="Sessões"
-                  stroke="#2EB886"
-                  strokeWidth={2}
-                  fill="url(#clipaiViewsGradient)"
-                  activeDot={{ r: 5, fill: '#2EB886', stroke: '#061C2C', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        <ViewsChartBody
+          isLoadingOverview={isLoadingOverview}
+          hasViewsActivity={hasViewsActivity}
+          viewsChartData={viewsChartData}
+        />
       </article>
 
       {/* Card 2: Curva de Retenção do Clipe (0% -> 100%) */}
