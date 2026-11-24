@@ -264,33 +264,32 @@ export function CreatorStudioWorkspace() {
 
             <div className="flex flex-wrap items-center gap-3">
               {/* Seletor de período em pills */}
-              <div
-                role="group"
-                aria-label="Selecionar período de análise"
-                className="inline-flex items-center gap-1 rounded-control border border-border-muted bg-bg-deep p-1"
-              >
-                {PERIOD_OPTIONS.map((option) => {
-                  const isActive = period === option.id;
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      aria-pressed={isActive}
-                      onClick={() => {
-                        setPeriod(option.id);
-                        setPage(1);
-                      }}
-                      className={`rounded-control px-3 py-1.5 font-mono text-mono-badge font-semibold transition-colors ${
-                        isActive
-                          ? 'bg-success text-bg-deep'
-                          : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <fieldset className="m-0 min-w-0 border-0 p-0">
+                <legend className="sr-only">Selecionar período de análise</legend>
+                <div className="inline-flex items-center gap-1 rounded-control border border-border-muted bg-bg-deep p-1">
+                  {PERIOD_OPTIONS.map((option) => {
+                    const isActive = period === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        aria-pressed={isActive}
+                        onClick={() => {
+                          setPeriod(option.id);
+                          setPage(1);
+                        }}
+                        className={`rounded-control px-3 py-1.5 font-mono text-mono-badge font-semibold transition-colors ${
+                          isActive
+                            ? 'bg-success text-bg-deep'
+                            : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
 
               <Button
                 type="button"
