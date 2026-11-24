@@ -88,11 +88,20 @@ export function BentoDashboardWorkspace() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
 
-  // Sincroniza seção caso o usuário acesse diretamente /dashboard?section=... (ex.: F5)
+  // Sincroniza seção e modal de upload via URL (ex.: F5 ou atalho mobile vindo de /settings)
   useEffect(() => {
     const urlSection = resolveDashboardSectionFromUrl();
     if (urlSection) {
       setActiveSection(urlSection);
+    }
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('upload') === '1') {
+        setIsUploadOpen(true);
+        params.delete('upload');
+        const query = params.toString();
+        window.history.replaceState(null, '', query ? `/dashboard?${query}` : '/dashboard');
+      }
     }
   }, [setActiveSection]);
 
@@ -323,6 +332,7 @@ export function BentoDashboardWorkspace() {
       <LiquidSidebar
         activeSection={activeSection}
         onSelectSection={handleSelectSection}
+        onOpenUpload={() => setIsUploadOpen(true)}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={toggleSidebarCollapsed}
         user={user}
@@ -330,7 +340,7 @@ export function BentoDashboardWorkspace() {
         onLogout={() => void handleLogout()}
       />
 
-      <main className="min-w-0 flex-1 p-4 pb-20 md:p-6 md:pl-7">
+      <main className="min-w-0 flex-1 p-4 pb-24 md:p-6 md:pl-7">
         <div className="mx-auto max-w-[1440px] space-y-4">
           {!user.is_email_verified && (
             <div

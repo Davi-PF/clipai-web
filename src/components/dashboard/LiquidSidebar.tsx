@@ -13,6 +13,7 @@ import {
   Settings,
   Sparkles,
 } from 'lucide-react';
+import { MobileFloatingDock } from '@/components/dashboard/MobileFloatingDock';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import type { User } from '@/types/api';
 import { getUserDisplayName } from '@/types/user';
@@ -39,6 +40,7 @@ const NAV_ITEMS: readonly NavItemConfig[] = [
 export interface LiquidSidebarProps {
   activeSection: DashboardSection;
   onSelectSection: (section: DashboardSection) => void;
+  onOpenUpload?: () => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   showInlineCollapseToggle?: boolean;
@@ -50,6 +52,7 @@ export interface LiquidSidebarProps {
 export function LiquidSidebar({
   activeSection,
   onSelectSection,
+  onOpenUpload,
   isCollapsed,
   onToggleCollapse,
   showInlineCollapseToggle = false,
@@ -105,40 +108,12 @@ export function LiquidSidebar({
         </div>
       </header>
 
-      {/* Bottom Navigation Bar fixa Mobile (< 768px) conforme DESIGN_SYSTEM.md */}
-      <nav
-        aria-label="Navegação principal mobile"
-        className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-center gap-1 overflow-x-auto border-t border-border-muted bg-bg-surface px-1.5 md:hidden"
-      >
-        {NAV_ITEMS.map(({ id, label, Icon }) => {
-          const isActive = activeSection === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              aria-current={isActive ? 'page' : undefined}
-              onClick={() => onSelectSection(id)}
-              className={`relative flex min-w-[60px] flex-1 shrink-0 flex-col items-center justify-center gap-1 rounded-control px-1.5 py-1.5 font-mono text-[10px] leading-none transition-colors ${
-                isActive
-                  ? 'bg-bg-deep font-semibold text-text-primary'
-                  : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
-              }`}
-            >
-              {isActive && (
-                <span
-                  aria-hidden="true"
-                  className="absolute top-0 h-[2.5px] w-7 rounded-full bg-success"
-                />
-              )}
-              <Icon
-                className={`h-4 w-4 shrink-0 ${isActive ? 'text-success' : 'text-text-muted'}`}
-                aria-hidden="true"
-              />
-              <span className="max-w-full truncate">{label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      {/* Dock flutuante Mobile (< 768px) com recorte côncavo SVG central e menu radial */}
+      <MobileFloatingDock
+        activeSection={activeSection}
+        onSelectSection={onSelectSection}
+        onOpenUpload={onOpenUpload}
+      />
 
       {/* Sidebar Líquida Colapsável Tablet/Desktop (>= 768px) */}
       <aside
