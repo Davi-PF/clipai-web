@@ -10,18 +10,14 @@ import {
 } from 'react';
 import Link from 'next/link';
 import { AlertCircle, CheckCircle2, Film, Loader2, RotateCcw, UploadCloud, X } from 'lucide-react';
+import { ClipVideoEditor } from '@/components/upload/ClipVideoEditor';
 import { PrivacySelector } from '@/components/upload/PrivacySelector';
 import { TagsChipInput } from '@/components/upload/TagsChipInput';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/contexts/toast-context';
 import { useClipUpload } from '@/hooks/useClipUpload';
-import {
-  formatDurationBadge,
-  formatFileSizeMb,
-  validateClipDescription,
-  validateClipTitle,
-} from '@/lib/validators';
+import { validateClipDescription, validateClipTitle } from '@/lib/validators';
 import { clipsService } from '@/services/clips-service';
 import {
   getClipShareSlug,
@@ -44,12 +40,18 @@ interface FormErrors {
   gameId?: string;
 }
 
-function getStageStatusLabel(stage: ClipUploadStage, videoProgress: number): string {
+function getStageStatusLabel(
+  stage: ClipUploadStage,
+  renderProgress: number,
+  videoProgress: number,
+): string {
   switch (stage) {
+    case 'rendering':
+      return `Renderizando clipe no navegador (${renderProgress}%)`;
     case 'preparing':
-      return 'Preparando...';
+      return 'Preparando envio...';
     case 'uploading_video':
-      return `Enviando vídeo (${videoProgress}%)`;
+      return `Enviando vídeo para o R2 (${videoProgress}%)`;
     case 'uploading_thumbnail':
       return 'Enviando thumbnail...';
     case 'confirming':
@@ -69,14 +71,20 @@ export function UploadClipModal({
 
   const {
     selectedFile,
+    videoPreviewUrl,
     extractedMeta,
+    editSettings,
+    editEstimate,
     isInspecting,
     inspectionError,
     stage,
+    renderProgress,
     videoProgress,
     uploadError,
     uploadedClip,
     selectVideoFile,
+    updateEditSettings,
+    updateThumbnailFromCapture,
     startUpload,
     cancelUpload,
     resetUploadState,
@@ -127,7 +135,9 @@ export function UploadClipModal({
     return null;
   }
 
+  const isRendering = stage === 'rendering';
   const isUploading =
+    stage === 'rendering' ||
     stage === 'preparing' ||
     stage === 'uploading_video' ||
     stage === 'uploading_thumbnail' ||
@@ -225,17 +235,19 @@ export function UploadClipModal({
     void executeUpload();
   };
 
-  const stageLabel = getStageStatusLabel(stage, videoProgress);
+  const stageLabel = getStageStatusLabel(stage, renderProgress, videoProgress);
   const progressPercent =
-    stage === 'preparing'
-      ? 5
-      : stage === 'uploading_video'
-        ? Math.max(8, Math.round(videoProgress * 0.85))
-        : stage === 'uploading_thumbnail'
-          ? 92
-          : stage === 'confirming'
-            ? 98
-            : 100;
+    stage === 'rendering'
+      ? Math.max(2, renderProgress)
+      : stage === 'preparing'
+        ? 5
+        : stage === 'uploading_video'
+          ? Math.max(8, Math.round(videoProgress * 0.85))
+          : stage === 'uploading_thumbnail'
+            ? 92
+            : stage === 'confirming'
+              ? 98
+              : 100;
 
   return (
     <div
@@ -244,7 +256,7 @@ export function UploadClipModal({
       aria-labelledby="upload-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-bg-deep/85 p-4 backdrop-blur-sm"
     >
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4 text-text-primary shadow-2xl sm:p-6">
+      <div className="custom-scrollbar max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4 text-text-primary shadow-2xl sm:p-6">
         <header className="mb-5 flex items-start justify-between gap-3 border-b border-border-muted pb-4 sm:items-center">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
@@ -299,7 +311,7 @@ export function UploadClipModal({
           </div>
         ) : (
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
-            {/* Drag & Drop / Preview */}
+            {/* Drag & Drop / Editor */}
             <div
               onDragOver={(event) => {
                 event.preventDefault();
@@ -307,13 +319,17 @@ export function UploadClipModal({
               }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
-              className={`rounded-card border-[1.5px] border-dashed p-4 transition-colors ${
-                isDragging
-                  ? 'border-success bg-bg-elevated'
-                  : inspectionError || formErrors.file
-                    ? 'border-danger bg-bg-deep'
-                    : 'border-border-muted bg-bg-deep'
-              }`}
+              className={
+                extractedMeta && !isInspecting
+                  ? `rounded-card transition-colors ${isDragging ? 'ring-2 ring-success' : ''}`
+                  : `rounded-card border-[1.5px] border-dashed p-4 transition-colors ${
+                      isDragging
+                        ? 'border-success bg-bg-elevated'
+                        : inspectionError || formErrors.file
+                          ? 'border-danger bg-bg-deep'
+                          : 'border-border-muted bg-bg-deep'
+                    }`
+              }
             >
               <input
                 ref={fileInputRef}
@@ -334,46 +350,24 @@ export function UploadClipModal({
                 </div>
               )}
 
-              {!isInspecting && extractedMeta && selectedFile && (
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                  <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-control border border-border-muted bg-bg-surface sm:w-52">
-                    <img
-                      src={extractedMeta.thumbnailPreviewUrl}
-                      alt="Pré-visualização da capa gerada do clipe"
-                      className="h-full w-full object-cover"
-                    />
-                    <span className="absolute bottom-1.5 right-1.5 rounded-control bg-bg-deep/90 px-1.5 py-0.5 font-mono text-mono-badge text-text-primary">
-                      {formatDurationBadge(extractedMeta.durationSeconds)}
-                    </span>
-                  </div>
-
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <p className="truncate font-mono text-mono-body font-semibold text-text-primary">
-                      {selectedFile.name}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-control border border-border-muted bg-bg-surface px-2 py-0.5 font-mono text-mono-badge text-text-primary">
-                        {extractedMeta.resolutionLabel}
-                      </span>
-                      <span className="rounded-control border border-border-muted bg-bg-surface px-2 py-0.5 font-mono text-mono-badge text-text-primary">
-                        {formatDurationBadge(extractedMeta.durationSeconds)}
-                      </span>
-                      <span className="rounded-control border border-border-muted bg-bg-surface px-2 py-0.5 font-mono text-mono-badge text-success">
-                        {formatFileSizeMb(extractedMeta.videoSizeBytes)}
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      disabled={isUploading}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      Trocar arquivo
-                    </Button>
-                  </div>
-                </div>
-              )}
+              {!isInspecting &&
+                extractedMeta &&
+                selectedFile &&
+                videoPreviewUrl &&
+                editSettings &&
+                editEstimate && (
+                  <ClipVideoEditor
+                    fileName={selectedFile.name}
+                    videoPreviewUrl={videoPreviewUrl}
+                    extractedMeta={extractedMeta}
+                    editSettings={editSettings}
+                    editEstimate={editEstimate}
+                    disabled={isUploading}
+                    onChangeFileClick={() => fileInputRef.current?.click()}
+                    onUpdateEditSettings={updateEditSettings}
+                    onCaptureThumbnail={updateThumbnailFromCapture}
+                  />
+                )}
 
               {!isInspecting && !extractedMeta && (
                 <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
@@ -481,11 +475,14 @@ export function UploadClipModal({
             {isUploading && (
               <div
                 aria-live="polite"
+                data-testid={isRendering ? 'render-progress-panel' : 'upload-progress-panel'}
                 className="space-y-2 rounded-card border border-border-muted bg-bg-deep p-4"
               >
                 <div className="flex items-center justify-between font-mono text-mono-meta">
                   <span className="font-semibold text-text-primary">{stageLabel}</span>
-                  <span className="text-success">{progressPercent}%</span>
+                  <span className={isRendering ? 'text-warning' : 'text-success'}>
+                    {progressPercent}%
+                  </span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-bg-surface">
                   <div
@@ -493,10 +490,17 @@ export function UploadClipModal({
                     aria-valuenow={progressPercent}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    className="h-full bg-success transition-all duration-150"
+                    className={`h-full transition-all duration-150 ${
+                      isRendering ? 'bg-warning' : 'bg-success'
+                    }`}
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
+                <p className="font-mono text-mono-badge text-text-muted">
+                  {isRendering
+                    ? 'Etapa 1 de 2: Otimizando e cortando no navegador antes do envio.'
+                    : 'Etapa 2 de 2: Enviando mídia direto para o Cloudflare R2.'}
+                </p>
               </div>
             )}
 
@@ -523,12 +527,16 @@ export function UploadClipModal({
 
             <div className="flex flex-col-reverse gap-3 border-t border-border-muted pt-4 sm:flex-row sm:justify-end">
               <Button type="button" variant="secondary" onClick={handleClose}>
-                {isUploading ? 'Cancelar envio' : 'Cancelar'}
+                {isRendering
+                  ? 'Cancelar renderização'
+                  : isUploading
+                    ? 'Cancelar envio'
+                    : 'Cancelar'}
               </Button>
               <Button
                 type="submit"
                 variant="primary"
-                disabled={isInspecting}
+                disabled={isInspecting || Boolean(editEstimate?.exceedsMaxSize)}
                 isLoading={isUploading}
                 loadingText={stageLabel || 'ENVIANDO...'}
               >

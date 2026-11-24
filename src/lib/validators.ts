@@ -1,6 +1,7 @@
 import type { AvatarMimeType, VideoMimeType } from '@/types/api';
 
 export const MAX_VIDEO_SIZE_BYTES = 104_857_600; // 100 MB
+export const MAX_EDITOR_INPUT_SIZE_BYTES = 524_288_000; // 500 MB (entrada do editor antes de cortar/comprimir)
 export const MAX_THUMBNAIL_SIZE_BYTES = 5_242_880; // 5 MB
 export const MAX_AVATAR_SIZE_BYTES = 5_242_880; // 5 MB
 export const MIN_DURATION_SECONDS = 1.0;
@@ -44,6 +45,27 @@ export function validateVideoFileMeta(file: { type: string; size: number }): Val
     return {
       valid: false,
       errorMessage: 'O arquivo excede o limite máximo de 100 MB.',
+    };
+  }
+
+  return { valid: true, errorMessage: null };
+}
+
+export function validateEditorInputVideoMeta(file: {
+  type: string;
+  size: number;
+}): ValidationResult {
+  if (!isAllowedVideoMimeType(file.type)) {
+    return {
+      valid: false,
+      errorMessage: 'Formato não suportado. Envie apenas arquivos MP4 ou WebM.',
+    };
+  }
+
+  if (file.size <= 0 || file.size > MAX_EDITOR_INPUT_SIZE_BYTES) {
+    return {
+      valid: false,
+      errorMessage: 'O arquivo excede o limite máximo de entrada do editor (500 MB).',
     };
   }
 

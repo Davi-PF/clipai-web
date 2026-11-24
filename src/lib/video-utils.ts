@@ -1,6 +1,8 @@
 import {
   MAX_THUMBNAIL_SIZE_BYTES,
+  MIN_DURATION_SECONDS,
   validateClipDuration,
+  validateEditorInputVideoMeta,
   validateVideoFileMeta,
 } from '@/lib/validators';
 import type { ExtractedVideoResult, ThumbnailMimeType, VideoMimeType } from '@/types/clip';
@@ -119,8 +121,138 @@ async function captureFrameBlob(
   throw new VideoMetadataError('Falha ao exportar a imagem de capa do clipe.');
 }
 
-export async function extractVideoMetadataAndThumbnail(file: File): Promise<ExtractedVideoResult> {
-  const fileMetaValidation = validateVideoFileMeta({ type: file.type, size: file.size });
+export interface CapturedThumbnailResult {
+  blob: Blob;
+  mimeType: ThumbnailMimeType;
+  sizeBytes: number;
+  previewUrl: string;
+}
+
+export async function captureThumbnailFromVideoElement(
+  video: HTMLVideoElement,
+  maxWidth = 1280,
+): Promise<CapturedThumbnailResult> {
+  const width = video.videoWidth || 1280;
+  const height = video.videoHeight || 720;
+  const targetSize = computeTargetThumbnailSize(width, height, maxWidth);
+  const { blob, mimeType } = await captureFrameBlob(video, targetSize.width, targetSize.height);
+
+  if (blob.size > MAX_THUMBNAIL_SIZE_BYTES) {
+    throw new VideoMetadataError('A imagem de capa gerada ultrapassou o limite de 5 MB.');
+  }
+
+  return {
+    blob,
+    mimeType,
+    sizeBytes: blob.size,
+    previewUrl: URL.createObjectURL(blob),
+  };
+}
+
+export const DEFAULT_FILMSTRIP_FRAME_COUNT = 10;
+
+export function computeFilmstripTimestamps(
+  durationSeconds: number,
+  frameCount = DEFAULT_FILMSTRIP_FRAME_COUNT,
+): number[] {
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || frameCount <= 0) {
+    return [];
+  }
+  const safeCount = Math.max(1, Math.floor(frameCount));
+  const step = durationSeconds / safeCount;
+  const maxTime = Math.max(0, durationSeconds - 0.05);
+
+  return Array.from({ length: safeCount }, (_, index) => {
+    const midpoint = (index + 0.5) * step;
+    return Math.round(Math.min(maxTime, Math.max(0, midpoint)) * 100) / 100;
+  });
+}
+
+export interface ExtractFilmstripOptions {
+  frameCount?: number;
+  frameWidth?: number;
+  signal?: AbortSignal;
+}
+
+export async function extractVideoFilmstripFrames(
+  videoUrl: string,
+  durationSeconds: number,
+  options: ExtractFilmstripOptions = {},
+): Promise<string[]> {
+  const { frameCount = DEFAULT_FILMSTRIP_FRAME_COUNT, frameWidth = 160, signal } = options;
+
+  const timestamps = computeFilmstripTimestamps(durationSeconds, frameCount);
+  if (timestamps.length === 0 || signal?.aborted || typeof document === 'undefined') {
+    return [];
+  }
+
+  const video = document.createElement('video');
+  video.preload = 'auto';
+  video.muted = true;
+  video.playsInline = true;
+
+  const frames: string[] = [];
+
+  try {
+    const metadataPromise = waitForVideoEvent(video, 'loadedmetadata');
+    video.src = videoUrl;
+    video.load();
+    await metadataPromise;
+
+    if (signal?.aborted) {
+      return [];
+    }
+
+    const width = video.videoWidth || 320;
+    const height = video.videoHeight || 180;
+    const targetSize = computeTargetThumbnailSize(width, height, frameWidth);
+    const canvas = document.createElement('canvas');
+    canvas.width = targetSize.width;
+    canvas.height = targetSize.height;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return [];
+    }
+
+    for (const timestamp of timestamps) {
+      if (signal?.aborted) {
+        break;
+      }
+      const seekPromise = waitForVideoEvent(video, 'seeked');
+      video.currentTime = timestamp;
+      await seekPromise;
+
+      if (signal?.aborted) {
+        break;
+      }
+
+      context.drawImage(video, 0, 0, targetSize.width, targetSize.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+      if (dataUrl) {
+        frames.push(dataUrl);
+      }
+    }
+
+    return frames;
+  } catch {
+    return frames;
+  } finally {
+    video.removeAttribute('src');
+    video.load();
+  }
+}
+
+export interface ExtractVideoOptions {
+  allowExtendedInput?: boolean;
+}
+
+export async function extractVideoMetadataAndThumbnail(
+  file: File,
+  options: ExtractVideoOptions = {},
+): Promise<ExtractedVideoResult> {
+  const fileMetaValidation = options.allowExtendedInput
+    ? validateEditorInputVideoMeta({ type: file.type, size: file.size })
+    : validateVideoFileMeta({ type: file.type, size: file.size });
   if (!fileMetaValidation.valid) {
     throw new VideoMetadataError(fileMetaValidation.errorMessage ?? 'Arquivo de vídeo inválido.');
   }
@@ -139,11 +271,17 @@ export async function extractVideoMetadataAndThumbnail(file: File): Promise<Extr
     await metadataPromise;
 
     const rawDuration = Number(video.duration.toFixed(2));
-    const durationValidation = validateClipDuration(rawDuration);
-    if (!durationValidation.valid) {
-      throw new VideoMetadataError(
-        durationValidation.errorMessage ?? 'Duração de vídeo fora do limite permitido.',
-      );
+    if (options.allowExtendedInput) {
+      if (!Number.isFinite(rawDuration) || rawDuration < MIN_DURATION_SECONDS) {
+        throw new VideoMetadataError('O clipe deve ter no mínimo 1 segundo de duração.');
+      }
+    } else {
+      const durationValidation = validateClipDuration(rawDuration);
+      if (!durationValidation.valid) {
+        throw new VideoMetadataError(
+          durationValidation.errorMessage ?? 'Duração de vídeo fora do limite permitido.',
+        );
+      }
     }
 
     const seekTime = Math.min(1, rawDuration * 0.1);

@@ -1,11 +1,31 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ApiClientError } from '@/lib/api-client';
+import { FfmpegProcessingError, processClipWithFfmpeg } from '@/lib/ffmpeg-processor';
 import { R2UploadError, uploadFileToPresignedUrl } from '@/lib/r2-upload';
-import { extractVideoMetadataAndThumbnail, VideoMetadataError } from '@/lib/video-utils';
+import { validateClipDuration, validateVideoFileMeta } from '@/lib/validators';
+import {
+  createDefaultEditSettings,
+  estimateEditedClipSize,
+  getExportPresetOption,
+  roundTimeSeconds,
+} from '@/lib/video-editor-utils';
+import {
+  extractVideoMetadataAndThumbnail,
+  formatResolutionLabel,
+  VideoMetadataError,
+  type CapturedThumbnailResult,
+} from '@/lib/video-utils';
 import { clipsService } from '@/services/clips-service';
-import type { Clip, ClipUploadStage, ExtractedVideoResult, PrivacyLevel } from '@/types/clip';
+import type {
+  Clip,
+  ClipEditEstimate,
+  ClipEditSettings,
+  ClipUploadStage,
+  ExtractedVideoResult,
+  PrivacyLevel,
+} from '@/types/clip';
 
 export interface StartUploadPayload {
   title: string;
@@ -17,75 +37,200 @@ export interface StartUploadPayload {
 
 export interface UseClipUploadResult {
   selectedFile: File | null;
+  videoPreviewUrl: string | null;
   extractedMeta: ExtractedVideoResult | null;
+  editSettings: ClipEditSettings | null;
+  editEstimate: ClipEditEstimate | null;
   isInspecting: boolean;
   inspectionError: string | null;
   stage: ClipUploadStage;
+  renderProgress: number;
   videoProgress: number;
   uploadError: string | null;
   uploadedClip: Clip | null;
   selectVideoFile: (file: File) => Promise<void>;
+  updateEditSettings: (
+    updater: Partial<ClipEditSettings> | ((prev: ClipEditSettings) => ClipEditSettings),
+  ) => void;
+  updateThumbnailFromCapture: (
+    captured: CapturedThumbnailResult,
+    capturedAtSeconds: number,
+  ) => void;
   startUpload: (payload: StartUploadPayload) => Promise<Clip | null>;
   cancelUpload: () => void;
   resetUploadState: () => void;
 }
 
-function revokePreviewUrl(meta: ExtractedVideoResult | null): void {
-  if (meta?.thumbnailPreviewUrl) {
-    URL.revokeObjectURL(meta.thumbnailPreviewUrl);
+function revokeUrl(url: string | null | undefined): void {
+  if (url) {
+    URL.revokeObjectURL(url);
   }
+}
+
+function resolveFinalDimensions(
+  meta: ExtractedVideoResult,
+  settings: ClipEditSettings,
+): { width: number; height: number; resolutionLabel: string } {
+  const presetOption = getExportPresetOption(settings.preset);
+  if (presetOption.maxHeight === null || meta.height <= presetOption.maxHeight) {
+    return {
+      width: meta.width,
+      height: meta.height,
+      resolutionLabel: meta.resolutionLabel,
+    };
+  }
+
+  const ratio = presetOption.maxHeight / meta.height;
+  const scaledWidth = Math.max(2, Math.round((meta.width * ratio) / 2) * 2);
+  return {
+    width: scaledWidth,
+    height: presetOption.maxHeight,
+    resolutionLabel: formatResolutionLabel(presetOption.maxHeight),
+  };
 }
 
 export function useClipUpload(): UseClipUploadResult {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const [extractedMeta, setExtractedMeta] = useState<ExtractedVideoResult | null>(null);
+  const [editSettings, setEditSettings] = useState<ClipEditSettings | null>(null);
   const [isInspecting, setIsInspecting] = useState(false);
   const [inspectionError, setInspectionError] = useState<string | null>(null);
 
   const [stage, setStage] = useState<ClipUploadStage>('idle');
+  const [renderProgress, setRenderProgress] = useState(0);
   const [videoProgress, setVideoProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedClip, setUploadedClip] = useState<Clip | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const metaRef = useRef<ExtractedVideoResult | null>(null);
+  const videoObjectUrlRef = useRef<{ file: File | null; url: string | null }>({
+    file: null,
+    url: null,
+  });
+  const selectionRequestIdRef = useRef(0);
 
   useEffect(() => {
     metaRef.current = extractedMeta;
   }, [extractedMeta]);
 
+  const releaseVideoPreviewUrl = useCallback(() => {
+    revokeUrl(videoObjectUrlRef.current.url);
+    videoObjectUrlRef.current = { file: null, url: null };
+  }, []);
+
+  const acquireVideoPreviewUrl = useCallback((file: File): string => {
+    if (videoObjectUrlRef.current.file === file && videoObjectUrlRef.current.url) {
+      return videoObjectUrlRef.current.url;
+    }
+    revokeUrl(videoObjectUrlRef.current.url);
+    const nextUrl = URL.createObjectURL(file);
+    videoObjectUrlRef.current = { file, url: nextUrl };
+    return nextUrl;
+  }, []);
+
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
-      revokePreviewUrl(metaRef.current);
+      revokeUrl(metaRef.current?.thumbnailPreviewUrl);
+      releaseVideoPreviewUrl();
     };
-  }, []);
+  }, [releaseVideoPreviewUrl]);
 
-  const selectVideoFile = useCallback(async (file: File) => {
-    setIsInspecting(true);
-    setInspectionError(null);
-    setUploadError(null);
-    setStage('idle');
-    setVideoProgress(0);
-    setUploadedClip(null);
-    revokePreviewUrl(metaRef.current);
-    setExtractedMeta(null);
-    setSelectedFile(null);
-
-    try {
-      const metadata = await extractVideoMetadataAndThumbnail(file);
-      setSelectedFile(file);
-      setExtractedMeta(metadata);
-    } catch (err: unknown) {
-      const message =
-        err instanceof VideoMetadataError
-          ? err.message
-          : 'Não foi possível validar o arquivo de vídeo selecionado.';
-      setInspectionError(message);
-    } finally {
-      setIsInspecting(false);
+  const editEstimate = useMemo<ClipEditEstimate | null>(() => {
+    if (!extractedMeta || !editSettings) {
+      return null;
     }
-  }, []);
+    return estimateEditedClipSize({
+      originalBytes: extractedMeta.videoSizeBytes,
+      totalDuration: extractedMeta.durationSeconds,
+      settings: editSettings,
+    });
+  }, [extractedMeta, editSettings]);
+
+  const selectVideoFile = useCallback(
+    async (file: File) => {
+      const requestId = selectionRequestIdRef.current + 1;
+      selectionRequestIdRef.current = requestId;
+
+      setIsInspecting(true);
+      setInspectionError(null);
+      setUploadError(null);
+      setStage('idle');
+      setRenderProgress(0);
+      setVideoProgress(0);
+      setUploadedClip(null);
+      revokeUrl(metaRef.current?.thumbnailPreviewUrl);
+      releaseVideoPreviewUrl();
+      setExtractedMeta(null);
+      setEditSettings(null);
+      setVideoPreviewUrl(null);
+      setSelectedFile(null);
+
+      try {
+        const metadata = await extractVideoMetadataAndThumbnail(file, { allowExtendedInput: true });
+        if (selectionRequestIdRef.current !== requestId) {
+          revokeUrl(metadata.thumbnailPreviewUrl);
+          return;
+        }
+        const previewUrl = acquireVideoPreviewUrl(file);
+        setSelectedFile(file);
+        setVideoPreviewUrl(previewUrl);
+        setExtractedMeta(metadata);
+        setEditSettings(createDefaultEditSettings(metadata.durationSeconds));
+      } catch (err: unknown) {
+        if (selectionRequestIdRef.current !== requestId) {
+          return;
+        }
+        const message =
+          err instanceof VideoMetadataError
+            ? err.message
+            : 'Não foi possível validar o arquivo de vídeo selecionado.';
+        setInspectionError(message);
+      } finally {
+        if (selectionRequestIdRef.current === requestId) {
+          setIsInspecting(false);
+        }
+      }
+    },
+    [acquireVideoPreviewUrl, releaseVideoPreviewUrl],
+  );
+
+  const updateEditSettings = useCallback(
+    (updater: Partial<ClipEditSettings> | ((prev: ClipEditSettings) => ClipEditSettings)) => {
+      setEditSettings((prev) => {
+        if (!prev) {
+          return prev;
+        }
+        return typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
+      });
+    },
+    [],
+  );
+
+  const updateThumbnailFromCapture = useCallback(
+    (captured: CapturedThumbnailResult, capturedAtSeconds: number) => {
+      revokeUrl(metaRef.current?.thumbnailPreviewUrl);
+      setExtractedMeta((prev) => {
+        if (!prev) {
+          revokeUrl(captured.previewUrl);
+          return prev;
+        }
+        return {
+          ...prev,
+          thumbnailBlob: captured.blob,
+          thumbnailMimeType: captured.mimeType,
+          thumbnailSizeBytes: captured.sizeBytes,
+          thumbnailPreviewUrl: captured.previewUrl,
+        };
+      });
+      setEditSettings((prev) =>
+        prev ? { ...prev, thumbnailTimeSeconds: roundTimeSeconds(capturedAtSeconds) } : prev,
+      );
+    },
+    [],
+  );
 
   const cancelUpload = useCallback(() => {
     abortControllerRef.current?.abort();
@@ -93,18 +238,23 @@ export function useClipUpload(): UseClipUploadResult {
   }, []);
 
   const resetUploadState = useCallback(() => {
+    selectionRequestIdRef.current += 1;
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
-    revokePreviewUrl(metaRef.current);
+    revokeUrl(metaRef.current?.thumbnailPreviewUrl);
+    releaseVideoPreviewUrl();
     setSelectedFile(null);
+    setVideoPreviewUrl(null);
     setExtractedMeta(null);
+    setEditSettings(null);
     setIsInspecting(false);
     setInspectionError(null);
     setStage('idle');
+    setRenderProgress(0);
     setVideoProgress(0);
     setUploadError(null);
     setUploadedClip(null);
-  }, []);
+  }, [releaseVideoPreviewUrl]);
 
   const startUpload = useCallback(
     async (payload: StartUploadPayload): Promise<Clip | null> => {
@@ -113,32 +263,83 @@ export function useClipUpload(): UseClipUploadResult {
         return null;
       }
 
+      const activeSettings =
+        editSettings ?? createDefaultEditSettings(extractedMeta.durationSeconds);
+      const finalDuration = roundTimeSeconds(activeSettings.endTime - activeSettings.startTime);
+      const durationCheck = validateClipDuration(finalDuration);
+      if (!durationCheck.valid) {
+        setUploadError(durationCheck.errorMessage ?? 'Duração do corte fora do limite permitido.');
+        setStage('error');
+        return null;
+      }
+
       const controller = new AbortController();
       abortControllerRef.current = controller;
       setUploadError(null);
+      setRenderProgress(0);
       setVideoProgress(0);
-      setStage('preparing');
 
       try {
+        let uploadFile = selectedFile;
+        let uploadMimeType = extractedMeta.videoMimeType;
+
+        setStage('rendering');
+        const processed = await processClipWithFfmpeg({
+          file: selectedFile,
+          totalDuration: extractedMeta.durationSeconds,
+          settings: activeSettings,
+          onProgress: (percent) => setRenderProgress(percent),
+          signal: controller.signal,
+        });
+        uploadFile = processed.file;
+        uploadMimeType = processed.mimeType;
+
+        const finalMetaCheck = validateVideoFileMeta({
+          type: uploadMimeType,
+          size: uploadFile.size,
+        });
+        if (!finalMetaCheck.valid) {
+          setUploadError(
+            'O vídeo final ultrapassou 100 MB. Reduza o trecho selecionado ou escolha o preset 480p Leve.',
+          );
+          setStage('error');
+          return null;
+        }
+
+        const finalDims = resolveFinalDimensions(extractedMeta, activeSettings);
+        const finalBitrateKbps = Math.max(
+          1,
+          Math.round((uploadFile.size * 8) / finalDuration / 1000),
+        );
+        const finalContainer = uploadMimeType === 'video/webm' ? 'webm' : 'mp4';
+
+        setStage('preparing');
         const presigned = await clipsService.requestUploadUrl({
           title: payload.title.trim(),
           description: payload.description.trim() || null,
           game_id: payload.gameId,
           privacy: payload.privacy,
           tags: payload.tags,
-          video_mime_type: extractedMeta.videoMimeType,
-          video_size_bytes: extractedMeta.videoSizeBytes,
-          duration_seconds: extractedMeta.durationSeconds,
+          video_mime_type: uploadMimeType,
+          video_size_bytes: uploadFile.size,
+          duration_seconds: finalDuration,
           thumbnail_mime_type: extractedMeta.thumbnailMimeType,
           thumbnail_size_bytes: extractedMeta.thumbnailSizeBytes,
-          technical_metadata: extractedMeta.technicalMetadata,
+          technical_metadata: {
+            ...extractedMeta.technicalMetadata,
+            container: finalContainer,
+            width: finalDims.width,
+            height: finalDims.height,
+            resolution_label: finalDims.resolutionLabel,
+            bitrate_kbps: finalBitrateKbps,
+          },
         });
 
         setStage('uploading_video');
         await uploadFileToPresignedUrl(
           presigned.video_upload.url,
-          selectedFile,
-          presigned.video_upload.headers['Content-Type'] || extractedMeta.videoMimeType,
+          uploadFile,
+          presigned.video_upload.headers['Content-Type'] || uploadMimeType,
           (percent) => setVideoProgress(percent),
           controller.signal,
         );
@@ -160,14 +361,20 @@ export function useClipUpload(): UseClipUploadResult {
         setStage('success');
         return confirmedClip;
       } catch (err: unknown) {
-        if (err instanceof R2UploadError && err.isAborted) {
+        if (
+          (err instanceof R2UploadError && err.isAborted) ||
+          (err instanceof FfmpegProcessingError && err.isAborted)
+        ) {
           setStage('idle');
+          setRenderProgress(0);
           setVideoProgress(0);
           return null;
         }
 
         const message =
-          err instanceof ApiClientError || err instanceof R2UploadError
+          err instanceof ApiClientError ||
+          err instanceof R2UploadError ||
+          err instanceof FfmpegProcessingError
             ? err.message
             : 'Ocorreu um erro inesperado ao enviar o clipe. Tente novamente.';
         setUploadError(message);
@@ -177,19 +384,25 @@ export function useClipUpload(): UseClipUploadResult {
         abortControllerRef.current = null;
       }
     },
-    [selectedFile, extractedMeta],
+    [selectedFile, extractedMeta, editSettings],
   );
 
   return {
     selectedFile,
+    videoPreviewUrl,
     extractedMeta,
+    editSettings,
+    editEstimate,
     isInspecting,
     inspectionError,
     stage,
+    renderProgress,
     videoProgress,
     uploadError,
     uploadedClip,
     selectVideoFile,
+    updateEditSettings,
+    updateThumbnailFromCapture,
     startUpload,
     cancelUpload,
     resetUploadState,
