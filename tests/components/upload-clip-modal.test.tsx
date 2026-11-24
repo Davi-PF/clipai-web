@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UploadClipModal } from '@/components/upload/UploadClipModal';
 import { ToastViewport } from '@/components/ui/Toast';
 import { ToastProvider } from '@/contexts/toast-context';
+import * as ffmpegProcessor from '@/lib/ffmpeg-processor';
 import * as r2Upload from '@/lib/r2-upload';
 import * as videoUtils from '@/lib/video-utils';
 import { clipsService } from '@/services/clips-service';
@@ -70,6 +71,18 @@ const MOCK_CONFIRMED_CLIP: Clip = {
 describe('UploadClipModal', () => {
   beforeEach(() => {
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    vi.spyOn(videoUtils, 'extractVideoFilmstripFrames').mockResolvedValue([]);
+    vi.spyOn(ffmpegProcessor, 'processClipWithFfmpeg').mockImplementation(
+      async ({ onProgress }) => {
+        onProgress?.(45);
+        onProgress?.(100);
+        return {
+          file: new File(['encoded-bytes'], 'clutch_mirage-edited.mp4', { type: 'video/mp4' }),
+          mimeType: 'video/mp4',
+          wasProcessed: true,
+        };
+      },
+    );
     vi.spyOn(clipsService, 'listGames').mockResolvedValue({
       items: MOCK_GAMES,
       page: 1,
@@ -221,5 +234,61 @@ describe('UploadClipModal', () => {
       expect(screen.getByText('Seu clipe está no ar!')).toBeInTheDocument();
     });
     expect(uploadSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps the video objectUrl stable across re-renders and revokes it only on file change or unmount', async () => {
+    const user = userEvent.setup();
+    const createUrlSpy = vi
+      .spyOn(URL, 'createObjectURL')
+      .mockReturnValueOnce('blob:stable-video-url-1')
+      .mockReturnValueOnce('blob:stable-video-url-2');
+    const revokeUrlSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+
+    vi.spyOn(videoUtils, 'extractVideoMetadataAndThumbnail').mockResolvedValue(MOCK_EXTRACTED);
+
+    const { unmount } = render(
+      <ToastProvider>
+        <UploadClipModal isOpen onClose={vi.fn()} />
+        <ToastViewport />
+      </ToastProvider>,
+    );
+
+    const file1 = new File(['video-1'], 'clip_one.mp4', { type: 'video/mp4' });
+    fireEvent.change(screen.getByTestId('clip-file-input'), { target: { files: [file1] } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('clip-video-editor')).toBeInTheDocument();
+    });
+
+    const videoEl = screen.getByLabelText(
+      'Pré-visualização do editor de clipe',
+    ) as HTMLVideoElement;
+    expect(videoEl.getAttribute('src')).toBe('blob:stable-video-url-1');
+    expect(createUrlSpy).toHaveBeenCalledTimes(1);
+
+    // Trigger multiple modal re-renders (title, description, privacy) -> objectUrl must NOT recreate or revoke
+    await user.type(screen.getByLabelText('Título do clipe'), ' editado');
+    await user.type(screen.getByLabelText('Descrição (opcional)'), 'Teste de estabilidade');
+    await user.click(screen.getByRole('button', { name: /Só Amigos/i }));
+
+    expect(createUrlSpy).toHaveBeenCalledTimes(1);
+    expect(revokeUrlSpy).not.toHaveBeenCalledWith('blob:stable-video-url-1');
+    expect(videoEl.getAttribute('src')).toBe('blob:stable-video-url-1');
+
+    // Selecting a new file revokes the previous objectUrl and creates a new one
+    const file2 = new File(['video-2'], 'clip_two.mp4', { type: 'video/mp4' });
+    fireEvent.change(screen.getByTestId('clip-file-input'), { target: { files: [file2] } });
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Pré-visualização do editor de clipe').getAttribute('src')).toBe(
+        'blob:stable-video-url-2',
+      );
+    });
+    expect(revokeUrlSpy).toHaveBeenCalledWith('blob:stable-video-url-1');
+    expect(createUrlSpy).toHaveBeenCalledTimes(2);
+
+    // Unmounting modal revokes the active objectUrl
+    unmount();
+    expect(revokeUrlSpy).toHaveBeenCalledWith('blob:stable-video-url-2');
   });
 });

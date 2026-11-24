@@ -3,8 +3,10 @@ import { R2UploadError, uploadFileToPresignedUrl } from '@/lib/r2-upload';
 import {
   VideoMetadataError,
   computeAspectRatio,
+  computeFilmstripTimestamps,
   computeTargetThumbnailSize,
   extractContainerFromMime,
+  extractVideoFilmstripFrames,
   extractVideoMetadataAndThumbnail,
   formatResolutionLabel,
 } from '@/lib/video-utils';
@@ -175,6 +177,86 @@ describe('video-utils', () => {
     const file = new File(['video-bytes'], 'long.mp4', { type: 'video/mp4' });
     await expect(extractVideoMetadataAndThumbnail(file)).rejects.toBeInstanceOf(VideoMetadataError);
     expect(revokeUrlSpy).toHaveBeenCalledWith('blob:long-video-url');
+  });
+
+  it('computes 10 spaced filmstrip timestamps and extracts canvas frames with cleanup', async () => {
+    const timestamps = computeFilmstripTimestamps(40, 10);
+    expect(timestamps).toHaveLength(10);
+    expect(timestamps[0]).toBe(2);
+    expect(timestamps[9]).toBe(38);
+    expect(computeFilmstripTimestamps(0, 10)).toEqual([]);
+
+    const drawImageMock = vi.fn();
+    let frameIndex = 0;
+    const fakeCanvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn().mockReturnValue({ drawImage: drawImageMock }),
+      toDataURL: vi.fn(() => `data:image/jpeg;base64,frame-${++frameIndex}`),
+    } as unknown as HTMLCanvasElement;
+
+    const removeAttrSpy = vi.fn();
+    const fakeVideo = {
+      preload: '',
+      muted: false,
+      playsInline: false,
+      videoWidth: 1280,
+      videoHeight: 720,
+      src: '',
+      removeAttribute: removeAttrSpy,
+      listeners: new Map<string, Array<() => void>>(),
+      addEventListener(eventName: string, cb: () => void) {
+        const list = this.listeners.get(eventName) ?? [];
+        list.push(cb);
+        this.listeners.set(eventName, list);
+      },
+      removeEventListener(eventName: string, cb: () => void) {
+        const list = this.listeners.get(eventName) ?? [];
+        this.listeners.set(
+          eventName,
+          list.filter((fn) => fn !== cb),
+        );
+      },
+      emit(eventName: string) {
+        const list = this.listeners.get(eventName) ?? [];
+        list.forEach((fn) => fn());
+      },
+      load() {
+        if (this.src) {
+          queueMicrotask(() => this.emit('loadedmetadata'));
+        }
+      },
+    };
+
+    Object.defineProperty(fakeVideo, 'currentTime', {
+      set() {
+        queueMicrotask(() => fakeVideo.emit('seeked'));
+      },
+      get() {
+        return 0;
+      },
+    });
+
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName === 'video') return fakeVideo as unknown as HTMLVideoElement;
+      if (tagName === 'canvas') return fakeCanvas;
+      return originalCreateElement(tagName);
+    });
+
+    const frames = await extractVideoFilmstripFrames('blob:demo-video', 40, { frameCount: 10 });
+    expect(frames).toHaveLength(10);
+    expect(frames[0]).toBe('data:image/jpeg;base64,frame-1');
+    expect(drawImageMock).toHaveBeenCalledTimes(10);
+    expect(removeAttrSpy).toHaveBeenCalledWith('src');
+
+    // Aborted signal returns empty array immediately
+    const abortedController = new AbortController();
+    abortedController.abort();
+    const abortedFrames = await extractVideoFilmstripFrames('blob:demo-video', 40, {
+      signal: abortedController.signal,
+    });
+    expect(abortedFrames).toEqual([]);
   });
 });
 
