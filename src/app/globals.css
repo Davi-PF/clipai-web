@@ -37,6 +37,51 @@
     font-size: 0.8125rem;
     line-height: 1.5;
   }
+
+  /* Scrollbars globais unificadas — Dark Mode Frio CLIPAÍ */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track {
+    background: var(--bg-deep);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(79, 100, 120, 0.35);
+    border-radius: 9999px;
+    transition: background-color 150ms ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(46, 184, 134, 0.6);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background-color: var(--color-success-primary);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(79, 100, 120, 0.4) transparent;
+    }
+
+    html,
+    body {
+      scrollbar-color: rgba(79, 100, 120, 0.4) var(--bg-deep);
+    }
+  }
 }
 
 /* Curvas côncavas líquidas e contorno contínuo do item ativo na Sidebar Líquida (expandida) */
