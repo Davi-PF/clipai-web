@@ -514,6 +514,16 @@ interface UploadModalFooterProps {
   onCancel: () => void;
 }
 
+function getCancelButtonLabel(isRendering: boolean, isUploading: boolean): string {
+  if (isRendering) {
+    return 'Cancelar renderização';
+  }
+  if (isUploading) {
+    return 'Cancelar envio';
+  }
+  return 'Cancelar';
+}
+
 function UploadModalFooter({
   isRendering,
   isUploading,
@@ -525,7 +535,7 @@ function UploadModalFooter({
   return (
     <div className="flex flex-col-reverse gap-3 border-t border-border-muted pt-4 sm:flex-row sm:justify-end">
       <Button type="button" variant="secondary" onClick={onCancel}>
-        {isRendering ? 'Cancelar renderização' : isUploading ? 'Cancelar envio' : 'Cancelar'}
+        {getCancelButtonLabel(isRendering, isUploading)}
       </Button>
       <Button
         type="submit"
