@@ -25,6 +25,49 @@ export interface ClipTrimTimelineProps {
 const KEYBOARD_STEP_SECONDS = 1;
 const SKELETON_SLOTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
+function FilmstripLayerContent({
+  filmstripFrames,
+  isLoadingFilmstrip,
+}: Readonly<{
+  filmstripFrames: string[];
+  isLoadingFilmstrip: boolean;
+}>) {
+  if (filmstripFrames.length > 0) {
+    return (
+      <div
+        className="grid h-full w-full"
+        style={{ gridTemplateColumns: `repeat(${filmstripFrames.length}, minmax(0, 1fr))` }}
+      >
+        {filmstripFrames.map((frameSrc, index) => (
+          <img
+            key={`${index}-${frameSrc.slice(-12)}`}
+            src={frameSrc}
+            alt=""
+            draggable={false}
+            data-testid="filmstrip-frame"
+            className="h-full w-full object-cover"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (isLoadingFilmstrip) {
+    return (
+      <div
+        data-testid="filmstrip-skeleton"
+        className="grid h-full w-full grid-cols-10 gap-px bg-bg-deep"
+      >
+        {SKELETON_SLOTS.map((slot) => (
+          <div key={slot} className="h-full w-full animate-pulse bg-bg-elevated/70" />
+        ))}
+      </div>
+    );
+  }
+
+  return <div className="h-full w-full bg-bg-surface" />;
+}
+
 export function ClipTrimTimeline({
   totalDuration,
   startTime,
@@ -169,34 +212,10 @@ export function ClipTrimTimeline({
           data-testid="clip-trim-filmstrip"
           className="pointer-events-none absolute inset-0 overflow-hidden rounded-control"
         >
-          {filmstripFrames.length > 0 ? (
-            <div
-              className="grid h-full w-full"
-              style={{ gridTemplateColumns: `repeat(${filmstripFrames.length}, minmax(0, 1fr))` }}
-            >
-              {filmstripFrames.map((frameSrc, index) => (
-                <img
-                  key={`${index}-${frameSrc.slice(-12)}`}
-                  src={frameSrc}
-                  alt=""
-                  draggable={false}
-                  data-testid="filmstrip-frame"
-                  className="h-full w-full object-cover"
-                />
-              ))}
-            </div>
-          ) : isLoadingFilmstrip ? (
-            <div
-              data-testid="filmstrip-skeleton"
-              className="grid h-full w-full grid-cols-10 gap-px bg-bg-deep"
-            >
-              {SKELETON_SLOTS.map((slot) => (
-                <div key={slot} className="h-full w-full animate-pulse bg-bg-elevated/70" />
-              ))}
-            </div>
-          ) : (
-            <div className="h-full w-full bg-bg-surface" />
-          )}
+          <FilmstripLayerContent
+            filmstripFrames={filmstripFrames}
+            isLoadingFilmstrip={isLoadingFilmstrip}
+          />
         </div>
 
         {/* Regiões descartadas escurecidas fora de [startTime, endTime] */}
