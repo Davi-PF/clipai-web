@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BarChart3,
   Bookmark,
@@ -106,6 +106,20 @@ export function MobileFloatingDock({
   onOpenUpload,
 }: Readonly<MobileFloatingDockProps>) {
   const [isRadialOpen, setIsRadialOpen] = useState(false);
+  const fabRef = useRef<HTMLButtonElement | null>(null);
+
+  const closeRadialMenu = useCallback(() => {
+    setIsRadialOpen(false);
+    fabRef.current?.blur();
+  }, []);
+
+  const handleToggleRadial = () => {
+    if (isRadialOpen) {
+      closeRadialMenu();
+      return;
+    }
+    setIsRadialOpen(true);
+  };
 
   useEffect(() => {
     if (!isRadialOpen) {
@@ -114,7 +128,7 @@ export function MobileFloatingDock({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsRadialOpen(false);
+        closeRadialMenu();
       }
     };
 
@@ -122,15 +136,15 @@ export function MobileFloatingDock({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isRadialOpen]);
+  }, [isRadialOpen, closeRadialMenu]);
 
   const handleDockSelect = (section: DashboardSection) => {
-    setIsRadialOpen(false);
+    closeRadialMenu();
     onSelectSection(section);
   };
 
   const handleUploadAction = () => {
-    setIsRadialOpen(false);
+    closeRadialMenu();
     if (onOpenUpload) {
       onOpenUpload();
       return;
@@ -145,7 +159,7 @@ export function MobileFloatingDock({
           type="button"
           data-testid="mobile-dock-backdrop"
           aria-label="Fechar menu rápido"
-          onClick={() => setIsRadialOpen(false)}
+          onClick={closeRadialMenu}
           className="fixed inset-0 z-30 bg-bg-deep/75 backdrop-blur-[2px] md:hidden"
         />
       )}
@@ -244,16 +258,17 @@ export function MobileFloatingDock({
 
         {/* Botão central flutuante (+ gira 45° para X ao abrir) */}
         <button
+          ref={fabRef}
           type="button"
           data-testid="mobile-dock-fab"
           aria-expanded={isRadialOpen}
           aria-controls="mobile-radial-menu"
           aria-label={isRadialOpen ? 'Fechar menu rápido' : 'Abrir menu rápido'}
-          onClick={() => setIsRadialOpen((prev) => !prev)}
-          className={`pointer-events-auto absolute -top-6 left-1/2 z-50 flex h-[52px] w-[52px] -translate-x-1/2 items-center justify-center rounded-full border-2 transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success ${
+          onClick={handleToggleRadial}
+          className={`pointer-events-auto absolute -top-6 left-1/2 z-50 flex h-[52px] w-[52px] -translate-x-1/2 touch-manipulation items-center justify-center rounded-full border-2 transition-all duration-300 ease-out [-webkit-tap-highlight-color:transparent] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success ${
             isRadialOpen
-              ? 'border-success bg-success text-bg-deep shadow-[0_0_24px_rgba(46,184,134,0.6)]'
-              : 'border-success bg-bg-deep text-success shadow-[0_10px_24px_rgba(2,10,18,0.95),0_0_14px_rgba(46,184,134,0.32)] hover:bg-success hover:text-bg-deep'
+              ? 'border-success bg-success text-bg-deep shadow-[0_6px_18px_rgba(46,184,134,0.4)]'
+              : 'border-[rgba(46,184,134,0.6)] bg-bg-deep text-success shadow-[0_6px_16px_rgba(0,0,0,0.45)]'
           }`}
         >
           <Plus
