@@ -17,6 +17,105 @@ export interface AddToCollectionModalProps {
   onMembershipChanged?: () => void;
 }
 
+interface AddToCollectionListBodyProps {
+  isLoading: boolean;
+  collections: Collection[];
+  memberCollectionIds: Set<string>;
+  pendingId: string | null;
+  onOpenCreate: () => void;
+  onToggleCollection: (collection: Collection) => void;
+}
+
+function AddToCollectionListBody({
+  isLoading,
+  collections,
+  memberCollectionIds,
+  pendingId,
+  onOpenCreate,
+  onToggleCollection,
+}: Readonly<AddToCollectionListBodyProps>) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-8 font-mono text-mono-meta text-text-secondary">
+        <Loader2 className="h-4 w-4 animate-spin text-success" aria-hidden="true" />
+        <span>Carregando suas coleções...</span>
+      </div>
+    );
+  }
+
+  if (collections.length === 0) {
+    return (
+      <div className="space-y-3 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-5 text-center">
+        <p className="font-mono text-mono-meta text-text-secondary">
+          Você ainda não criou nenhuma coleção.
+        </p>
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          leftIcon={<FolderPlus className="h-4 w-4" />}
+          onClick={onOpenCreate}
+        >
+          CRIAR PRIMEIRA COLEÇÃO
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
+      {collections.map((collection) => {
+        const checked = memberCollectionIds.has(collection.id);
+        const isRowPending = pendingId === collection.id;
+
+        return (
+          <li key={collection.id}>
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border-muted bg-bg-deep px-3.5 py-2.5 transition-colors hover:border-success">
+              <span className="flex min-w-0 items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={Boolean(pendingId)}
+                  onChange={() => onToggleCollection(collection)}
+                  className="sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-control border transition-colors ${
+                    checked
+                      ? 'border-success bg-success text-bg-deep'
+                      : 'border-border-muted bg-bg-elevated text-transparent'
+                  }`}
+                >
+                  {isRowPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-text-primary" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5" />
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-mono text-mono-body font-semibold text-text-primary">
+                    {collection.title}
+                  </span>
+                  <span className="block font-mono text-mono-badge text-text-muted">
+                    {collection.clips_count} {collection.clips_count === 1 ? 'clipe' : 'clipes'}
+                  </span>
+                </span>
+              </span>
+
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: collection.accent_color || '#2EB886' }}
+                aria-hidden="true"
+              />
+            </label>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function AddToCollectionModal({
   clipId,
   clipTitle,
@@ -147,79 +246,14 @@ export function AddToCollectionModal({
             </button>
           </header>
 
-          {isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-8 font-mono text-mono-meta text-text-secondary">
-              <Loader2 className="h-4 w-4 animate-spin text-success" aria-hidden="true" />
-              <span>Carregando suas coleções...</span>
-            </div>
-          ) : collections.length === 0 ? (
-            <div className="space-y-3 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-5 text-center">
-              <p className="font-mono text-mono-meta text-text-secondary">
-                Você ainda não criou nenhuma coleção.
-              </p>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                leftIcon={<FolderPlus className="h-4 w-4" />}
-                onClick={() => setIsCreateOpen(true)}
-              >
-                CRIAR PRIMEIRA COLEÇÃO
-              </Button>
-            </div>
-          ) : (
-            <ul className="max-h-64 space-y-2 overflow-y-auto pr-1">
-              {collections.map((collection) => {
-                const checked = memberCollectionIds.has(collection.id);
-                const isRowPending = pendingId === collection.id;
-
-                return (
-                  <li key={collection.id}>
-                    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border-muted bg-bg-deep px-3.5 py-2.5 transition-colors hover:border-success">
-                      <span className="flex min-w-0 items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={Boolean(pendingId)}
-                          onChange={() => void handleToggleCollection(collection)}
-                          className="sr-only"
-                        />
-                        <span
-                          aria-hidden="true"
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-control border transition-colors ${
-                            checked
-                              ? 'border-success bg-success text-bg-deep'
-                              : 'border-border-muted bg-bg-elevated text-transparent'
-                          }`}
-                        >
-                          {isRowPending ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-text-primary" />
-                          ) : (
-                            <Check className="h-3.5 w-3.5" />
-                          )}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate font-mono text-mono-body font-semibold text-text-primary">
-                            {collection.title}
-                          </span>
-                          <span className="block font-mono text-mono-badge text-text-muted">
-                            {collection.clips_count}{' '}
-                            {collection.clips_count === 1 ? 'clipe' : 'clipes'}
-                          </span>
-                        </span>
-                      </span>
-
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: collection.accent_color || '#2EB886' }}
-                        aria-hidden="true"
-                      />
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <AddToCollectionListBody
+            isLoading={isLoading}
+            collections={collections}
+            memberCollectionIds={memberCollectionIds}
+            pendingId={pendingId}
+            onOpenCreate={() => setIsCreateOpen(true)}
+            onToggleCollection={(collection) => void handleToggleCollection(collection)}
+          />
 
           <div className="mt-5 flex items-center justify-between gap-3 border-t border-border-muted pt-4">
             <Button
