@@ -88,6 +88,52 @@ export function createDefaultEditSettings(
   };
 }
 
+function clampFromStartHandle(
+  initialStart: number,
+  initialEnd: number,
+  safeTotal: number,
+  minAllowed: number,
+  maxAllowed: number,
+): { start: number; end: number } {
+  let start = initialStart;
+  let end = initialEnd;
+
+  if (end - start < minAllowed) {
+    start = Math.max(0, end - minAllowed);
+  }
+  if (end - start < minAllowed) {
+    end = Math.min(safeTotal, start + minAllowed);
+  }
+  if (end - start > maxAllowed) {
+    end = Math.min(safeTotal, start + maxAllowed);
+  }
+
+  return { start, end };
+}
+
+function clampFromEndHandle(
+  initialStart: number,
+  initialEnd: number,
+  safeTotal: number,
+  minAllowed: number,
+  maxAllowed: number,
+): { start: number; end: number } {
+  let start = initialStart;
+  let end = initialEnd;
+
+  if (end - start < minAllowed) {
+    end = Math.min(safeTotal, start + minAllowed);
+  }
+  if (end - start < minAllowed) {
+    start = Math.max(0, end - minAllowed);
+  }
+  if (end - start > maxAllowed) {
+    start = Math.max(0, end - maxAllowed);
+  }
+
+  return { start, end };
+}
+
 export function clampTrimRange(params: {
   startTime: number;
   endTime: number;
@@ -99,34 +145,17 @@ export function clampTrimRange(params: {
   const maxAllowed = Math.min(safeTotal, params.maxDuration ?? MAX_DURATION_SECONDS);
   const minAllowed = Math.min(safeTotal, MIN_DURATION_SECONDS);
 
-  let start = Math.max(0, Math.min(safeTotal, roundTimeSeconds(params.startTime)));
-  let end = Math.max(0, Math.min(safeTotal, roundTimeSeconds(params.endTime)));
+  const initialStart = Math.max(0, Math.min(safeTotal, roundTimeSeconds(params.startTime)));
+  const initialEnd = Math.max(0, Math.min(safeTotal, roundTimeSeconds(params.endTime)));
 
-  if (params.changedHandle === 'start') {
-    if (end - start < minAllowed) {
-      start = Math.max(0, end - minAllowed);
-      if (end - start < minAllowed) {
-        end = Math.min(safeTotal, start + minAllowed);
-      }
-    }
-    if (end - start > maxAllowed) {
-      end = Math.min(safeTotal, start + maxAllowed);
-    }
-  } else {
-    if (end - start < minAllowed) {
-      end = Math.min(safeTotal, start + minAllowed);
-      if (end - start < minAllowed) {
-        start = Math.max(0, end - minAllowed);
-      }
-    }
-    if (end - start > maxAllowed) {
-      start = Math.max(0, end - maxAllowed);
-    }
-  }
+  const clamped =
+    params.changedHandle === 'start'
+      ? clampFromStartHandle(initialStart, initialEnd, safeTotal, minAllowed, maxAllowed)
+      : clampFromEndHandle(initialStart, initialEnd, safeTotal, minAllowed, maxAllowed);
 
   return {
-    startTime: roundTimeSeconds(start),
-    endTime: roundTimeSeconds(end),
+    startTime: roundTimeSeconds(clamped.start),
+    endTime: roundTimeSeconds(clamped.end),
   };
 }
 
