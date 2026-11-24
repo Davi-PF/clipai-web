@@ -6,7 +6,6 @@ import {
   ArrowRight,
   BarChart3,
   CloudUpload,
-  Film,
   FolderKanban,
   Lock,
   Share2,
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react';
 import { LandingHeroMockup } from '@/components/landing/LandingHeroMockup';
 import { LandingNavbar } from '@/components/landing/LandingNavbar';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import { Button } from '@/components/ui/Button';
 import { DiscordIcon } from '@/components/ui/DiscordBadge';
 import { useAuth } from '@/hooks/useAuth';
@@ -342,17 +342,7 @@ export function LandingPageContent() {
       {/* Footer minimalista */}
       <footer className="border-t border-border-muted bg-bg-surface px-4 py-8 md:px-8">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 sm:flex-row">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-control border border-border-muted bg-bg-deep">
-              <Film className="h-4 w-4 text-success" aria-hidden="true" />
-            </span>
-            <span className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
-              CLIPAÍ
-            </span>
-            <span className="rounded-control bg-warning px-2 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep">
-              BETA
-            </span>
-          </div>
+          <BrandLogo variant="horizontal" size="sm" showBeta />
 
           <div className="flex flex-wrap items-center justify-center gap-5 font-mono text-mono-badge text-text-secondary">
             <Link href="/login" className="transition-colors hover:text-success">

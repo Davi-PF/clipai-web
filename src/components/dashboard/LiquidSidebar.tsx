@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Compass,
-  Film,
   Flame,
   FolderKanban,
   LogOut,
@@ -14,6 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { MobileFloatingDock } from '@/components/dashboard/MobileFloatingDock';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import type { User } from '@/types/api';
 import { getUserDisplayName } from '@/types/user';
@@ -66,16 +66,13 @@ export function LiquidSidebar({
     <>
       {/* Cabeçalho compacto Mobile (< 768px) */}
       <header className="flex items-center justify-between gap-2 border-b border-border-muted bg-bg-surface px-3 py-2.5 md:hidden">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
-            <Film className="h-4 w-4 text-success" aria-hidden="true" />
-          </span>
-          <span className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
-            CLIPAÍ
-          </span>
-          <span className="hidden rounded-control bg-warning px-1.5 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep sm:inline-flex">
-            BETA
-          </span>
+        <div className="flex min-w-0 items-center">
+          <BrandLogo
+            variant="horizontal"
+            size="sm"
+            showBeta
+            betaClassName="hidden sm:inline-flex"
+          />
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
@@ -136,9 +133,10 @@ export function LiquidSidebar({
                 title="Expandir sidebar"
                 className="group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep transition-colors hover:border-success hover:bg-bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
               >
-                <Film
-                  className="h-5 w-5 text-success transition-opacity duration-150 group-hover:opacity-0"
-                  aria-hidden="true"
+                <BrandLogo
+                  variant="icon"
+                  size="xs"
+                  className="transition-opacity duration-150 group-hover:opacity-0"
                 />
                 <ChevronRight
                   className="absolute h-5 w-5 text-success opacity-0 transition-opacity duration-150 group-hover:opacity-100"
@@ -146,19 +144,7 @@ export function LiquidSidebar({
                 />
               </button>
             ) : (
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
-                  <Film className="h-5 w-5 text-success" aria-hidden="true" />
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
-                    CLIPAÍ
-                  </span>
-                  <span className="rounded-control bg-warning px-1.5 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep">
-                    BETA
-                  </span>
-                </div>
-              </div>
+              <BrandLogo variant="horizontal" size="md" showBeta />
             )}
 
             {!isCollapsed && showInlineCollapseToggle && (

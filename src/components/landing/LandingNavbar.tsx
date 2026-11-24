@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Film, LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 import { Button } from '@/components/ui/Button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,17 +17,14 @@ export function LandingNavbar() {
         {/* Marca CLIPAÍ + BETA */}
         <Link
           href="/"
-          className="inline-flex min-w-0 shrink-0 items-center gap-1.5 rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success sm:gap-2.5"
+          className="inline-flex min-w-0 shrink-0 items-center rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-surface sm:h-9 sm:w-9">
-            <Film className="h-4 w-4 text-success" aria-hidden="true" />
-          </span>
-          <span className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
-            CLIPAÍ
-          </span>
-          <span className="hidden rounded-control bg-warning px-2 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep sm:inline-flex">
-            BETA
-          </span>
+          <BrandLogo
+            variant="horizontal"
+            size="md"
+            showBeta
+            betaClassName="hidden sm:inline-flex"
+          />
         </Link>
 
         {/* Links âncora */}
