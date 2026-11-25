@@ -46,6 +46,13 @@ function getFanCardSurfaceClass(isFront: boolean, isActiveFilter: boolean): stri
   return 'border-border-muted bg-text-primary text-bg-deep shadow-lg hover:border-success';
 }
 
+function getFanCardActionLabel(isFront: boolean, isActiveFilter: boolean): string {
+  if (!isFront) {
+    return 'TRAZER PARA FRENTE';
+  }
+  return isActiveFilter ? 'COLEÇÃO ATIVA' : 'CLIQUE PARA FILTRAR';
+}
+
 interface CollectionFanCardProps {
   collection: Collection;
   index: number;
@@ -124,11 +131,7 @@ function CollectionFanCard({
             isFront ? 'text-bg-deep' : 'text-text-muted'
           }`}
         >
-          {isFront
-            ? isActiveFilter
-              ? 'COLEÇÃO ATIVA'
-              : 'CLIQUE PARA FILTRAR'
-            : 'TRAZER PARA FRENTE'}
+          {getFanCardActionLabel(isFront, isActiveFilter)}
         </span>
         <span
           className="h-1 w-8 rounded-full"
