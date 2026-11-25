@@ -201,8 +201,8 @@ function DisableTwoFactorModal({
       aria-labelledby="disable-2fa-dialog-title"
       className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
     >
-      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 shadow-xl sm:p-6">
-        <div className="flex items-center justify-between border-b border-border-muted pb-4">
+      <div className="flex max-h-[92vh] w-full max-w-md flex-col overflow-hidden rounded-bento border-[1.5px] border-border-muted bg-bg-surface shadow-xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-border-muted px-5 py-4 sm:px-6">
           <h3
             id="disable-2fa-dialog-title"
             className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary"
@@ -219,62 +219,64 @@ function DisableTwoFactorModal({
           </button>
         </div>
 
-        <form onSubmit={(event) => void handleSubmit(event)} noValidate className="mt-4 space-y-4">
-          <p className="font-mono text-mono-meta text-text-secondary">
-            Para remover a proteção em duas etapas e invalidar seus códigos de backup atuais,
-            confirme sua identidade abaixo.
-          </p>
+        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">
+          <form onSubmit={(event) => void handleSubmit(event)} noValidate className="space-y-4">
+            <p className="font-mono text-mono-meta text-text-secondary">
+              Para remover a proteção em duas etapas e invalidar seus códigos de backup atuais,
+              confirme sua identidade abaixo.
+            </p>
 
-          {formError && (
-            <div
-              role="alert"
-              className="flex items-start gap-2 rounded-card border border-danger bg-danger-surface p-3 font-mono text-mono-meta text-danger-text"
-            >
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{formError}</span>
-            </div>
-          )}
+            {formError && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-card border border-danger bg-danger-surface p-3 font-mono text-mono-meta text-danger-text"
+              >
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{formError}</span>
+              </div>
+            )}
 
-          <Input
-            label="Código 2FA ou código de backup"
-            type="text"
-            name="disable_2fa_code"
-            placeholder="000000 ou 7K4M-9P2X"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            error={codeError}
-            leftIcon={<KeyRound className="h-4 w-4" />}
-            disabled={isSubmitting}
-          />
-
-          {hasPassword && (
             <Input
-              label="Senha atual"
-              type="password"
-              name="disable_2fa_password"
-              placeholder="Digite sua senha atual"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              error={passwordError}
-              leftIcon={<Lock className="h-4 w-4" />}
+              label="Código 2FA ou código de backup"
+              type="text"
+              name="disable_2fa_code"
+              placeholder="000000 ou 7K4M-9P2X"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              error={codeError}
+              leftIcon={<KeyRound className="h-4 w-4" />}
               disabled={isSubmitting}
             />
-          )}
 
-          <div className="flex flex-col-reverse gap-2.5 pt-2 sm:flex-row sm:items-center sm:justify-end">
-            <Button type="button" variant="secondary" disabled={isSubmitting} onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="danger"
-              isLoading={isSubmitting}
-              loadingText="DESATIVANDO..."
-            >
-              CONFIRMAR DESATIVAÇÃO
-            </Button>
-          </div>
-        </form>
+            {hasPassword && (
+              <Input
+                label="Senha atual"
+                type="password"
+                name="disable_2fa_password"
+                placeholder="Digite sua senha atual"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                error={passwordError}
+                leftIcon={<Lock className="h-4 w-4" />}
+                disabled={isSubmitting}
+              />
+            )}
+
+            <div className="flex flex-col-reverse gap-2.5 pt-2 sm:flex-row sm:items-center sm:justify-end">
+              <Button type="button" variant="secondary" disabled={isSubmitting} onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="danger"
+                isLoading={isSubmitting}
+                loadingText="DESATIVANDO..."
+              >
+                CONFIRMAR DESATIVAÇÃO
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
     </dialog>
   );
