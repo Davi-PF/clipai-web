@@ -159,7 +159,8 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
     }
   };
 
-  const isOwner = Boolean(user && clip && user.id === clip.author.id);
+  const currentUserId = user?.id;
+  const isOwner = Boolean(currentUserId && currentUserId === clip?.author.id);
   const liked = clip ? isClipLiked(clip) : false;
   const favorited = clip ? isClipFavorited(clip) : false;
   const clipDetailPath = `/c/${slug}`;
