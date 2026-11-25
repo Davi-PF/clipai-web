@@ -69,17 +69,25 @@ export function isApiErrorPayload(payload: unknown): payload is ApiError {
   return typeof candidate.code === 'string' && typeof candidate.message === 'string';
 }
 
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.endsWith('/', end)) {
+    end -= 1;
+  }
+  return end === value.length ? value : value.slice(0, end);
+}
+
 export function getApiBaseUrl(): string {
   const configured =
     process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? DEFAULT_API_BASE_URL;
-  return configured.replace(/\/+$/, '');
+  return stripTrailingSlashes(configured);
 }
 
 export function resolveApiUrl(path: string, baseUrl: string = getApiBaseUrl()): string {
   if (/^https?:\/\//i.test(path)) {
     return path;
   }
-  const normalizedBase = baseUrl.replace(/\/+$/, '');
+  const normalizedBase = stripTrailingSlashes(baseUrl);
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 
   if (normalizedBase.endsWith('/api/v1') && normalizedPath.startsWith('/api/v1/')) {
