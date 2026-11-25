@@ -101,8 +101,8 @@ export function EditClipModal({ clip, isOpen, onClose, onUpdated }: Readonly<Edi
       aria-labelledby="edit-clip-modal-title"
       className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
     >
-      <div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6 text-text-primary shadow-2xl">
-        <header className="mb-5 flex items-center justify-between border-b border-border-muted pb-3">
+      <div className="flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-bento border-[1.5px] border-border-muted bg-bg-surface text-text-primary shadow-2xl">
+        <header className="flex shrink-0 items-center justify-between border-b border-border-muted px-6 py-4">
           <h2
             id="edit-clip-modal-title"
             className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary"
@@ -119,73 +119,80 @@ export function EditClipModal({ clip, isOpen, onClose, onUpdated }: Readonly<Edi
           </button>
         </header>
 
-        <form onSubmit={(event) => void handleSubmit(event)} noValidate className="space-y-4">
-          <Input
-            label="Título"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            error={titleError}
-            disabled={isSaving}
-          />
-
-          <div className="space-y-1.5">
-            <label
-              htmlFor="edit-clip-description"
-              className="block font-mono text-mono-meta font-medium text-text-secondary"
-            >
-              Descrição (opcional)
-            </label>
-            <textarea
-              id="edit-clip-description"
-              rows={3}
-              value={description}
+        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <form onSubmit={(event) => void handleSubmit(event)} noValidate className="space-y-4">
+            <Input
+              label="Título"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              error={titleError}
               disabled={isSaving}
-              onChange={(event) => setDescription(event.target.value)}
-              className="w-full rounded-control border border-border-muted bg-bg-elevated p-3 font-mono text-mono-body text-text-primary focus:border-success focus:outline-none"
             />
-            {descError && (
-              <p role="alert" className="font-mono text-mono-meta text-danger-text">
-                {descError}
-              </p>
-            )}
-          </div>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="edit-clip-game"
-              className="block font-mono text-mono-meta font-medium text-text-secondary"
-            >
-              Jogo
-            </label>
-            <select
-              id="edit-clip-game"
-              value={gameId}
-              disabled={isSaving}
-              onChange={(event) => setGameId(event.target.value)}
-              className="h-11 w-full rounded-control border border-border-muted bg-bg-elevated px-3 font-mono text-mono-body text-text-primary focus:border-success focus:outline-none"
-            >
-              {games.length === 0 && <option value={clip.game.id}>{clip.game.name}</option>}
-              {games.map((game) => (
-                <option key={game.id} value={game.id}>
-                  {game.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <div className="space-y-1.5">
+              <label
+                htmlFor="edit-clip-description"
+                className="block font-mono text-mono-meta font-medium text-text-secondary"
+              >
+                Descrição (opcional)
+              </label>
+              <textarea
+                id="edit-clip-description"
+                rows={3}
+                value={description}
+                disabled={isSaving}
+                onChange={(event) => setDescription(event.target.value)}
+                className="w-full rounded-control border border-border-muted bg-bg-elevated p-3 font-mono text-mono-body text-text-primary focus:border-success focus:outline-none"
+              />
+              {descError && (
+                <p role="alert" className="font-mono text-mono-meta text-danger-text">
+                  {descError}
+                </p>
+              )}
+            </div>
 
-          <TagsChipInput tags={tags} onChange={setTags} disabled={isSaving} />
+            <div className="space-y-1.5">
+              <label
+                htmlFor="edit-clip-game"
+                className="block font-mono text-mono-meta font-medium text-text-secondary"
+              >
+                Jogo
+              </label>
+              <select
+                id="edit-clip-game"
+                value={gameId}
+                disabled={isSaving}
+                onChange={(event) => setGameId(event.target.value)}
+                className="h-11 w-full rounded-control border border-border-muted bg-bg-elevated px-3 font-mono text-mono-body text-text-primary focus:border-success focus:outline-none"
+              >
+                {games.length === 0 && <option value={clip.game.id}>{clip.game.name}</option>}
+                {games.map((game) => (
+                  <option key={game.id} value={game.id}>
+                    {game.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <PrivacySelector value={privacy} onChange={setPrivacy} disabled={isSaving} />
+            <TagsChipInput tags={tags} onChange={setTags} disabled={isSaving} />
 
-          <div className="flex flex-col-reverse gap-3 border-t border-border-muted pt-4 sm:flex-row sm:justify-end">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="primary" isLoading={isSaving} loadingText="SALVANDO...">
-              SALVAR ALTERAÇÕES
-            </Button>
-          </div>
-        </form>
+            <PrivacySelector value={privacy} onChange={setPrivacy} disabled={isSaving} />
+
+            <div className="flex flex-col-reverse gap-3 border-t border-border-muted pt-4 sm:flex-row sm:justify-end">
+              <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={isSaving}
+                loadingText="SALVANDO..."
+              >
+                SALVAR ALTERAÇÕES
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
     </dialog>
   );

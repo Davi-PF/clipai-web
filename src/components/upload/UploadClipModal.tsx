@@ -698,17 +698,11 @@ export function UploadClipModal({
           </button>
         </header>
 
-        {stage === 'success' && uploadedClip ? (
-          <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+          {stage === 'success' && uploadedClip ? (
             <UploadSuccessPanel uploadedClip={uploadedClip} onClose={handleClose} />
-          </div>
-        ) : (
-          <form
-            onSubmit={handleSubmit}
-            noValidate
-            className="flex min-h-0 flex-1 flex-col overflow-hidden"
-          >
-            <div className="custom-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+          ) : (
+            <form onSubmit={handleSubmit} noValidate className="space-y-5">
               <UploadDropzoneSection
                 fileInputRef={fileInputRef}
                 selectedFile={selectedFile}
@@ -773,18 +767,18 @@ export function UploadClipModal({
                   </Button>
                 </div>
               )}
-            </div>
 
-            <UploadModalFooter
-              isRendering={isRendering}
-              isUploading={isUploading}
-              isInspecting={isInspecting}
-              exceedsMaxSize={Boolean(editEstimate?.exceedsMaxSize)}
-              stageLabel={stageLabel}
-              onCancel={handleClose}
-            />
-          </form>
-        )}
+              <UploadModalFooter
+                isRendering={isRendering}
+                isUploading={isUploading}
+                isInspecting={isInspecting}
+                exceedsMaxSize={Boolean(editEstimate?.exceedsMaxSize)}
+                stageLabel={stageLabel}
+                onCancel={handleClose}
+              />
+            </form>
+          )}
+        </div>
       </div>
     </dialog>
   );
