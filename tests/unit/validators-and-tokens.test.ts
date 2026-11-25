@@ -133,6 +133,10 @@ describe('validators & formatters', () => {
     expect(normalizeTagSlug('uma tag muito longa com acentuação extra')).toBe(
       'uma-tag-muito-longa-com-acentu',
     );
+    expect(normalizeTagSlug('---clutch-1v4---')).toBe('clutch-1v4');
+    expect(normalizeTagSlug('---')).toBe('');
+    expect(normalizeTagSlug(`${'a'.repeat(29)}-extra`)).toBe('a'.repeat(29));
+    expect(normalizeTagSlug(`---${'a'.repeat(30)}---`)).toBe('a'.repeat(30));
   });
 
   it('validates auth fields with PT-BR error messages', () => {
