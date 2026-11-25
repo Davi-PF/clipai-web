@@ -73,7 +73,7 @@ function AddToCollectionListBody({
           <li key={collection.id}>
             <label
               htmlFor={checkboxId}
-              className="flex cursor-pointer items-center justify-between gap-3 rounded-card border border-border-muted bg-bg-deep px-3.5 py-2.5 transition-colors hover:border-success"
+              className="flex w-full min-w-0 cursor-pointer items-center justify-between gap-3 rounded-card border border-border-muted bg-bg-deep px-3.5 py-2.5 transition-colors hover:border-success"
             >
               <span className="sr-only">Selecionar coleção {collection.title}</span>
               <input
@@ -84,7 +84,7 @@ function AddToCollectionListBody({
                 onChange={() => onToggleCollection(collection)}
                 className="sr-only"
               />
-              <span aria-hidden="true" className="flex min-w-0 items-center gap-3">
+              <span aria-hidden="true" className="flex min-w-0 flex-1 items-center gap-3">
                 <span
                   className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-control border transition-colors ${
                     checked
@@ -98,8 +98,11 @@ function AddToCollectionListBody({
                     <Check className="h-3.5 w-3.5" />
                   )}
                 </span>
-                <span className="min-w-0">
-                  <span className="block truncate font-mono text-mono-body font-semibold text-text-primary">
+                <span className="min-w-0 flex-1">
+                  <span
+                    title={collection.title}
+                    className="block truncate font-mono text-mono-body font-semibold text-text-primary"
+                  >
                     {collection.title}
                   </span>
                   <span className="block font-mono text-mono-badge text-text-muted">
