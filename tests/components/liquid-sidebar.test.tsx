@@ -54,10 +54,25 @@ describe('LiquidSidebar & MobileFloatingDock', () => {
     const { onSelectSection, rerender } = renderSidebar({ activeSection: 'home' });
 
     const mobileDock = screen.getByTestId('mobile-floating-dock');
+    const bgSvg = within(mobileDock).getByTestId('mobile-dock-bg-svg');
+    expect(bgSvg).toHaveClass('h-full', 'w-full');
+    expect(within(mobileDock).getByTestId('mobile-dock-bg-fill')).toHaveAttribute(
+      'fill',
+      'var(--bg-elevated)',
+    );
+    expect(within(mobileDock).getByTestId('mobile-dock-bg-stroke')).toHaveAttribute(
+      'stroke',
+      'var(--text-muted)',
+    );
+
     const homeBtn = within(mobileDock).getByRole('button', { name: 'Início' });
     const exploreBtn = within(mobileDock).getByRole('button', { name: 'Explorar' });
     const collectionsBtn = within(mobileDock).getByRole('button', { name: 'Coleções' });
     const profileBtn = within(mobileDock).getByRole('button', { name: 'Perfil' });
+
+    for (const label of ['Início', 'Explorar', 'Coleções', 'Perfil']) {
+      expect(within(mobileDock).getByText(label)).toHaveClass('whitespace-nowrap');
+    }
 
     expect(homeBtn).toHaveAttribute('aria-current', 'page');
     expect(within(mobileDock).getByTestId('mobile-dock-active-indicator-home')).toBeInTheDocument();
