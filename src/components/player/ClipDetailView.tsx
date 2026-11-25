@@ -73,7 +73,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
   const hasRegisteredViewRef = useRef(false);
 
   const patchClip = useCallback((clipId: string, patch: SocialMutationPatch) => {
-    setClip((prev) => (prev && prev.id === clipId ? { ...prev, ...patch } : prev));
+    setClip((prev) => (prev?.id === clipId ? { ...prev, ...patch } : prev));
   }, []);
 
   const { toggleLike, toggleFavorite, isLikePending, isFavoritePending } = useClipSocial(patchClip);
