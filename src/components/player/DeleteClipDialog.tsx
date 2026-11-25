@@ -23,11 +23,11 @@ export function DeleteClipDialog({
   }
 
   return (
-    <div
-      role="dialog"
+    <dialog
+      open
       aria-modal="true"
       aria-labelledby="delete-clip-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-deep/85 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
     >
       <div className="w-full max-w-md rounded-bento border-[1.5px] border-danger bg-bg-surface p-6 text-text-primary shadow-2xl">
         <div className="flex items-start gap-3">
@@ -63,6 +63,6 @@ export function DeleteClipDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }
