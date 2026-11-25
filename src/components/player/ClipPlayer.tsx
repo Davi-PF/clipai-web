@@ -177,7 +177,9 @@ export function ClipPlayer({
         }}
         onTimeUpdate={handleTimeUpdate}
         className="h-full w-full cursor-pointer object-contain"
-      />
+      >
+        <track kind="captions" srcLang="pt-BR" label="Português" />
+      </video>
 
       {resolutionLabel && (
         <span className="pointer-events-none absolute right-3 top-3 rounded-control border border-border-muted bg-bg-deep/85 px-2 py-0.5 font-mono text-mono-badge uppercase text-text-primary">
