@@ -108,12 +108,14 @@ export function validateClipDuration(durationSeconds: number): ValidationResult 
 export function normalizeTagSlug(rawTag: string): string {
   return rawTag
     .trim()
+    .normalize('NFC')
     .toLowerCase()
-    .replace(/[^a-z0-9-\s]/g, '')
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 30);
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 30)
+    .replace(/-+$/g, '');
 }
 
 export function formatDurationBadge(seconds: number): string {
