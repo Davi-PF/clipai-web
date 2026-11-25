@@ -667,11 +667,11 @@ export function UploadClipModal({
   const progressPercent = getUploadProgressPercent(stage, renderProgress, videoProgress);
 
   return (
-    <div
-      role="dialog"
+    <dialog
+      open
       aria-modal="true"
       aria-labelledby="upload-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-deep/85 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
     >
       <div className="custom-scrollbar max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4 text-text-primary shadow-2xl sm:p-6">
         <header className="mb-5 flex items-start justify-between gap-3 border-b border-border-muted pb-4 sm:items-center">
@@ -782,6 +782,6 @@ export function UploadClipModal({
           </form>
         )}
       </div>
-    </div>
+    </dialog>
   );
 }
