@@ -235,7 +235,7 @@ export function CollectionsFanWidget({
         const [first, ...rest] = prev;
         return first ? [...rest, first] : prev;
       }
-      const last = prev[prev.length - 1];
+      const last = prev.at(-1);
       return last ? [last, ...prev.slice(0, -1)] : prev;
     });
   };
