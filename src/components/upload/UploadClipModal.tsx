@@ -6,7 +6,7 @@ import {
   useState,
   type ChangeEvent,
   type DragEvent,
-  type FormEvent,
+  type SubmitEvent,
 } from 'react';
 import Link from 'next/link';
 import { AlertCircle, CheckCircle2, Loader2, RotateCcw, UploadCloud, X } from 'lucide-react';
@@ -654,7 +654,7 @@ export function UploadClipModal({
     }
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     void executeUpload();
   };
