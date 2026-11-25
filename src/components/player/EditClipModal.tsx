@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { X } from 'lucide-react';
 import { PrivacySelector } from '@/components/upload/PrivacySelector';
 import { TagsChipInput } from '@/components/upload/TagsChipInput';
@@ -61,7 +61,7 @@ export function EditClipModal({ clip, isOpen, onClose, onUpdated }: Readonly<Edi
     return null;
   }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const titleCheck = validateClipTitle(title);
     const descCheck = validateClipDescription(description);
