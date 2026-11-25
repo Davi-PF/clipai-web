@@ -162,6 +162,8 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
   const isOwner = Boolean(user && clip && user.id === clip.author.id);
   const liked = clip ? isClipLiked(clip) : false;
   const favorited = clip ? isClipFavorited(clip) : false;
+  const clipDetailPath = `/c/${slug}`;
+  const loginRedirectHref = `/login?redirect=${encodeURIComponent(clipDetailPath)}`;
 
   return (
     <main className="min-h-screen bg-bg-deep px-4 py-8 text-text-primary md:px-8">
@@ -223,7 +225,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
               </p>
             </div>
             {!user && (
-              <Link href={`/login?redirect=${encodeURIComponent(`/c/${slug}`)}`}>
+              <Link href={loginRedirectHref}>
                 <Button type="button" variant="primary">
                   FAZER LOGIN PARA ASSISTIR
                 </Button>
