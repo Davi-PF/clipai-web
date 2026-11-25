@@ -122,6 +122,23 @@ describe('validators & formatters', () => {
     expect(formatFileSizeMb(0)).toBe('0.0 MB');
   });
 
+  it('preserves ç, Ç and accented PT-BR letters literally when normalizing tags', () => {
+    expect(normalizeTagSlug('espaço')).toBe('espaço');
+    expect(normalizeTagSlug('çççç')).toBe('çççç');
+    expect(normalizeTagSlug('testando adicionar com espaço')).toBe('testando-adicionar-com-espaço');
+    expect(normalizeTagSlug('AÇÃO')).toBe('ação');
+    expect(normalizeTagSlug('EDIÇÃO')).toBe('edição');
+    expect(normalizeTagSlug('ÇÊÃÕÉÍÓÚ')).toBe('çêãõéíóú');
+    expect(normalizeTagSlug('São Paulo — Clássico #1')).toBe('são-paulo-clássico-1');
+    expect(normalizeTagSlug('uma tag muito longa com acentuação extra')).toBe(
+      'uma-tag-muito-longa-com-acentu',
+    );
+    expect(normalizeTagSlug('---clutch-1v4---')).toBe('clutch-1v4');
+    expect(normalizeTagSlug('---')).toBe('');
+    expect(normalizeTagSlug(`${'a'.repeat(29)}-extra`)).toBe('a'.repeat(29));
+    expect(normalizeTagSlug(`---${'a'.repeat(30)}---`)).toBe('a'.repeat(30));
+  });
+
   it('validates auth fields with PT-BR error messages', () => {
     expect(validateEmail('fallen@clipai.com.br').valid).toBe(true);
     expect(validateEmail('invalido').valid).toBe(false);

@@ -529,7 +529,7 @@ function UploadModalFooter({
   onCancel,
 }: Readonly<UploadModalFooterProps>) {
   return (
-    <div className="flex flex-col-reverse gap-3 border-t border-border-muted pt-4 sm:flex-row sm:justify-end">
+    <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-border-muted bg-bg-surface px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
       <Button type="button" variant="secondary" onClick={onCancel}>
         {getCancelButtonLabel(isRendering, isUploading)}
       </Button>
