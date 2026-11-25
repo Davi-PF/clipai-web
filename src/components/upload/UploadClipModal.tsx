@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -10,6 +11,7 @@ import {
 } from 'react';
 import Link from 'next/link';
 import { AlertCircle, CheckCircle2, Loader2, RotateCcw, UploadCloud, X } from 'lucide-react';
+import { CancelUploadConfirmDialog } from '@/components/upload/CancelUploadConfirmDialog';
 import { ClipVideoEditor } from '@/components/upload/ClipVideoEditor';
 import { PrivacySelector } from '@/components/upload/PrivacySelector';
 import { TagsChipInput } from '@/components/upload/TagsChipInput';
@@ -529,7 +531,7 @@ function UploadModalFooter({
   onCancel,
 }: Readonly<UploadModalFooterProps>) {
   return (
-    <div className="flex flex-col-reverse gap-3 border-t border-border-muted pt-4 sm:flex-row sm:justify-end">
+    <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-border-muted bg-bg-surface px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
       <Button type="button" variant="secondary" onClick={onCancel}>
         {getCancelButtonLabel(isRendering, isUploading)}
       </Button>
@@ -577,6 +579,7 @@ export function UploadClipModal({
 
   const { games, isLoadingGames } = useAvailableGames(isOpen);
   const [isDragging, setIsDragging] = useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -585,14 +588,19 @@ export function UploadClipModal({
   const [privacy, setPrivacy] = useState<PrivacyLevel>('public');
   const [formErrors, setFormErrors] = useState<FormErrors>({});
 
-  if (!isOpen) {
-    return null;
-  }
-
   const isRendering = stage === 'rendering';
   const isUploading = isActiveUploadStage(stage);
+  const shouldConfirmClose =
+    stage !== 'success' && (isUploading || isInspecting || Boolean(selectedFile));
 
-  const handleClose = () => {
+  useEffect(() => {
+    if (stage === 'success' && isCancelConfirmOpen) {
+      setIsCancelConfirmOpen(false);
+    }
+  }, [stage, isCancelConfirmOpen]);
+
+  const forceCloseModal = useCallback(() => {
+    setIsCancelConfirmOpen(false);
     if (isUploading) {
       cancelUpload();
     }
@@ -604,7 +612,42 @@ export function UploadClipModal({
     setPrivacy('public');
     setFormErrors({});
     onClose();
-  };
+  }, [isUploading, cancelUpload, resetUploadState, onClose]);
+
+  const handleRequestClose = useCallback(() => {
+    if (shouldConfirmClose) {
+      setIsCancelConfirmOpen(true);
+      return;
+    }
+    forceCloseModal();
+  }, [shouldConfirmClose, forceCloseModal]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return;
+      }
+      event.preventDefault();
+      if (isCancelConfirmOpen) {
+        setIsCancelConfirmOpen(false);
+        return;
+      }
+      handleRequestClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, isCancelConfirmOpen, handleRequestClose]);
+
+  if (!isOpen) {
+    return null;
+  }
 
   const handleFilePicked = (file: File | undefined) => {
     if (!file) {
@@ -669,8 +712,17 @@ export function UploadClipModal({
       aria-labelledby="upload-modal-title"
       className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
     >
-      <div className="custom-scrollbar max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-4 text-text-primary shadow-2xl sm:p-6">
-        <header className="mb-5 flex items-start justify-between gap-3 border-b border-border-muted pb-4 sm:items-center">
+      <button
+        type="button"
+        tabIndex={-1}
+        data-testid="upload-modal-backdrop"
+        aria-label="Fechar modal de upload ao clicar fora"
+        onClick={handleRequestClose}
+        className="fixed inset-0 bg-bg-deep/75"
+      />
+
+      <div className="relative z-10 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-bento border-[1.5px] border-border-muted bg-bg-surface text-text-primary shadow-2xl">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border-muted px-4 py-4 sm:items-center sm:px-6 sm:py-5">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
               <BrandLogo variant="icon" size="xs" />
@@ -690,7 +742,7 @@ export function UploadClipModal({
 
           <button
             type="button"
-            onClick={handleClose}
+            onClick={handleRequestClose}
             aria-label="Fechar modal de upload"
             className="shrink-0 rounded-control p-2 text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary"
           >
@@ -699,73 +751,81 @@ export function UploadClipModal({
         </header>
 
         {stage === 'success' && uploadedClip ? (
-          <UploadSuccessPanel uploadedClip={uploadedClip} onClose={handleClose} />
+          <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+            <UploadSuccessPanel uploadedClip={uploadedClip} onClose={forceCloseModal} />
+          </div>
         ) : (
-          <form onSubmit={handleSubmit} noValidate className="space-y-5">
-            <UploadDropzoneSection
-              fileInputRef={fileInputRef}
-              selectedFile={selectedFile}
-              videoPreviewUrl={videoPreviewUrl}
-              extractedMeta={extractedMeta}
-              editSettings={editSettings}
-              editEstimate={editEstimate}
-              isInspecting={isInspecting}
-              isUploading={isUploading}
-              isDragging={isDragging}
-              inspectionError={inspectionError}
-              fileError={formErrors.file}
-              onSetDragging={setIsDragging}
-              onDrop={handleDrop}
-              onFileInputChange={handleFileInputChange}
-              onUpdateEditSettings={updateEditSettings}
-              onCaptureThumbnail={updateThumbnailFromCapture}
-            />
-
-            <UploadMetadataFields
-              title={title}
-              description={description}
-              gameId={gameId}
-              tags={tags}
-              privacy={privacy}
-              games={games}
-              isLoadingGames={isLoadingGames}
-              isUploading={isUploading}
-              formErrors={formErrors}
-              onChangeTitle={setTitle}
-              onChangeDescription={setDescription}
-              onChangeGameId={setGameId}
-              onChangeTags={setTags}
-              onChangePrivacy={setPrivacy}
-            />
-
-            {isUploading && (
-              <UploadProgressPanel
-                isRendering={isRendering}
-                stageLabel={stageLabel}
-                progressPercent={progressPercent}
+          <form
+            onSubmit={handleSubmit}
+            noValidate
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+          >
+            <div className="custom-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+              <UploadDropzoneSection
+                fileInputRef={fileInputRef}
+                selectedFile={selectedFile}
+                videoPreviewUrl={videoPreviewUrl}
+                extractedMeta={extractedMeta}
+                editSettings={editSettings}
+                editEstimate={editEstimate}
+                isInspecting={isInspecting}
+                isUploading={isUploading}
+                isDragging={isDragging}
+                inspectionError={inspectionError}
+                fileError={formErrors.file}
+                onSetDragging={setIsDragging}
+                onDrop={handleDrop}
+                onFileInputChange={handleFileInputChange}
+                onUpdateEditSettings={updateEditSettings}
+                onCaptureThumbnail={updateThumbnailFromCapture}
               />
-            )}
 
-            {stage === 'error' && uploadError && (
-              <div
-                role="alert"
-                className="flex flex-col gap-3 rounded-card border border-danger bg-danger-surface p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex min-w-0 flex-1 items-start gap-2 font-mono text-mono-meta text-danger-text">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span className="min-w-0 flex-1 break-words">{uploadError}</span>
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
-                  onClick={() => void executeUpload()}
+              <UploadMetadataFields
+                title={title}
+                description={description}
+                gameId={gameId}
+                tags={tags}
+                privacy={privacy}
+                games={games}
+                isLoadingGames={isLoadingGames}
+                isUploading={isUploading}
+                formErrors={formErrors}
+                onChangeTitle={setTitle}
+                onChangeDescription={setDescription}
+                onChangeGameId={setGameId}
+                onChangeTags={setTags}
+                onChangePrivacy={setPrivacy}
+              />
+
+              {isUploading && (
+                <UploadProgressPanel
+                  isRendering={isRendering}
+                  stageLabel={stageLabel}
+                  progressPercent={progressPercent}
+                />
+              )}
+
+              {stage === 'error' && uploadError && (
+                <div
+                  role="alert"
+                  className="flex flex-col gap-3 rounded-card border border-danger bg-danger-surface p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  Tentar novamente
-                </Button>
-              </div>
-            )}
+                  <div className="flex min-w-0 flex-1 items-start gap-2 font-mono text-mono-meta text-danger-text">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span className="min-w-0 flex-1 break-words">{uploadError}</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
+                    onClick={() => void executeUpload()}
+                  >
+                    Tentar novamente
+                  </Button>
+                </div>
+              )}
+            </div>
 
             <UploadModalFooter
               isRendering={isRendering}
@@ -773,11 +833,19 @@ export function UploadClipModal({
               isInspecting={isInspecting}
               exceedsMaxSize={Boolean(editEstimate?.exceedsMaxSize)}
               stageLabel={stageLabel}
-              onCancel={handleClose}
+              onCancel={handleRequestClose}
             />
           </form>
         )}
       </div>
+
+      <CancelUploadConfirmDialog
+        isOpen={isCancelConfirmOpen}
+        isRendering={isRendering}
+        isUploading={isUploading}
+        onContinue={() => setIsCancelConfirmOpen(false)}
+        onConfirmCancel={forceCloseModal}
+      />
     </dialog>
   );
 }
