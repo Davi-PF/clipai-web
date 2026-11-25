@@ -77,10 +77,10 @@ export function PublicProfileView({ username }: Readonly<{ username: string }>) 
     }
   }, [fetchProfileAndClips, isAuthLoading]);
 
+  const normalizedCurrentUsername = currentUser?.username.trim().toLowerCase();
+  const normalizedProfileUsername = profile?.username.trim().toLowerCase();
   const isOwnProfile = Boolean(
-    currentUser &&
-    profile &&
-    currentUser.username.trim().toLowerCase() === profile.username.trim().toLowerCase(),
+    normalizedCurrentUsername && normalizedCurrentUsername === normalizedProfileUsername,
   );
 
   const clipsCount = profile?.stats?.clips_count ?? profile?.clips_count ?? clips.length;
