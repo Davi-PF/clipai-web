@@ -253,6 +253,7 @@ export function StudioChartsGrid({
     ...point,
     bucket_label: `${point.bucket_pct}%`,
   }));
+  const biggestDropBucket = retention?.biggest_drop_bucket_pct ?? null;
 
   return (
     <section
@@ -299,13 +300,13 @@ export function StudioChartsGrid({
               </h2>
             </div>
 
-            {retention && retention.biggest_drop_bucket_pct !== null && (
+            {biggestDropBucket !== null && (
               <span
                 data-testid="retention-biggest-drop-badge"
                 className="inline-flex items-center gap-1.5 rounded-control border border-warning bg-bg-deep px-2.5 py-0.5 font-mono text-mono-badge font-semibold text-warning"
               >
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                Maior queda nos {retention.biggest_drop_bucket_pct}%
+                Maior queda nos {biggestDropBucket}%
               </span>
             )}
           </div>
