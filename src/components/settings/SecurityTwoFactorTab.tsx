@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -155,7 +155,7 @@ function DisableTwoFactorModal({
     return null;
   }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setCodeError(null);
     setPasswordError(null);
@@ -333,7 +333,7 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
     }
   };
 
-  const handleEnableSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleEnableSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const validation = validateTwoFactorCode(verificationCode, false);
     if (!validation.valid) {
