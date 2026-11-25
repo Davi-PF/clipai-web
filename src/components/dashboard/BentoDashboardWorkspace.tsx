@@ -373,23 +373,38 @@ export function BentoDashboardWorkspace() {
           {activeCollection && (
             <div
               data-testid="active-collection-banner"
-              className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-success bg-bg-surface px-4 py-2.5"
+              className="flex min-w-0 flex-col gap-3 rounded-card border border-success bg-bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
-                <FolderKanban className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-                <span className="shrink-0 font-mono text-mono-meta text-text-secondary">
-                  Coleção ativa:
-                </span>
-                <span className="min-w-0 break-words font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <FolderKanban className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+                  <span className="shrink-0 font-mono text-mono-meta text-text-secondary">
+                    Coleção ativa:
+                  </span>
+                  <span className="shrink-0 rounded-control bg-bg-deep px-2 py-0.5 font-mono text-mono-badge text-success">
+                    {activeCollection.clips_count}{' '}
+                    {activeCollection.clips_count === 1 ? 'clipe' : 'clipes'}
+                  </span>
+                </div>
+
+                <h2
+                  data-testid="active-collection-title"
+                  className="min-w-0 break-words font-display text-display-md uppercase text-text-primary"
+                >
                   {activeCollection.title}
-                </span>
-                <span className="shrink-0 rounded-control bg-bg-deep px-2 py-0.5 font-mono text-mono-badge text-success">
-                  {activeCollection.clips_count}{' '}
-                  {activeCollection.clips_count === 1 ? 'clipe' : 'clipes'}
-                </span>
+                </h2>
+
+                {activeCollection.description && (
+                  <p className="min-w-0 break-words font-mono text-mono-badge text-text-secondary">
+                    {activeCollection.description}
+                  </p>
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div
+                data-testid="active-collection-actions"
+                className="flex shrink-0 flex-wrap items-center gap-2"
+              >
                 {isCollectionOwner && (
                   <>
                     <button
@@ -399,7 +414,7 @@ export function BentoDashboardWorkspace() {
                         setIsCreateCollectionOpen(true);
                       }}
                       aria-label="Editar coleção ativa"
-                      className="inline-flex items-center gap-1 rounded-control border border-border-muted bg-bg-elevated px-2.5 py-1 font-mono text-mono-badge text-text-primary hover:border-success"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-control border border-border-muted bg-bg-elevated px-2.5 py-1.5 font-mono text-mono-badge text-text-primary hover:border-success"
                     >
                       <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
                       Editar
@@ -408,7 +423,7 @@ export function BentoDashboardWorkspace() {
                       type="button"
                       onClick={() => setIsDeleteCollectionOpen(true)}
                       aria-label="Excluir coleção ativa"
-                      className="inline-flex items-center gap-1 rounded-control border border-danger bg-danger-surface px-2.5 py-1 font-mono text-mono-badge text-danger-text hover:bg-danger hover:text-text-primary"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-control border border-danger bg-danger-surface px-2.5 py-1.5 font-mono text-mono-badge text-danger-text hover:bg-danger hover:text-text-primary"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                       Excluir
@@ -423,7 +438,7 @@ export function BentoDashboardWorkspace() {
                     setPage(1);
                   }}
                   aria-label="Remover filtro de coleção"
-                  className="inline-flex items-center gap-1 rounded-control border border-border-muted bg-bg-deep px-2.5 py-1 font-mono text-mono-badge text-text-secondary hover:text-text-primary"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-control border border-border-muted bg-bg-deep px-2.5 py-1.5 font-mono text-mono-badge text-text-secondary hover:text-text-primary"
                 >
                   <X className="h-3.5 w-3.5" aria-hidden="true" />
                   Limpar
