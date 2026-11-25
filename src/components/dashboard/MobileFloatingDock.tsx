@@ -61,6 +61,38 @@ const RIGHT_DOCK_ITEMS: readonly DockItemConfig[] = [
   },
 ] as const;
 
+const DOCK_HEIGHT = 64;
+const DOCK_DEFAULT_WIDTH = 390;
+const DOCK_CORNER_RADIUS = 18;
+const DOCK_NOTCH_HALF_WIDTH = 48;
+const DOCK_STROKE_INSET = 0.75;
+
+function buildMobileDockOutlinePath(width: number, height: number): string {
+  const safeWidth = Math.max(220, Math.round(width));
+  const i = DOCK_STROKE_INSET;
+  const r = DOCK_CORNER_RADIUS;
+  const cx = safeWidth / 2;
+  const notchLeft = cx - DOCK_NOTCH_HALF_WIDTH;
+  const notchRight = cx + DOCK_NOTCH_HALF_WIDTH;
+  const notchDepth = 33;
+
+  return [
+    `M ${i + r} ${i}`,
+    `L ${notchLeft} ${i}`,
+    `C ${notchLeft + 16} ${i}, ${notchLeft + 19} ${notchDepth}, ${cx} ${notchDepth}`,
+    `C ${notchRight - 19} ${notchDepth}, ${notchRight - 16} ${i}, ${notchRight} ${i}`,
+    `L ${safeWidth - i - r} ${i}`,
+    `A ${r} ${r} 0 0 1 ${safeWidth - i} ${i + r}`,
+    `L ${safeWidth - i} ${height - i - r}`,
+    `A ${r} ${r} 0 0 1 ${safeWidth - i - r} ${height - i}`,
+    `L ${i + r} ${height - i}`,
+    `A ${r} ${r} 0 0 1 ${i} ${height - i - r}`,
+    `L ${i} ${i + r}`,
+    `A ${r} ${r} 0 0 1 ${i + r} ${i}`,
+    'Z',
+  ].join(' ');
+}
+
 function DockNavButton({
   item,
   activeSection,
@@ -78,7 +110,7 @@ function DockNavButton({
       type="button"
       aria-current={active ? 'page' : undefined}
       onClick={() => onSelect(item.section)}
-      className={`relative flex h-full w-full flex-col items-center justify-center gap-1 rounded-control px-1 font-mono text-[10px] leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success ${
+      className={`relative flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 rounded-control px-0.5 font-mono text-[10px] leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success sm:px-1 ${
         active ? 'font-semibold text-text-primary' : 'text-text-secondary hover:text-text-primary'
       }`}
     >
@@ -106,7 +138,36 @@ export function MobileFloatingDock({
   onOpenUpload,
 }: Readonly<MobileFloatingDockProps>) {
   const [isRadialOpen, setIsRadialOpen] = useState(false);
+  const [dockWidth, setDockWidth] = useState(DOCK_DEFAULT_WIDTH);
   const fabRef = useRef<HTMLButtonElement | null>(null);
+  const dockNavRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const navEl = dockNavRef.current;
+    if (!navEl) {
+      return;
+    }
+
+    const updateWidth = () => {
+      const measured = navEl.getBoundingClientRect().width;
+      if (measured > 0) {
+        setDockWidth(measured);
+      }
+    };
+
+    updateWidth();
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(navEl);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const dockOutlinePath = buildMobileDockOutlinePath(dockWidth, DOCK_HEIGHT);
 
   const closeRadialMenu = useCallback(() => {
     setIsRadialOpen(false);
@@ -279,45 +340,35 @@ export function MobileFloatingDock({
           />
         </button>
 
-        {/* Dock flutuante com recorte côncavo SVG central e superfície elevada (bg-elevated) */}
+        {/* Dock flutuante com recorte côncavo SVG contínuo único e superfície elevada (bg-elevated) */}
         <nav
+          ref={dockNavRef}
           aria-label="Navegação principal mobile"
           data-testid="mobile-floating-dock"
           className="pointer-events-auto relative h-16 w-full [filter:drop-shadow(0_14px_28px_rgba(2,10,18,0.95))_drop-shadow(0_-4px_14px_rgba(2,10,18,0.65))]"
         >
-          {/* Camada de fundo líquida sem distorção (asa esquerda + berço SVG central + asa direita) */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 flex">
-            <div className="h-full flex-1 rounded-l-bento border-y-[1.5px] border-l-[1.5px] border-text-muted bg-bg-elevated" />
-            <svg
-              width="96"
-              height="64"
-              viewBox="0 0 96 64"
-              fill="none"
-              className="-mx-[1px] h-16 w-[96px] shrink-0"
-            >
-              <path
-                d="M 0 0.75 C 16 0.75, 19 33, 48 33 C 77 33, 80 0.75, 96 0.75 L 96 63.25 L 0 63.25 Z"
-                fill="var(--bg-elevated)"
-              />
-              <path
-                d="M 0 0.75 C 16 0.75, 19 33, 48 33 C 77 33, 80 0.75, 96 0.75"
-                stroke="var(--text-muted)"
-                strokeWidth="1.5"
-              />
-              <line
-                x1="0"
-                y1="63.25"
-                x2="96"
-                y2="63.25"
-                stroke="var(--text-muted)"
-                strokeWidth="1.5"
-              />
-            </svg>
-            <div className="h-full flex-1 rounded-r-bento border-y-[1.5px] border-r-[1.5px] border-text-muted bg-bg-elevated" />
-          </div>
+          {/* Único SVG contínuo (100% largura/altura) eliminando qualquer emenda lateral no recorte côncavo */}
+          <svg
+            aria-hidden="true"
+            data-testid="mobile-dock-bg-svg"
+            viewBox={`0 0 ${Math.max(220, Math.round(dockWidth))} ${DOCK_HEIGHT}`}
+            preserveAspectRatio="none"
+            fill="none"
+            className="pointer-events-none absolute inset-0 h-full w-full"
+          >
+            <path data-testid="mobile-dock-bg-fill" d={dockOutlinePath} fill="var(--bg-elevated)" />
+            <path
+              data-testid="mobile-dock-bg-stroke"
+              d={dockOutlinePath}
+              stroke="var(--text-muted)"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
 
           {/* 4 itens principais com espaço central dedicado ao recorte */}
-          <div className="relative z-10 grid h-full grid-cols-[1fr_1fr_76px_1fr_1fr] items-center px-1.5">
+          <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_72px_minmax(0,1fr)_minmax(0,1fr)] items-center px-1.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_76px_minmax(0,1fr)_minmax(0,1fr)]">
             {LEFT_DOCK_ITEMS.map((item) => (
               <DockNavButton
                 key={item.id}
