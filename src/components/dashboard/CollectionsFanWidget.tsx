@@ -36,6 +36,16 @@ function getStackContainerHeight(count: number): string {
   return 'min-h-[164px]';
 }
 
+function getFanCardSurfaceClass(isFront: boolean, isActiveFilter: boolean): string {
+  if (!isFront) {
+    return 'border-border-muted bg-bg-elevated text-text-primary shadow-md hover:border-success hover:bg-bg-surface';
+  }
+  if (isActiveFilter) {
+    return 'border-success bg-text-primary text-bg-deep shadow-xl';
+  }
+  return 'border-border-muted bg-text-primary text-bg-deep shadow-lg hover:border-success';
+}
+
 interface CollectionFanCardProps {
   collection: Collection;
   index: number;
@@ -69,13 +79,7 @@ function CollectionFanCard({
         transform: FAN_TRANSFORMS[index] ?? FAN_TRANSFORMS[2],
         zIndex: FAN_Z_INDEX[index] ?? 5,
       }}
-      className={`absolute inset-x-1 bottom-2 flex h-[142px] flex-col justify-between rounded-card border-[1.5px] p-3.5 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success ${
-        isFront
-          ? isActiveFilter
-            ? 'border-success bg-text-primary text-bg-deep shadow-xl'
-            : 'border-border-muted bg-text-primary text-bg-deep shadow-lg hover:border-success'
-          : 'border-border-muted bg-bg-elevated text-text-primary shadow-md hover:border-success hover:bg-bg-surface'
-      }`}
+      className={`absolute inset-x-1 bottom-2 flex h-[142px] flex-col justify-between rounded-card border-[1.5px] p-3.5 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success ${getFanCardSurfaceClass(isFront, isActiveFilter)}`}
     >
       {/* Faixa superior visível mesmo quando o card está atrás no leque */}
       <div className="flex items-center justify-between gap-2">
