@@ -105,15 +105,31 @@ export function validateClipDuration(durationSeconds: number): ValidationResult 
   return { valid: true, errorMessage: null };
 }
 
+function trimHyphens(value: string): string {
+  let start = 0;
+  let end = value.length;
+
+  while (start < end && value[start] === '-') {
+    start += 1;
+  }
+
+  while (end > start && value[end - 1] === '-') {
+    end -= 1;
+  }
+
+  return value.slice(start, end);
+}
+
 export function normalizeTagSlug(rawTag: string): string {
-  return rawTag
+  const cleaned = rawTag
     .trim()
+    .normalize('NFC')
     .toLowerCase()
-    .replace(/[^a-z0-9-\s]/g, '')
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
     .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 30);
+    .replace(/-+/g, '-');
+
+  return trimHyphens(trimHyphens(cleaned).slice(0, 30));
 }
 
 export function formatDurationBadge(seconds: number): string {

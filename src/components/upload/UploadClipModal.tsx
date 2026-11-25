@@ -712,16 +712,7 @@ export function UploadClipModal({
       aria-labelledby="upload-modal-title"
       className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
     >
-      <button
-        type="button"
-        tabIndex={-1}
-        data-testid="upload-modal-backdrop"
-        aria-label="Fechar modal de upload ao clicar fora"
-        onClick={handleRequestClose}
-        className="fixed inset-0 bg-bg-deep/75"
-      />
-
-      <div className="relative z-10 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-bento border-[1.5px] border-border-muted bg-bg-surface text-text-primary shadow-2xl">
+      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-bento border-[1.5px] border-border-muted bg-bg-surface text-text-primary shadow-2xl">
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border-muted px-4 py-4 sm:items-center sm:px-6 sm:py-5">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
@@ -750,17 +741,11 @@ export function UploadClipModal({
           </button>
         </header>
 
-        {stage === 'success' && uploadedClip ? (
-          <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
-            <UploadSuccessPanel uploadedClip={uploadedClip} onClose={forceCloseModal} />
-          </div>
-        ) : (
-          <form
-            onSubmit={handleSubmit}
-            noValidate
-            className="flex min-h-0 flex-1 flex-col overflow-hidden"
-          >
-            <div className="custom-scrollbar min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+          {stage === 'success' && uploadedClip ? (
+            <UploadSuccessPanel uploadedClip={uploadedClip} onClose={handleClose} />
+          ) : (
+            <form onSubmit={handleSubmit} noValidate className="space-y-5">
               <UploadDropzoneSection
                 fileInputRef={fileInputRef}
                 selectedFile={selectedFile}
@@ -825,18 +810,18 @@ export function UploadClipModal({
                   </Button>
                 </div>
               )}
-            </div>
 
-            <UploadModalFooter
-              isRendering={isRendering}
-              isUploading={isUploading}
-              isInspecting={isInspecting}
-              exceedsMaxSize={Boolean(editEstimate?.exceedsMaxSize)}
-              stageLabel={stageLabel}
-              onCancel={handleRequestClose}
-            />
-          </form>
-        )}
+              <UploadModalFooter
+                isRendering={isRendering}
+                isUploading={isUploading}
+                isInspecting={isInspecting}
+                exceedsMaxSize={Boolean(editEstimate?.exceedsMaxSize)}
+                stageLabel={stageLabel}
+                onCancel={handleClose}
+              />
+            </form>
+          )}
+        </div>
       </div>
 
       <CancelUploadConfirmDialog

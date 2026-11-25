@@ -411,4 +411,52 @@ describe('BentoDashboardWorkspace — Sprint 3 Signature Components', () => {
       expect(addSpy).toHaveBeenCalledWith('col-1', 'clip-1');
     });
   });
+
+  it('stacks long collection titles cleanly on mobile in the active banner and truncates inside collection cards', async () => {
+    const user = userEvent.setup();
+    const longTitle =
+      'Coleção Super Longa de Clutches Inacreditáveis de AWP na Mirage e Inferno Temporada 2026';
+    const longDescription =
+      'Descrição extensa detalhando os melhores highlights competitivos da temporada sem estourar a largura da tela.';
+
+    vi.spyOn(collectionsService, 'listCollections').mockResolvedValue({
+      items: [
+        {
+          ...COLLECTIONS[0]!,
+          id: 'col-long',
+          title: longTitle,
+          description: longDescription,
+        },
+      ],
+      page: 1,
+      page_size: 12,
+      total: 1,
+      total_pages: 1,
+    });
+
+    renderDashboard();
+
+    const fanCard = await screen.findByTestId('collection-fan-card-col-long');
+    expect(fanCard).toHaveClass('overflow-hidden');
+    const cardTitle = fanCard.querySelector(`[title="${longTitle}"]`);
+    expect(cardTitle).toBeInTheDocument();
+    expect(cardTitle).toHaveClass('truncate', 'min-w-0');
+
+    // Select collection -> opens active collection banner stacked on mobile (flex-col sm:flex-row)
+    await user.click(fanCard);
+
+    const banner = await screen.findByTestId('active-collection-banner');
+    expect(banner).toHaveClass('flex-col', 'sm:flex-row', 'min-w-0');
+
+    const bannerTitle = screen.getByTestId('active-collection-title');
+    expect(bannerTitle).toHaveTextContent(longTitle);
+    expect(bannerTitle).toHaveClass('break-words', 'min-w-0');
+    expect(banner).toHaveTextContent(longDescription);
+
+    const actions = screen.getByTestId('active-collection-actions');
+    expect(actions).toHaveClass('flex-wrap', 'gap-2');
+    expect(screen.getByRole('button', { name: 'Editar coleção ativa' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Excluir coleção ativa' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remover filtro de coleção' })).toBeInTheDocument();
+  });
 });

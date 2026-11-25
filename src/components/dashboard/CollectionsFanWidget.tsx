@@ -86,18 +86,19 @@ function CollectionFanCard({
         transform: FAN_TRANSFORMS[index] ?? FAN_TRANSFORMS[2],
         zIndex: FAN_Z_INDEX[index] ?? 5,
       }}
-      className={`absolute inset-x-1 bottom-2 flex h-[142px] flex-col justify-between rounded-card border-[1.5px] p-3.5 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success ${getFanCardSurfaceClass(isFront, isActiveFilter)}`}
+      className={`absolute inset-x-1 bottom-2 flex h-[142px] flex-col justify-between overflow-hidden rounded-card border-[1.5px] p-3.5 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success ${getFanCardSurfaceClass(isFront, isActiveFilter)}`}
     >
       {/* Faixa superior visível mesmo quando o card está atrás no leque */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="flex w-full min-w-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <span
             className="h-2.5 w-2.5 shrink-0 rounded-full"
             style={{ backgroundColor: accent }}
             aria-hidden="true"
           />
           <span
-            className={`truncate font-display text-display-md uppercase tracking-[0.06em] ${
+            title={collection.title}
+            className={`block min-w-0 truncate font-display text-display-md uppercase ${
               isFront ? 'text-bg-deep' : 'text-text-primary'
             }`}
           >
@@ -118,23 +119,23 @@ function CollectionFanCard({
       </div>
 
       <p
-        className={`line-clamp-2 font-mono text-mono-badge ${
+        className={`w-full break-words line-clamp-2 font-mono text-mono-badge ${
           isFront ? 'text-bg-surface' : 'text-text-secondary'
         }`}
       >
         {collection.description || `Por @${collection.owner.username}`}
       </p>
 
-      <div className="flex items-center justify-between">
+      <div className="flex w-full min-w-0 items-center justify-between gap-2">
         <span
-          className={`font-mono text-mono-badge font-semibold uppercase ${
+          className={`min-w-0 truncate font-mono text-mono-badge font-semibold uppercase ${
             isFront ? 'text-bg-deep' : 'text-text-muted'
           }`}
         >
           {getFanCardActionLabel(isFront, isActiveFilter)}
         </span>
         <span
-          className="h-1 w-8 rounded-full"
+          className="h-1 w-8 shrink-0 rounded-full"
           style={{ backgroundColor: accent }}
           aria-hidden="true"
         />
