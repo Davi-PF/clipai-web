@@ -135,7 +135,7 @@ export function formatFileSizeMb(bytes: number): string {
 }
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,30}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 const UPPERCASE_REGEX = /[A-Z]/;
 const LOWERCASE_REGEX = /[a-z]/;
 const DIGIT_REGEX = /\d/;
