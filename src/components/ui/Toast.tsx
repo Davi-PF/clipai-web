@@ -29,13 +29,10 @@ function ToastItem({
   onDismiss,
 }: Readonly<{ toast: ToastItemData; onDismiss: (id: string) => void }>) {
   const { container, iconClass, Icon } = TOAST_STYLES[toast.type];
+  const baseClassName = `pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-card border-[1.5px] p-3.5 shadow-lg ${container}`;
 
-  return (
-    <div
-      role={toast.type === 'error' ? 'alert' : 'status'}
-      aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
-      className={`pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-card border-[1.5px] p-3.5 shadow-lg ${container}`}
-    >
+  const content = (
+    <>
       <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${iconClass}`} aria-hidden="true" />
       <div className="min-w-0 flex-1 font-mono text-mono-body">
         {toast.title && <p className="font-semibold text-text-primary">{toast.title}</p>}
@@ -49,7 +46,21 @@ function ToastItem({
       >
         <X className="h-3.5 w-3.5" aria-hidden="true" />
       </button>
-    </div>
+    </>
+  );
+
+  if (toast.type === 'error') {
+    return (
+      <div role="alert" aria-live="assertive" className={baseClassName}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <output aria-live="polite" className={baseClassName}>
+      {content}
+    </output>
   );
 }
 
