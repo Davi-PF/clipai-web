@@ -291,4 +291,93 @@ describe('UploadClipModal', () => {
     unmount();
     expect(revokeUrlSpy).toHaveBeenCalledWith('blob:stable-video-url-2');
   });
+
+  it('closes immediately when empty, and intercepts cancel/close during FFmpeg rendering with Continue and Confirm options', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+
+    vi.spyOn(videoUtils, 'extractVideoMetadataAndThumbnail').mockResolvedValue(MOCK_EXTRACTED);
+
+    let capturedSignal: AbortSignal | undefined;
+    vi.spyOn(ffmpegProcessor, 'processClipWithFfmpeg').mockImplementation(
+      ({ onProgress, signal }) => {
+        capturedSignal = signal;
+        onProgress?.(35);
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener('abort', () => {
+            reject(
+              new ffmpegProcessor.FfmpegProcessingError('Renderização cancelada.', {
+                isAborted: true,
+              }),
+            );
+          });
+        });
+      },
+    );
+
+    render(
+      <ToastProvider>
+        <UploadClipModal isOpen onClose={onClose} />
+        <ToastViewport />
+      </ToastProvider>,
+    );
+
+    // 1. Before selecting a file, clicking Cancel closes immediately without confirmation
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('cancel-upload-confirm-dialog')).not.toBeInTheDocument();
+    onClose.mockClear();
+
+    // 2. Load a video file -> clicking backdrop opens confirmation dialog (loaded video guard)
+    const file = new File(['video-bytes'], 'clutch_render.mp4', { type: 'video/mp4' });
+    fireEvent.change(screen.getByTestId('clip-file-input'), { target: { files: [file] } });
+    await waitFor(() => {
+      expect(screen.getByTestId('clip-video-editor')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByTestId('upload-modal-backdrop'));
+    expect(screen.getByTestId('cancel-upload-confirm-dialog')).toBeInTheDocument();
+    expect(screen.getByText(/Você já carregou um vídeo neste formulário/i)).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    // Escape closes only the confirmation dialog, keeping modal open
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('cancel-upload-confirm-dialog')).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    // 3. Start FFmpeg rendering
+    await user.selectOptions(screen.getByLabelText('Jogo'), 'g-cs2');
+    await user.click(screen.getByRole('button', { name: 'PUBLICAR CLIPE' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('render-progress-panel')).toBeInTheDocument();
+    });
+
+    // Click "Cancelar renderização" -> opens confirmation dialog instead of aborting immediately
+    await user.click(screen.getByRole('button', { name: 'Cancelar renderização' }));
+    const confirmDialog = screen.getByTestId('cancel-upload-confirm-dialog');
+    expect(confirmDialog).toBeInTheDocument();
+    expect(confirmDialog).toHaveTextContent('CANCELAR ENVIO DO CLIPE?');
+    expect(confirmDialog).toHaveTextContent(
+      /renderização do clipe no navegador está em andamento/i,
+    );
+    expect(capturedSignal?.aborted).toBe(false);
+    expect(onClose).not.toHaveBeenCalled();
+
+    // Choose "Continuar envio" -> keeps rendering running and closes only the confirmation dialog
+    await user.click(screen.getByRole('button', { name: 'Continuar envio' }));
+    expect(screen.queryByTestId('cancel-upload-confirm-dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('render-progress-panel')).toBeInTheDocument();
+    expect(capturedSignal?.aborted).toBe(false);
+    expect(onClose).not.toHaveBeenCalled();
+
+    // Click close (X) and choose "Sim, cancelar" -> aborts FFmpeg and closes the modal
+    await user.click(screen.getByRole('button', { name: 'Fechar modal de upload' }));
+    expect(screen.getByTestId('cancel-upload-confirm-dialog')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Sim, cancelar' }));
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('cancel-upload-confirm-dialog')).not.toBeInTheDocument();
+  });
 });
