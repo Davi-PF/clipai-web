@@ -102,8 +102,8 @@ export function CreateCollectionModal({
       aria-labelledby="collection-modal-title"
       className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
     >
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6 text-text-primary shadow-2xl">
-        <header className="mb-5 flex items-center justify-between border-b border-border-muted pb-3.5">
+      <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-bento border-[1.5px] border-border-muted bg-bg-surface text-text-primary shadow-2xl">
+        <header className="flex shrink-0 items-center justify-between border-b border-border-muted px-6 py-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
               <FolderPlus className="h-4 w-4 text-success" aria-hidden="true" />
@@ -126,83 +126,85 @@ export function CreateCollectionModal({
           </button>
         </header>
 
-        <form onSubmit={(event) => void handleSubmit(event)} noValidate className="space-y-4">
-          <Input
-            label="Nome da coleção"
-            name="collection_title"
-            placeholder="Ex: Melhores Clutches de CS2"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            error={titleError}
-            disabled={isSaving}
-          />
-
-          <div className="space-y-1.5">
-            <label
-              htmlFor="collection-description"
-              className="block font-mono text-mono-meta font-medium text-text-secondary"
-            >
-              Descrição (opcional)
-            </label>
-            <textarea
-              id="collection-description"
-              rows={3}
-              value={description}
+        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <form onSubmit={(event) => void handleSubmit(event)} noValidate className="space-y-4">
+            <Input
+              label="Nome da coleção"
+              name="collection_title"
+              placeholder="Ex: Melhores Clutches de CS2"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              error={titleError}
               disabled={isSaving}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Descreva o tema dos clipes desta coleção..."
-              className="w-full rounded-control border border-border-muted bg-bg-elevated p-3 font-mono text-mono-body text-text-primary placeholder:text-text-muted focus:border-success focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
             />
-          </div>
 
-          <fieldset className="space-y-2" disabled={isSaving}>
-            <legend className="font-mono text-mono-meta font-medium text-text-secondary">
-              Cor de destaque
-            </legend>
-            <div className="flex flex-wrap gap-2.5">
-              {ACCENT_COLOR_OPTIONS.map((option) => {
-                const isSelected = accentColor.toUpperCase() === option.hex.toUpperCase();
-                return (
-                  <button
-                    key={option.hex}
-                    type="button"
-                    aria-label={option.label}
-                    aria-pressed={isSelected}
-                    onClick={() => setAccentColor(option.hex)}
-                    className={`flex items-center gap-2 rounded-control border px-3 py-1.5 font-mono text-mono-badge transition-colors ${
-                      isSelected
-                        ? 'border-text-primary bg-bg-deep text-text-primary'
-                        : 'border-border-muted bg-bg-elevated text-text-secondary hover:text-text-primary'
-                    }`}
-                  >
-                    <span
-                      className="h-3.5 w-3.5 rounded-full border border-bg-deep"
-                      style={{ backgroundColor: option.hex }}
-                      aria-hidden="true"
-                    />
-                    {option.label}
-                  </button>
-                );
-              })}
+            <div className="space-y-1.5">
+              <label
+                htmlFor="collection-description"
+                className="block font-mono text-mono-meta font-medium text-text-secondary"
+              >
+                Descrição (opcional)
+              </label>
+              <textarea
+                id="collection-description"
+                rows={3}
+                value={description}
+                disabled={isSaving}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Descreva o tema dos clipes desta coleção..."
+                className="w-full rounded-control border border-border-muted bg-bg-elevated p-3 font-mono text-mono-body text-text-primary placeholder:text-text-muted focus:border-success focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+              />
             </div>
-          </fieldset>
 
-          <PrivacySelector value={privacy} onChange={setPrivacy} disabled={isSaving} />
+            <fieldset className="space-y-2" disabled={isSaving}>
+              <legend className="font-mono text-mono-meta font-medium text-text-secondary">
+                Cor de destaque
+              </legend>
+              <div className="flex flex-wrap gap-2.5">
+                {ACCENT_COLOR_OPTIONS.map((option) => {
+                  const isSelected = accentColor.toUpperCase() === option.hex.toUpperCase();
+                  return (
+                    <button
+                      key={option.hex}
+                      type="button"
+                      aria-label={option.label}
+                      aria-pressed={isSelected}
+                      onClick={() => setAccentColor(option.hex)}
+                      className={`flex items-center gap-2 rounded-control border px-3 py-1.5 font-mono text-mono-badge transition-colors ${
+                        isSelected
+                          ? 'border-text-primary bg-bg-deep text-text-primary'
+                          : 'border-border-muted bg-bg-elevated text-text-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      <span
+                        className="h-3.5 w-3.5 rounded-full border border-bg-deep"
+                        style={{ backgroundColor: option.hex }}
+                        aria-hidden="true"
+                      />
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
 
-          <div className="flex flex-col-reverse gap-3 border-t border-border-muted pt-4 sm:flex-row sm:justify-end">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              isLoading={isSaving}
-              loadingText={isEditMode ? 'SALVANDO...' : 'CRIANDO...'}
-            >
-              {isEditMode ? 'SALVAR ALTERAÇÕES' : 'CRIAR COLEÇÃO'}
-            </Button>
-          </div>
-        </form>
+            <PrivacySelector value={privacy} onChange={setPrivacy} disabled={isSaving} />
+
+            <div className="flex flex-col-reverse gap-3 border-t border-border-muted pt-4 sm:flex-row sm:justify-end">
+              <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={isSaving}
+                loadingText={isEditMode ? 'SALVANDO...' : 'CRIANDO...'}
+              >
+                {isEditMode ? 'SALVAR ALTERAÇÕES' : 'CRIAR COLEÇÃO'}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
     </dialog>
   );
