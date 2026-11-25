@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle2, Loader2, Mail, XCircle } from 'lucide-react';
@@ -75,7 +75,7 @@ export function VerifyEmailContent() {
     };
   }, [token]);
 
-  const handleResend = async (event: FormEvent<HTMLFormElement>) => {
+  const handleResend = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const validation = validateEmail(resendEmail);
     if (!validation.valid) {

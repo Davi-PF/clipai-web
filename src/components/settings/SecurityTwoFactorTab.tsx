@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -57,7 +57,7 @@ function BackupCodesStep({ backupCodes, username, onFinish }: Readonly<BackupCod
     anchor.download = `clipai-backup-codes-${username}.txt`;
     document.body.appendChild(anchor);
     anchor.click();
-    document.body.removeChild(anchor);
+    anchor.remove();
     URL.revokeObjectURL(objectUrl);
     success('Arquivo .TXT com códigos de backup baixado!');
   };
@@ -155,7 +155,7 @@ function DisableTwoFactorModal({
     return null;
   }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setCodeError(null);
     setPasswordError(null);
@@ -195,11 +195,11 @@ function DisableTwoFactorModal({
   };
 
   return (
-    <div
-      role="dialog"
+    <dialog
+      open
       aria-modal="true"
       aria-labelledby="disable-2fa-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-deep/85 p-4"
+      className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
     >
       <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 shadow-xl sm:p-6">
         <div className="flex items-center justify-between border-b border-border-muted pb-4">
@@ -276,7 +276,7 @@ function DisableTwoFactorModal({
           </div>
         </form>
       </div>
-    </div>
+    </dialog>
   );
 }
 
@@ -333,7 +333,7 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
     }
   };
 
-  const handleEnableSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleEnableSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const validation = validateTwoFactorCode(verificationCode, false);
     if (!validation.valid) {

@@ -21,38 +21,37 @@ export function ClipExportControls({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-border-muted bg-bg-surface px-3 py-2.5">
       {/* Seletor segmentado horizontal compacto (1 única linha) */}
-      <div
-        role="group"
-        aria-label="Preset de exportação e compressão"
-        className="inline-flex flex-wrap items-center gap-0.5 rounded-control border border-border-muted bg-bg-deep p-0.5"
-      >
-        {CLIP_EXPORT_PRESETS.map((option) => {
-          const isSelected = preset === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              disabled={disabled}
-              aria-pressed={isSelected}
-              data-testid={`export-preset-${option.id}`}
-              title={option.description}
-              onClick={() => onChangePreset(option.id)}
-              className={`inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-1.5 font-mono text-mono-badge transition-colors disabled:cursor-not-allowed disabled:opacity-55 ${
-                isSelected
-                  ? 'bg-bg-elevated font-semibold text-text-primary shadow-sm ring-1 ring-success'
-                  : 'text-text-secondary hover:bg-bg-surface hover:text-text-primary'
-              }`}
-            >
-              <span>{option.label}</span>
-              {option.id === '720p' && (
-                <span className="rounded-[4px] bg-warning px-1 py-0.5 font-mono text-[9px] font-bold uppercase leading-none text-bg-deep">
-                  Rec.
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <fieldset className="m-0 min-w-0 border-0 p-0">
+        <legend className="sr-only">Preset de exportação e compressão</legend>
+        <div className="inline-flex flex-wrap items-center gap-0.5 rounded-control border border-border-muted bg-bg-deep p-0.5">
+          {CLIP_EXPORT_PRESETS.map((option) => {
+            const isSelected = preset === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                disabled={disabled}
+                aria-pressed={isSelected}
+                data-testid={`export-preset-${option.id}`}
+                title={option.description}
+                onClick={() => onChangePreset(option.id)}
+                className={`inline-flex items-center gap-1.5 rounded-[6px] px-2.5 py-1.5 font-mono text-mono-badge transition-colors disabled:cursor-not-allowed disabled:opacity-55 ${
+                  isSelected
+                    ? 'bg-bg-elevated font-semibold text-text-primary shadow-sm ring-1 ring-success'
+                    : 'text-text-secondary hover:bg-bg-surface hover:text-text-primary'
+                }`}
+              >
+                <span>{option.label}</span>
+                {option.id === '720p' && (
+                  <span className="rounded-[4px] bg-warning px-1 py-0.5 font-mono text-[9px] font-bold uppercase leading-none text-bg-deep">
+                    Rec.
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
 
       {/* Resumo discreto do tamanho estimado e economia no R2 */}
       <div

@@ -27,6 +27,109 @@ function getAccentBarColor(clip: ClipSummary, isActive: boolean): string {
   return 'bg-border-muted';
 }
 
+interface ClipQueueListBodyProps {
+  clips: ClipSummary[];
+  activeClipId: string | null;
+  isLoading: boolean;
+  onSelectClip: (clip: ClipSummary) => void;
+}
+
+function ClipQueueListBody({
+  clips,
+  activeClipId,
+  isLoading,
+  onSelectClip,
+}: Readonly<ClipQueueListBodyProps>) {
+  if (isLoading) {
+    return (
+      <div
+        className="flex flex-col gap-[10px] xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-0.5"
+        aria-busy="true"
+        aria-label="Carregando fila"
+      >
+        {[1, 2, 3, 4].map((skeletonItem) => (
+          <div
+            key={skeletonItem}
+            className="h-[76px] w-full shrink-0 animate-pulse rounded-card border border-border-muted bg-bg-elevated"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (clips.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-6 text-center xl:min-h-0 xl:flex-1">
+        <Film className="h-7 w-7 text-text-muted" aria-hidden="true" />
+        <p className="font-mono text-mono-meta text-text-secondary">
+          Nenhum clipe na fila para este filtro.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-[10px] xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-0.5">
+      {clips.map((clip) => {
+        const isActive = clip.id === activeClipId;
+        const accentClass = getAccentBarColor(clip, isActive);
+        const authorDisplayName = getUserDisplayName(clip.author);
+
+        return (
+          <button
+            key={clip.id}
+            type="button"
+            aria-current={isActive ? 'true' : undefined}
+            onClick={() => onSelectClip(clip)}
+            className={`group flex h-[76px] w-full shrink-0 overflow-hidden rounded-card border text-left transition-colors ${
+              isActive
+                ? 'border-success bg-bg-deep'
+                : 'border-border-muted bg-bg-elevated/60 hover:border-text-secondary hover:bg-bg-elevated'
+            }`}
+          >
+            <span className={`h-full w-1 shrink-0 ${accentClass}`} aria-hidden="true" />
+
+            <div className="flex min-w-0 flex-1 items-center gap-3 px-2.5 py-2">
+              <div className="relative h-[56px] w-[100px] shrink-0 overflow-hidden rounded-[6px] bg-bg-deep">
+                <img
+                  src={clip.thumbnail_url}
+                  alt={`Miniatura de ${clip.title}`}
+                  className="h-full w-full object-cover"
+                />
+                <span className="absolute bottom-1 right-1 rounded-[4px] bg-bg-deep/90 px-1 py-0.5 font-mono text-[10px] leading-none text-text-primary">
+                  {formatDurationBadge(clip.duration_seconds)}
+                </span>
+              </div>
+
+              <div className="min-w-0 flex-1 space-y-1">
+                <p
+                  className={`truncate font-mono text-mono-body font-semibold ${
+                    isActive ? 'text-success' : 'text-text-primary'
+                  }`}
+                >
+                  {clip.title}
+                </p>
+                <div className="flex items-center gap-1.5 font-mono text-mono-badge text-text-muted">
+                  <UserAvatar
+                    username={clip.author.username}
+                    displayName={clip.author.display_name}
+                    avatarUrl={clip.author.avatar_url}
+                    size="xs"
+                  />
+                  <p className="truncate">
+                    {clip.game.name} • {authorDisplayName} (@{clip.author.username}) •{' '}
+                    {clip.views_count} views
+                  </p>
+                </div>
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ClipQueueList({
   clips,
   activeClipId,
@@ -104,86 +207,12 @@ export function ClipQueueList({
       </div>
 
       {/* Lista limpa vertical (gap: 10px, zero sobreposição) com scroll interno sutil em xl+ */}
-      {isLoading ? (
-        <div
-          className="flex flex-col gap-[10px] xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-0.5"
-          aria-busy="true"
-          aria-label="Carregando fila"
-        >
-          {[1, 2, 3, 4].map((skeletonItem) => (
-            <div
-              key={skeletonItem}
-              className="h-[76px] w-full shrink-0 animate-pulse rounded-card border border-border-muted bg-bg-elevated"
-            />
-          ))}
-        </div>
-      ) : clips.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-6 text-center xl:min-h-0 xl:flex-1">
-          <Film className="h-7 w-7 text-text-muted" aria-hidden="true" />
-          <p className="font-mono text-mono-meta text-text-secondary">
-            Nenhum clipe na fila para este filtro.
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-[10px] xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-0.5">
-          {clips.map((clip) => {
-            const isActive = clip.id === activeClipId;
-            const accentClass = getAccentBarColor(clip, isActive);
-            const authorDisplayName = getUserDisplayName(clip.author);
-
-            return (
-              <button
-                key={clip.id}
-                type="button"
-                aria-current={isActive ? 'true' : undefined}
-                onClick={() => onSelectClip(clip)}
-                className={`group flex h-[76px] w-full shrink-0 overflow-hidden rounded-card border text-left transition-colors ${
-                  isActive
-                    ? 'border-success bg-bg-deep'
-                    : 'border-border-muted bg-bg-elevated/60 hover:border-text-secondary hover:bg-bg-elevated'
-                }`}
-              >
-                <span className={`h-full w-1 shrink-0 ${accentClass}`} aria-hidden="true" />
-
-                <div className="flex min-w-0 flex-1 items-center gap-3 px-2.5 py-2">
-                  <div className="relative h-[56px] w-[100px] shrink-0 overflow-hidden rounded-[6px] bg-bg-deep">
-                    <img
-                      src={clip.thumbnail_url}
-                      alt={`Miniatura de ${clip.title}`}
-                      className="h-full w-full object-cover"
-                    />
-                    <span className="absolute bottom-1 right-1 rounded-[4px] bg-bg-deep/90 px-1 py-0.5 font-mono text-[10px] leading-none text-text-primary">
-                      {formatDurationBadge(clip.duration_seconds)}
-                    </span>
-                  </div>
-
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <p
-                      className={`truncate font-mono text-mono-body font-semibold ${
-                        isActive ? 'text-success' : 'text-text-primary'
-                      }`}
-                    >
-                      {clip.title}
-                    </p>
-                    <div className="flex items-center gap-1.5 font-mono text-mono-badge text-text-muted">
-                      <UserAvatar
-                        username={clip.author.username}
-                        displayName={clip.author.display_name}
-                        avatarUrl={clip.author.avatar_url}
-                        size="xs"
-                      />
-                      <p className="truncate">
-                        {clip.game.name} • {authorDisplayName} (@{clip.author.username}) •{' '}
-                        {clip.views_count} views
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <ClipQueueListBody
+        clips={clips}
+        activeClipId={activeClipId}
+        isLoading={isLoading}
+        onSelectClip={onSelectClip}
+      />
     </section>
   );
 }

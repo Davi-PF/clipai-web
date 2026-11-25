@@ -73,7 +73,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
   const hasRegisteredViewRef = useRef(false);
 
   const patchClip = useCallback((clipId: string, patch: SocialMutationPatch) => {
-    setClip((prev) => (prev && prev.id === clipId ? { ...prev, ...patch } : prev));
+    setClip((prev) => (prev?.id === clipId ? { ...prev, ...patch } : prev));
   }, []);
 
   const { toggleLike, toggleFavorite, isLikePending, isFavoritePending } = useClipSocial(patchClip);
@@ -159,9 +159,12 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
     }
   };
 
-  const isOwner = Boolean(user && clip && user.id === clip.author.id);
+  const currentUserId = user?.id;
+  const isOwner = Boolean(currentUserId && currentUserId === clip?.author.id);
   const liked = clip ? isClipLiked(clip) : false;
   const favorited = clip ? isClipFavorited(clip) : false;
+  const clipDetailPath = `/c/${slug}`;
+  const loginRedirectHref = `/login?redirect=${encodeURIComponent(clipDetailPath)}`;
 
   return (
     <main className="min-h-screen bg-bg-deep px-4 py-8 text-text-primary md:px-8">
@@ -223,7 +226,7 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
               </p>
             </div>
             {!user && (
-              <Link href={`/login?redirect=${encodeURIComponent(`/c/${slug}`)}`}>
+              <Link href={loginRedirectHref}>
                 <Button type="button" variant="primary">
                   FAZER LOGIN PARA ASSISTIR
                 </Button>

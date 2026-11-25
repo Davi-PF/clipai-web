@@ -26,6 +26,185 @@ const FAN_TRANSFORMS: readonly string[] = [
 
 const FAN_Z_INDEX: readonly number[] = [30, 20, 10] as const;
 
+function getStackContainerHeight(count: number): string {
+  if (count >= 3) {
+    return 'min-h-[236px]';
+  }
+  if (count === 2) {
+    return 'min-h-[198px]';
+  }
+  return 'min-h-[164px]';
+}
+
+function getFanCardSurfaceClass(isFront: boolean, isActiveFilter: boolean): string {
+  if (!isFront) {
+    return 'border-border-muted bg-bg-elevated text-text-primary shadow-md hover:border-success hover:bg-bg-surface';
+  }
+  if (isActiveFilter) {
+    return 'border-success bg-text-primary text-bg-deep shadow-xl';
+  }
+  return 'border-border-muted bg-text-primary text-bg-deep shadow-lg hover:border-success';
+}
+
+function getFanCardActionLabel(isFront: boolean, isActiveFilter: boolean): string {
+  if (!isFront) {
+    return 'TRAZER PARA FRENTE';
+  }
+  return isActiveFilter ? 'COLEÇÃO ATIVA' : 'CLIQUE PARA FILTRAR';
+}
+
+interface CollectionFanCardProps {
+  collection: Collection;
+  index: number;
+  activeCollectionId: string | null;
+  onCardClick: (collection: Collection, stackIndex: number) => void;
+}
+
+function CollectionFanCard({
+  collection,
+  index,
+  activeCollectionId,
+  onCardClick,
+}: Readonly<CollectionFanCardProps>) {
+  const isFront = index === 0;
+  const isActiveFilter = activeCollectionId === collection.id;
+  const PrivacyIcon = PRIVACY_ICONS[collection.privacy];
+  const accent = collection.accent_color || '#2EB886';
+
+  return (
+    <button
+      type="button"
+      data-testid={`collection-fan-card-${collection.id}`}
+      data-front={isFront ? 'true' : 'false'}
+      aria-label={
+        isFront
+          ? `Filtrar pela coleção ${collection.title}`
+          : `Trazer coleção ${collection.title} para frente`
+      }
+      onClick={() => onCardClick(collection, index)}
+      style={{
+        transform: FAN_TRANSFORMS[index] ?? FAN_TRANSFORMS[2],
+        zIndex: FAN_Z_INDEX[index] ?? 5,
+      }}
+      className={`absolute inset-x-1 bottom-2 flex h-[142px] flex-col justify-between rounded-card border-[1.5px] p-3.5 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success ${getFanCardSurfaceClass(isFront, isActiveFilter)}`}
+    >
+      {/* Faixa superior visível mesmo quando o card está atrás no leque */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: accent }}
+            aria-hidden="true"
+          />
+          <span
+            className={`truncate font-display text-display-md uppercase tracking-[0.06em] ${
+              isFront ? 'text-bg-deep' : 'text-text-primary'
+            }`}
+          >
+            {collection.title}
+          </span>
+        </div>
+
+        <span
+          className={`inline-flex shrink-0 items-center gap-1 rounded-control px-2 py-0.5 font-mono text-mono-badge uppercase ${
+            isFront
+              ? 'bg-bg-deep text-text-primary'
+              : 'border border-border-muted bg-bg-deep text-text-secondary'
+          }`}
+        >
+          <PrivacyIcon className="h-3 w-3" aria-hidden="true" />
+          {collection.clips_count}
+        </span>
+      </div>
+
+      <p
+        className={`line-clamp-2 font-mono text-mono-badge ${
+          isFront ? 'text-bg-surface' : 'text-text-secondary'
+        }`}
+      >
+        {collection.description || `Por @${collection.owner.username}`}
+      </p>
+
+      <div className="flex items-center justify-between">
+        <span
+          className={`font-mono text-mono-badge font-semibold uppercase ${
+            isFront ? 'text-bg-deep' : 'text-text-muted'
+          }`}
+        >
+          {getFanCardActionLabel(isFront, isActiveFilter)}
+        </span>
+        <span
+          className="h-1 w-8 rounded-full"
+          style={{ backgroundColor: accent }}
+          aria-hidden="true"
+        />
+      </div>
+    </button>
+  );
+}
+
+interface CollectionsFanBodyProps {
+  isLoading: boolean;
+  orderedCollections: Collection[];
+  activeCollectionId: string | null;
+  stackContainerHeight: string;
+  onOpenCreate: () => void;
+  onCardClick: (collection: Collection, stackIndex: number) => void;
+}
+
+function CollectionsFanBody({
+  isLoading,
+  orderedCollections,
+  activeCollectionId,
+  stackContainerHeight,
+  onOpenCreate,
+  onCardClick,
+}: Readonly<CollectionsFanBodyProps>) {
+  if (isLoading) {
+    return (
+      <div
+        aria-busy="true"
+        aria-label="Carregando coleções"
+        className="h-44 w-full animate-pulse rounded-card border border-border-muted bg-bg-elevated"
+      />
+    );
+  }
+
+  if (orderedCollections.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-2.5 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep px-4 py-6 text-center">
+        <p className="font-mono text-mono-meta text-text-secondary">
+          Crie coleções para agrupar suas melhores jogadas.
+        </p>
+        <button
+          type="button"
+          onClick={onOpenCreate}
+          className="inline-flex items-center gap-1.5 rounded-control bg-success px-3.5 py-2 font-display text-display-cta uppercase tracking-[0.06em] text-bg-deep transition-colors hover:bg-success-surface hover:text-text-primary"
+        >
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          NOVA COLEÇÃO
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative mx-auto flex w-full max-w-[328px] items-end justify-center pb-2 pt-3 ${stackContainerHeight}`}
+    >
+      {orderedCollections.map((collection, index) => (
+        <CollectionFanCard
+          key={collection.id}
+          collection={collection}
+          index={index}
+          activeCollectionId={activeCollectionId}
+          onCardClick={onCardClick}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function CollectionsFanWidget({
   collections,
   activeCollectionId,
@@ -56,7 +235,7 @@ export function CollectionsFanWidget({
         const [first, ...rest] = prev;
         return first ? [...rest, first] : prev;
       }
-      const last = prev[prev.length - 1];
+      const last = prev.at(-1);
       return last ? [last, ...prev.slice(0, -1)] : prev;
     });
   };
@@ -69,12 +248,7 @@ export function CollectionsFanWidget({
     onSelectCollection(collection);
   };
 
-  const stackContainerHeight =
-    orderedCollections.length >= 3
-      ? 'min-h-[236px]'
-      : orderedCollections.length === 2
-        ? 'min-h-[198px]'
-        : 'min-h-[164px]';
+  const stackContainerHeight = getStackContainerHeight(orderedCollections.length);
 
   return (
     <section
@@ -125,120 +299,14 @@ export function CollectionsFanWidget({
         </div>
       </header>
 
-      {isLoading ? (
-        <div
-          aria-busy="true"
-          aria-label="Carregando coleções"
-          className="h-44 w-full animate-pulse rounded-card border border-border-muted bg-bg-elevated"
-        />
-      ) : orderedCollections.length === 0 ? (
-        <div className="flex flex-col items-center gap-2.5 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep px-4 py-6 text-center">
-          <p className="font-mono text-mono-meta text-text-secondary">
-            Crie coleções para agrupar suas melhores jogadas.
-          </p>
-          <button
-            type="button"
-            onClick={onOpenCreate}
-            className="inline-flex items-center gap-1.5 rounded-control bg-success px-3.5 py-2 font-display text-display-cta uppercase tracking-[0.06em] text-bg-deep transition-colors hover:bg-success-surface hover:text-text-primary"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            NOVA COLEÇÃO
-          </button>
-        </div>
-      ) : (
-        <div
-          className={`relative mx-auto flex w-full max-w-[328px] items-end justify-center pb-2 pt-3 ${stackContainerHeight}`}
-        >
-          {orderedCollections.map((collection, index) => {
-            const isFront = index === 0;
-            const isActiveFilter = activeCollectionId === collection.id;
-            const PrivacyIcon = PRIVACY_ICONS[collection.privacy];
-            const accent = collection.accent_color || '#2EB886';
-
-            return (
-              <button
-                key={collection.id}
-                type="button"
-                data-testid={`collection-fan-card-${collection.id}`}
-                data-front={isFront ? 'true' : 'false'}
-                aria-label={
-                  isFront
-                    ? `Filtrar pela coleção ${collection.title}`
-                    : `Trazer coleção ${collection.title} para frente`
-                }
-                onClick={() => handleCardClick(collection, index)}
-                style={{
-                  transform: FAN_TRANSFORMS[index] ?? FAN_TRANSFORMS[2],
-                  zIndex: FAN_Z_INDEX[index] ?? 5,
-                }}
-                className={`absolute inset-x-1 bottom-2 flex h-[142px] flex-col justify-between rounded-card border-[1.5px] p-3.5 text-left transition-all duration-300 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success ${
-                  isFront
-                    ? isActiveFilter
-                      ? 'border-success bg-text-primary text-bg-deep shadow-xl'
-                      : 'border-border-muted bg-text-primary text-bg-deep shadow-lg hover:border-success'
-                    : 'border-border-muted bg-bg-elevated text-text-primary shadow-md hover:border-success hover:bg-bg-surface'
-                }`}
-              >
-                {/* Faixa superior visível mesmo quando o card está atrás no leque */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: accent }}
-                      aria-hidden="true"
-                    />
-                    <span
-                      className={`truncate font-display text-display-md uppercase tracking-[0.06em] ${
-                        isFront ? 'text-bg-deep' : 'text-text-primary'
-                      }`}
-                    >
-                      {collection.title}
-                    </span>
-                  </div>
-
-                  <span
-                    className={`inline-flex shrink-0 items-center gap-1 rounded-control px-2 py-0.5 font-mono text-mono-badge uppercase ${
-                      isFront
-                        ? 'bg-bg-deep text-text-primary'
-                        : 'border border-border-muted bg-bg-deep text-text-secondary'
-                    }`}
-                  >
-                    <PrivacyIcon className="h-3 w-3" aria-hidden="true" />
-                    {collection.clips_count}
-                  </span>
-                </div>
-
-                <p
-                  className={`line-clamp-2 font-mono text-mono-badge ${
-                    isFront ? 'text-bg-surface' : 'text-text-secondary'
-                  }`}
-                >
-                  {collection.description || `Por @${collection.owner.username}`}
-                </p>
-
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`font-mono text-mono-badge font-semibold uppercase ${
-                      isFront ? 'text-bg-deep' : 'text-text-muted'
-                    }`}
-                  >
-                    {isFront
-                      ? isActiveFilter
-                        ? 'COLEÇÃO ATIVA'
-                        : 'CLIQUE PARA FILTRAR'
-                      : 'TRAZER PARA FRENTE'}
-                  </span>
-                  <span
-                    className="h-1 w-8 rounded-full"
-                    style={{ backgroundColor: accent }}
-                    aria-hidden="true"
-                  />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <CollectionsFanBody
+        isLoading={isLoading}
+        orderedCollections={orderedCollections}
+        activeCollectionId={activeCollectionId}
+        stackContainerHeight={stackContainerHeight}
+        onOpenCreate={onOpenCreate}
+        onCardClick={handleCardClick}
+      />
     </section>
   );
 }

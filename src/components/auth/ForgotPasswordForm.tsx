@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Mail } from 'lucide-react';
 import { AuthCardLayout } from '@/components/auth/AuthCardLayout';
@@ -19,7 +19,7 @@ export function ForgotPasswordForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sentMessage, setSentMessage] = useState<string | null>(null);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const validation = validateEmail(email);
     if (!validation.valid) {

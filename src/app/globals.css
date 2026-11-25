@@ -38,6 +38,36 @@
     line-height: 1.5;
   }
 
+  dialog {
+    margin: 0;
+    border-width: 0;
+    background-color: transparent;
+    color: inherit;
+  }
+
+  progress.clipai-progress {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 0;
+    background-color: var(--bg-surface);
+  }
+
+  progress.clipai-progress::-webkit-progress-bar {
+    background-color: var(--bg-surface);
+    border-radius: 9999px;
+  }
+
+  progress.clipai-progress::-webkit-progress-value {
+    background-color: currentColor;
+    border-radius: 9999px;
+    transition: width 150ms ease;
+  }
+
+  progress.clipai-progress::-moz-progress-bar {
+    background-color: currentColor;
+    border-radius: 9999px;
+  }
+
   /* Scrollbars globais unificadas — Dark Mode Frio CLIPAÍ */
   ::-webkit-scrollbar {
     width: 6px;
@@ -178,4 +208,10 @@
 
 .radial-dock-item {
   animation: radialDockPop 220ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radial-dock-item {
+    animation: none;
+  }
 }

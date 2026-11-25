@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Lock, Mail, User as UserIcon } from 'lucide-react';
 import { AuthCardLayout } from '@/components/auth/AuthCardLayout';
@@ -75,7 +75,7 @@ export function RegisterForm() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!validateFields()) {
       return;

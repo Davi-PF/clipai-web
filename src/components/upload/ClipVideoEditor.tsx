@@ -275,7 +275,9 @@ export function ClipVideoEditor({
           onEnded={handleEnded}
           onTimeUpdate={handleTimeUpdate}
           className="h-full w-full object-contain"
-        />
+        >
+          <track kind="captions" srcLang="pt-BR" label="Português" />
+        </video>
       </div>
 
       {/* Barra unificada de controles do player + Mutar + Miniatura compacta + Capturar capa */}

@@ -280,9 +280,6 @@ export function useClipUpload(): UseClipUploadResult {
       setVideoProgress(0);
 
       try {
-        let uploadFile = selectedFile;
-        let uploadMimeType = extractedMeta.videoMimeType;
-
         setStage('rendering');
         const processed = await processClipWithFfmpeg({
           file: selectedFile,
@@ -291,8 +288,8 @@ export function useClipUpload(): UseClipUploadResult {
           onProgress: (percent) => setRenderProgress(percent),
           signal: controller.signal,
         });
-        uploadFile = processed.file;
-        uploadMimeType = processed.mimeType;
+        const uploadFile = processed.file;
+        const uploadMimeType = processed.mimeType;
 
         const finalMetaCheck = validateVideoFileMeta({
           type: uploadMimeType,

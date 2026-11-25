@@ -73,8 +73,11 @@ export function LandingHeroMockup() {
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-control bg-danger px-2 py-0.5 font-mono text-mono-badge font-bold uppercase text-text-primary">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-text-primary" />
-            REC
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 animate-pulse rounded-full bg-text-primary"
+            />
+            <span>REC</span>
           </span>
           <span className="inline-flex items-center gap-1 rounded-control bg-warning px-2 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep">
             <Star className="h-3 w-3 fill-current" aria-hidden="true" />

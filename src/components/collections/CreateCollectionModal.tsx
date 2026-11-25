@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { FolderPlus, X } from 'lucide-react';
 import { PrivacySelector } from '@/components/upload/PrivacySelector';
 import { Button } from '@/components/ui/Button';
@@ -54,7 +54,7 @@ export function CreateCollectionModal({
     return null;
   }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedTitle = title.trim();
     if (trimmedTitle.length < 2 || trimmedTitle.length > 80) {
@@ -96,11 +96,11 @@ export function CreateCollectionModal({
   };
 
   return (
-    <div
-      role="dialog"
+    <dialog
+      open
       aria-modal="true"
       aria-labelledby="collection-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-deep/85 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
     >
       <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6 text-text-primary shadow-2xl">
         <header className="mb-5 flex items-center justify-between border-b border-border-muted pb-3.5">
@@ -204,6 +204,6 @@ export function CreateCollectionModal({
           </div>
         </form>
       </div>
-    </div>
+    </dialog>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type SubmitEvent } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, Camera, ExternalLink, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -122,7 +122,7 @@ export function ProfileSettingsTab({ user, onUserUpdated }: Readonly<ProfileSett
     }
   };
 
-  const handleSubmitProfile = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmitProfile = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const nameValidation = validateDisplayName(displayName);
     const bioValidation = validateBio(bio);
