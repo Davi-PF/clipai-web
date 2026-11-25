@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { FolderPlus, X } from 'lucide-react';
 import { PrivacySelector } from '@/components/upload/PrivacySelector';
 import { Button } from '@/components/ui/Button';
@@ -54,7 +54,7 @@ export function CreateCollectionModal({
     return null;
   }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedTitle = title.trim();
     if (trimmedTitle.length < 2 || trimmedTitle.length > 80) {
