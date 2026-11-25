@@ -195,7 +195,7 @@ export function BentoDashboardWorkspace() {
 
   const patchClipInState = useCallback((clipId: string, patch: SocialMutationPatch) => {
     setClips((prev) => prev.map((item) => (item.id === clipId ? { ...item, ...patch } : item)));
-    setActiveClip((prev) => (prev && prev.id === clipId ? { ...prev, ...patch } : prev));
+    setActiveClip((prev) => (prev?.id === clipId ? { ...prev, ...patch } : prev));
   }, []);
 
   const { toggleLike, toggleFavorite, isLikePending, isFavoritePending } =
@@ -215,7 +215,7 @@ export function BentoDashboardWorkspace() {
           ),
         );
         setActiveClip((prev) =>
-          prev && prev.id === clip.id ? { ...prev, views_count: res.views_count } : prev,
+          prev?.id === clip.id ? { ...prev, views_count: res.views_count } : prev,
         );
       })
       .catch(() => {
@@ -325,7 +325,7 @@ export function BentoDashboardWorkspace() {
     return null;
   }
 
-  const isCollectionOwner = Boolean(activeCollection && activeCollection.owner.id === user.id);
+  const isCollectionOwner = activeCollection?.owner.id === user.id;
 
   return (
     <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary md:flex-row">
