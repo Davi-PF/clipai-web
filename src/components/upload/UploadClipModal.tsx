@@ -484,18 +484,14 @@ function UploadProgressPanel({
         <span className="font-semibold text-text-primary">{stageLabel}</span>
         <span className={isRendering ? 'text-warning' : 'text-success'}>{progressPercent}%</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-bg-surface">
-        <div
-          role="progressbar"
-          aria-valuenow={progressPercent}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          className={`h-full transition-all duration-150 ${
-            isRendering ? 'bg-warning' : 'bg-success'
-          }`}
-          style={{ width: `${progressPercent}%` }}
-        />
-      </div>
+      <progress
+        value={progressPercent}
+        max={100}
+        aria-label={stageLabel || 'Progresso do envio'}
+        className={`clipai-progress block h-2 w-full overflow-hidden rounded-full bg-bg-surface ${
+          isRendering ? 'text-warning' : 'text-success'
+        }`}
+      />
       <p className="font-mono text-mono-badge text-text-muted">
         {isRendering
           ? 'Etapa 1 de 2: Otimizando e cortando no navegador antes do envio.'
