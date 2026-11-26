@@ -28,6 +28,8 @@ export interface HeroPlayerBentoProps {
   clip: ClipSummary | null;
   isLoading: boolean;
   isFeaturedHighlight?: boolean;
+  emptyStateTitle?: string;
+  emptyStateDescription?: string;
   isSidebarCollapsed: boolean;
   isLikePending: boolean;
   isFavoritePending: boolean;
@@ -73,10 +75,18 @@ function HeroLoadingSkeleton({ isReady, cutoutHeight }: Readonly<HeroLoadingSkel
 interface HeroEmptyStateProps {
   isReady: boolean;
   cutoutHeight: number;
+  title?: string;
+  description?: string;
   onOpenUpload: () => void;
 }
 
-function HeroEmptyState({ isReady, cutoutHeight, onOpenUpload }: Readonly<HeroEmptyStateProps>) {
+function HeroEmptyState({
+  isReady,
+  cutoutHeight,
+  title = 'NENHUM CLIPE ENCONTRADO',
+  description = 'Não há clipes para o filtro atual. Envie sua primeira jogada ou ajuste os filtros ao lado.',
+  onOpenUpload,
+}: Readonly<HeroEmptyStateProps>) {
   return (
     <div
       style={isReady && cutoutHeight > 0 ? { paddingBottom: `${cutoutHeight + 28}px` } : undefined}
@@ -86,12 +96,8 @@ function HeroEmptyState({ isReady, cutoutHeight, onOpenUpload }: Readonly<HeroEm
         <Film className="h-7 w-7 text-text-muted" aria-hidden="true" />
       </div>
       <div className="max-w-md space-y-1.5">
-        <h2 className="font-display text-display-hero uppercase tracking-[0.06em] text-text-primary">
-          NENHUM CLIPE ENCONTRADO
-        </h2>
-        <p className="font-mono text-mono-body text-text-secondary">
-          Não há clipes para o filtro atual. Envie sua primeira jogada ou ajuste os filtros ao lado.
-        </p>
+        <h2 className="font-display text-display-hero uppercase text-text-primary">{title}</h2>
+        <p className="font-mono text-mono-body text-text-secondary">{description}</p>
       </div>
       <Button
         type="button"
@@ -229,7 +235,7 @@ function HeroActiveClipContent({
 }: Readonly<HeroActiveClipContentProps>) {
   const liked = isClipLiked(clip);
   const favorited = isClipFavorited(clip);
-  const showFeaturedBadge = isFeaturedHighlight || clip.likes_count >= 10;
+  const showFeaturedBadge = isFeaturedHighlight;
 
   return (
     <div className="flex flex-col">
@@ -256,17 +262,20 @@ function HeroActiveClipContent({
         <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             {showFeaturedBadge && (
-              <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-control bg-warning px-2 font-mono text-mono-badge font-bold uppercase leading-none text-bg-deep">
+              <span
+                data-testid="hero-highlight-badge"
+                className="inline-flex h-6 shrink-0 items-center gap-1 rounded-control bg-warning px-2 font-mono text-mono-badge/none font-bold uppercase text-bg-deep"
+              >
                 ★ DESTAQUE
               </span>
             )}
-            <span className="inline-flex h-6 max-w-full items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 font-mono text-mono-badge uppercase leading-none text-success">
+            <span className="inline-flex h-6 max-w-full items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 font-mono text-mono-badge/none uppercase text-success">
               <Gamepad2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span className="truncate">{clip.game.name}</span>
             </span>
             <Link
               href={`/u/${clip.author.username}`}
-              className="inline-flex h-6 max-w-full min-w-0 items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 font-mono text-mono-badge leading-none text-text-primary transition-colors hover:border-success"
+              className="inline-flex h-6 max-w-full min-w-0 items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 font-mono text-mono-badge/none text-text-primary transition-colors hover:border-success"
             >
               <UserAvatar
                 username={clip.author.username}
@@ -282,7 +291,7 @@ function HeroActiveClipContent({
             )}
           </div>
 
-          <h1 className="line-clamp-2 break-words font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
+          <h1 className="line-clamp-2 break-words font-display text-display-lg uppercase text-text-primary">
             {clip.title}
           </h1>
           <div className="flex flex-wrap items-center gap-2 font-mono text-mono-badge text-text-secondary">
@@ -326,6 +335,8 @@ function renderHeroSurfaceContent(params: {
   isReady: boolean;
   cutoutHeight: number;
   isFeaturedHighlight: boolean;
+  emptyStateTitle?: string;
+  emptyStateDescription?: string;
   isLikePending: boolean;
   isFavoritePending: boolean;
   onPlayStart: (clip: ClipSummary) => void;
@@ -344,6 +355,8 @@ function renderHeroSurfaceContent(params: {
       <HeroEmptyState
         isReady={params.isReady}
         cutoutHeight={params.cutoutHeight}
+        title={params.emptyStateTitle}
+        description={params.emptyStateDescription}
         onOpenUpload={params.onOpenUpload}
       />
     );
@@ -370,6 +383,8 @@ export function HeroPlayerBento({
   clip,
   isLoading,
   isFeaturedHighlight = false,
+  emptyStateTitle,
+  emptyStateDescription,
   isSidebarCollapsed,
   isLikePending,
   isFavoritePending,
@@ -429,6 +444,8 @@ export function HeroPlayerBento({
             isReady,
             cutoutHeight,
             isFeaturedHighlight,
+            emptyStateTitle,
+            emptyStateDescription,
             isLikePending,
             isFavoritePending,
             onPlayStart,

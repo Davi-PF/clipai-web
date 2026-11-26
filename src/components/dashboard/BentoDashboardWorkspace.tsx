@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Edit3, FolderKanban, Trash2, X } from 'lucide-react';
 import { AddToCollectionModal } from '@/components/collections/AddToCollectionModal';
@@ -21,6 +21,11 @@ import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
 import { useClipSocial, type SocialMutationPatch } from '@/hooks/useClipSocial';
 import { ApiClientError } from '@/lib/api-client';
+import {
+  getTopHighlightClipId,
+  MAX_HIGHLIGHT_CLIPS,
+  selectHighlightClips,
+} from '@/lib/highlight-ranking';
 import { authService } from '@/services/auth-service';
 import { clipsService } from '@/services/clips-service';
 import { collectionsService } from '@/services/collections-service';
@@ -28,6 +33,7 @@ import { getClipShareSlug, type Clip, type ClipSummary, type Game, type Tag } fr
 import type { Collection } from '@/types/collection';
 
 const QUEUE_PAGE_SIZE = 4;
+const HIGHLIGHTS_FETCH_PAGE_SIZE = 50;
 const SEARCH_DEBOUNCE_MS = 300;
 const DASHBOARD_SECTIONS: readonly DashboardContentSection[] = [
   'home',
@@ -36,6 +42,38 @@ const DASHBOARD_SECTIONS: readonly DashboardContentSection[] = [
   'favorites',
   'collections',
 ] as const;
+
+interface ResolvedClipsResult {
+  items: ClipSummary[];
+  totalPages: number;
+  topHighlightId: string | null;
+}
+
+function resolveClipsForSection(params: {
+  rawItems: ClipSummary[];
+  apiTotalPages: number;
+  activeSection: DashboardContentSection;
+  page: number;
+}): ResolvedClipsResult {
+  if (params.activeSection !== 'featured') {
+    return {
+      items: params.rawItems,
+      totalPages: Math.max(1, params.apiTotalPages),
+      topHighlightId: getTopHighlightClipId(params.rawItems),
+    };
+  }
+
+  const rankedHighlights = selectHighlightClips(params.rawItems, MAX_HIGHLIGHT_CLIPS);
+  const totalPages = Math.max(1, Math.ceil(rankedHighlights.length / QUEUE_PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, params.page), totalPages);
+  const startIndex = (safePage - 1) * QUEUE_PAGE_SIZE;
+
+  return {
+    items: rankedHighlights.slice(startIndex, startIndex + QUEUE_PAGE_SIZE),
+    totalPages,
+    topHighlightId: rankedHighlights[0]?.id ?? null,
+  };
+}
 
 function resolveDashboardSectionFromUrl(): DashboardContentSection | null {
   if (typeof window === 'undefined') {
@@ -73,6 +111,7 @@ export function BentoDashboardWorkspace() {
   const [games, setGames] = useState<Game[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [clips, setClips] = useState<ClipSummary[]>([]);
+  const [featuredTopHighlightId, setFeaturedTopHighlightId] = useState<string | null>(null);
   const [activeClip, setActiveClip] = useState<ClipSummary | null>(null);
   const [isLoadingClips, setIsLoadingClips] = useState(true);
 
@@ -161,27 +200,37 @@ export function BentoDashboardWorkspace() {
   const loadClips = useCallback(async () => {
     setIsLoadingClips(true);
     try {
+      const isFeaturedSection = activeSection === 'featured';
       const response = await clipsService.listClips({
         q: debouncedQuery || undefined,
         game_slug: quickFilter.gameSlug,
         tag: quickFilter.tagSlug,
         favorited: activeSection === 'favorites' ? true : undefined,
         collection_id: activeCollection?.id,
-        sort: activeSection === 'featured' ? 'popular' : 'recent',
-        page,
-        page_size: QUEUE_PAGE_SIZE,
+        sort: isFeaturedSection ? 'popular' : 'recent',
+        page: isFeaturedSection ? 1 : page,
+        page_size: isFeaturedSection ? HIGHLIGHTS_FETCH_PAGE_SIZE : QUEUE_PAGE_SIZE,
       });
 
-      setClips(response.items);
-      setTotalPages(Math.max(1, response.total_pages));
+      const resolved = resolveClipsForSection({
+        rawItems: response.items,
+        apiTotalPages: response.total_pages,
+        activeSection,
+        page,
+      });
+
+      setClips(resolved.items);
+      setTotalPages(resolved.totalPages);
+      setFeaturedTopHighlightId(resolved.topHighlightId);
       setActiveClip((prev) => {
-        if (prev && response.items.some((item) => item.id === prev.id)) {
-          return response.items.find((item) => item.id === prev.id) ?? response.items[0] ?? null;
+        if (prev && resolved.items.some((item) => item.id === prev.id)) {
+          return resolved.items.find((item) => item.id === prev.id) ?? resolved.items[0] ?? null;
         }
-        return response.items[0] ?? null;
+        return resolved.items[0] ?? null;
       });
     } catch {
       setClips([]);
+      setFeaturedTopHighlightId(null);
       setActiveClip(null);
       setTotalPages(1);
     } finally {
@@ -317,15 +366,24 @@ export function BentoDashboardWorkspace() {
   };
 
   const handleUploadSuccess = (newClip: Clip) => {
+    if (activeSection === 'featured') {
+      return;
+    }
     setClips((prev) => [newClip, ...prev.filter((item) => item.id !== newClip.id)]);
     setActiveClip(newClip);
   };
+
+  const topHighlightClipId = useMemo(
+    () => (activeSection === 'featured' ? featuredTopHighlightId : getTopHighlightClipId(clips)),
+    [activeSection, featuredTopHighlightId, clips],
+  );
 
   if (!user) {
     return null;
   }
 
   const isCollectionOwner = activeCollection?.owner.id === user.id;
+  const isHighlightsSection = activeSection === 'featured';
 
   return (
     <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary md:flex-row">
@@ -453,7 +511,13 @@ export function BentoDashboardWorkspace() {
             <HeroPlayerBento
               clip={activeClip}
               isLoading={isLoadingClips}
-              isFeaturedHighlight={activeSection === 'featured'}
+              isFeaturedHighlight={Boolean(activeClip && activeClip.id === topHighlightClipId)}
+              emptyStateTitle={isHighlightsSection ? 'NENHUM DESTAQUE AINDA' : undefined}
+              emptyStateDescription={
+                isHighlightsSection
+                  ? 'Ainda não há clipes com favoritos ou visualizações para entrar nos destaques. Envie uma jogada ou interaja com os clipes recentes.'
+                  : undefined
+              }
               isSidebarCollapsed={isSidebarCollapsed}
               isLikePending={activeClip ? isLikePending(activeClip.id) : false}
               isFavoritePending={activeClip ? isFavoritePending(activeClip.id) : false}
@@ -489,6 +553,13 @@ export function BentoDashboardWorkspace() {
                 <ClipQueueList
                   clips={clips}
                   activeClipId={activeClip?.id ?? null}
+                  topHighlightClipId={topHighlightClipId}
+                  sectionTitle={isHighlightsSection ? 'TOP DESTAQUES' : 'NA FILA / RECENTES'}
+                  emptyMessage={
+                    isHighlightsSection
+                      ? 'Nenhum clipe com favoritos ou visualizações em destaque ainda.'
+                      : undefined
+                  }
                   isLoading={isLoadingClips}
                   searchValue={searchInput}
                   page={page}
