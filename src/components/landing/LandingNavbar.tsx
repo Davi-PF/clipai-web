@@ -30,19 +30,19 @@ export function LandingNavbar() {
         <nav aria-label="Navegação da landing page" className="hidden items-center gap-6 md:flex">
           <a
             href="#recursos"
-            className="inline-flex h-10 items-center font-mono text-mono-meta/none text-text-secondary transition-colors hover:text-text-primary"
+            className="inline-flex h-10 items-center font-mono text-mono-meta leading-none text-text-secondary transition-colors hover:text-text-primary"
           >
             Recursos
           </a>
           <a
             href="#como-funciona"
-            className="inline-flex h-10 items-center font-mono text-mono-meta/none text-text-secondary transition-colors hover:text-text-primary"
+            className="inline-flex h-10 items-center font-mono text-mono-meta leading-none text-text-secondary transition-colors hover:text-text-primary"
           >
             Como Funciona
           </a>
           <a
             href="#estudio"
-            className="inline-flex h-10 items-center font-mono text-mono-meta/none text-text-secondary transition-colors hover:text-text-primary"
+            className="inline-flex h-10 items-center font-mono text-mono-meta leading-none text-text-secondary transition-colors hover:text-text-primary"
           >
             Estúdio
           </a>
@@ -64,6 +64,7 @@ export function LandingNavbar() {
                   displayName={user.display_name}
                   avatarUrl={user.avatar_url}
                   size="md"
+                  className="border-0"
                 />
               </Link>
               <Link href="/dashboard" className="inline-flex items-center">
@@ -82,7 +83,7 @@ export function LandingNavbar() {
             <>
               <Link
                 href="/login"
-                className="inline-flex h-10 items-center justify-center rounded-control border border-border-muted bg-bg-surface px-3.5 font-mono text-mono-meta/none font-medium text-text-primary transition-colors hover:border-success"
+                className="inline-flex h-10 items-center justify-center rounded-control border border-border-muted bg-bg-surface px-3.5 font-mono text-mono-meta font-medium leading-none text-text-primary transition-colors hover:border-success"
               >
                 ENTRAR
               </Link>

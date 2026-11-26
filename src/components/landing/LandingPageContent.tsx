@@ -111,7 +111,7 @@ export function LandingPageContent() {
                 SUAS MELHORES JOGADAS. <span className="text-success">SALVAS EM SEGUNDOS.</span>
               </h1>
 
-              <p className="max-w-xl font-mono text-mono-body/relaxed text-text-secondary">
+              <p className="max-w-xl font-mono text-mono-body leading-relaxed text-text-secondary">
                 Upload direto para a nuvem de até 100 MB, links limpos prontos para o Discord,
                 coleções organizadas para a sua squad e um Estúdio de Criador com curva de retenção
                 real para cada clipe.
