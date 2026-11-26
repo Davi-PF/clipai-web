@@ -380,4 +380,242 @@ describe('UploadClipModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('cancel-upload-confirm-dialog')).not.toBeInTheDocument();
   });
+
+  it('freezes visual progress and blocks pipeline while confirmation dialog is open, then resumes cleanly on Continue', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onUploadSuccess = vi.fn();
+
+    vi.spyOn(videoUtils, 'extractVideoMetadataAndThumbnail').mockResolvedValue(MOCK_EXTRACTED);
+
+    let emitFfmpegProgress: ((percent: number) => void) | undefined;
+    let resolveFfmpeg!: (value: ffmpegProcessor.ProcessClipResult) => void;
+    vi.spyOn(ffmpegProcessor, 'processClipWithFfmpeg').mockImplementation(({ onProgress }) => {
+      emitFfmpegProgress = onProgress;
+      onProgress?.(53);
+      return new Promise((resolve) => {
+        resolveFfmpeg = resolve;
+      });
+    });
+
+    const requestUrlSpy = vi.spyOn(clipsService, 'requestUploadUrl').mockResolvedValue({
+      clip_id: 'clip-uuid-1',
+      status: 'pending_upload',
+      expires_in: 900,
+      video_upload: {
+        url: 'https://r2.example.com/video',
+        method: 'PUT',
+        headers: { 'Content-Type': 'video/mp4', 'Content-Length': '48234496' },
+      },
+      thumbnail_upload: null,
+    });
+    const r2Spy = vi.spyOn(r2Upload, 'uploadFileToPresignedUrl').mockResolvedValue(undefined);
+    const confirmSpy = vi
+      .spyOn(clipsService, 'confirmUpload')
+      .mockResolvedValue(MOCK_CONFIRMED_CLIP);
+
+    render(
+      <ToastProvider>
+        <UploadClipModal isOpen onClose={onClose} onUploadSuccess={onUploadSuccess} />
+        <ToastViewport />
+      </ToastProvider>,
+    );
+
+    const file = new File(['video-bytes'], 'clutch_pause.mp4', { type: 'video/mp4' });
+    fireEvent.change(screen.getByTestId('clip-file-input'), { target: { files: [file] } });
+    await waitFor(() => {
+      expect(screen.getByTestId('clip-video-editor')).toBeInTheDocument();
+    });
+
+    await user.selectOptions(screen.getByLabelText('Jogo'), 'g-cs2');
+    await user.click(screen.getByRole('button', { name: 'PUBLICAR CLIPE' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('render-progress-panel')).toHaveTextContent('53%');
+    });
+
+    // Open cancel confirmation while rendering is at 53% -> freezes UI progress & pauses pipeline
+    await user.click(screen.getByRole('button', { name: 'Cancelar renderização' }));
+    const confirmOverlay = screen.getByTestId('cancel-upload-confirm-dialog');
+    const confirmCard = screen.getByTestId('cancel-upload-confirm-card');
+    expect(confirmOverlay).toHaveClass('flex', 'items-center', 'justify-center', 'p-4');
+    expect(confirmCard).toHaveClass('my-auto');
+    expect(confirmOverlay.parentElement).toBe(document.body);
+
+    // FFmpeg keeps emitting progress (85%, 100%) and finishes while confirmation dialog is open
+    emitFfmpegProgress?.(85);
+    emitFfmpegProgress?.(100);
+    resolveFfmpeg({
+      file: new File(['encoded-bytes'], 'clutch_pause-edited.mp4', { type: 'video/mp4' }),
+      mimeType: 'video/mp4',
+      wasProcessed: true,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    // UI progress MUST remain frozen at 53% and pipeline MUST NOT advance to R2 or publish
+    expect(screen.getByTestId('render-progress-panel')).toHaveTextContent(
+      'Renderizando clipe no navegador (53%)',
+    );
+    expect(screen.getByTestId('render-progress-panel')).not.toHaveTextContent('100%');
+    expect(requestUrlSpy).not.toHaveBeenCalled();
+    expect(r2Spy).not.toHaveBeenCalled();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onUploadSuccess).not.toHaveBeenCalled();
+    expect(screen.getByTestId('cancel-upload-confirm-dialog')).toBeInTheDocument();
+
+    // Choose "Continuar envio" -> unfreezes UI, releases pause gate and finishes upload cleanly
+    await user.click(screen.getByRole('button', { name: 'Continuar envio' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Seu clipe está no ar!')).toBeInTheDocument();
+    });
+    expect(requestUrlSpy).toHaveBeenCalledTimes(1);
+    expect(r2Spy).toHaveBeenCalledTimes(1);
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(onUploadSuccess).toHaveBeenCalledWith(MOCK_CONFIRMED_CLIP);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('aborts cleanly without uploading when FFmpeg finishes during confirmation dialog and user confirms cancel', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onUploadSuccess = vi.fn();
+
+    vi.spyOn(videoUtils, 'extractVideoMetadataAndThumbnail').mockResolvedValue(MOCK_EXTRACTED);
+
+    let emitFfmpegProgress: ((percent: number) => void) | undefined;
+    let resolveFfmpeg!: (value: ffmpegProcessor.ProcessClipResult) => void;
+    let capturedSignal: AbortSignal | undefined;
+    vi.spyOn(ffmpegProcessor, 'processClipWithFfmpeg').mockImplementation(
+      ({ onProgress, signal }) => {
+        emitFfmpegProgress = onProgress;
+        capturedSignal = signal;
+        onProgress?.(42);
+        return new Promise((resolve) => {
+          resolveFfmpeg = resolve;
+        });
+      },
+    );
+
+    const requestUrlSpy = vi.spyOn(clipsService, 'requestUploadUrl');
+    const confirmSpy = vi.spyOn(clipsService, 'confirmUpload');
+
+    render(
+      <ToastProvider>
+        <UploadClipModal isOpen onClose={onClose} onUploadSuccess={onUploadSuccess} />
+        <ToastViewport />
+      </ToastProvider>,
+    );
+
+    const file = new File(['video-bytes'], 'clutch_cancel_after_ffmpeg.mp4', { type: 'video/mp4' });
+    fireEvent.change(screen.getByTestId('clip-file-input'), { target: { files: [file] } });
+    await waitFor(() => {
+      expect(screen.getByTestId('clip-video-editor')).toBeInTheDocument();
+    });
+
+    await user.selectOptions(screen.getByLabelText('Jogo'), 'g-cs2');
+    await user.click(screen.getByRole('button', { name: 'PUBLICAR CLIPE' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('render-progress-panel')).toHaveTextContent('42%');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar renderização' }));
+    emitFfmpegProgress?.(100);
+    resolveFfmpeg({
+      file: new File(['encoded-bytes'], 'clutch_cancel_after_ffmpeg-edited.mp4', {
+        type: 'video/mp4',
+      }),
+      mimeType: 'video/mp4',
+      wasProcessed: true,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(screen.getByTestId('render-progress-panel')).toHaveTextContent('42%');
+
+    await user.click(screen.getByRole('button', { name: 'Sim, cancelar' }));
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(requestUrlSpy).not.toHaveBeenCalled();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onUploadSuccess).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('freezes R2 upload progress while dialog is open and aborts immediately when confirming cancel', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onUploadSuccess = vi.fn();
+
+    vi.spyOn(videoUtils, 'extractVideoMetadataAndThumbnail').mockResolvedValue(MOCK_EXTRACTED);
+    vi.spyOn(clipsService, 'requestUploadUrl').mockResolvedValue({
+      clip_id: 'clip-uuid-1',
+      status: 'pending_upload',
+      expires_in: 900,
+      video_upload: {
+        url: 'https://r2.example.com/video',
+        method: 'PUT',
+        headers: { 'Content-Type': 'video/mp4', 'Content-Length': '48234496' },
+      },
+      thumbnail_upload: null,
+    });
+
+    let emitR2Progress: ((percent: number) => void) | undefined;
+    let capturedR2Signal: AbortSignal | undefined;
+    vi.spyOn(r2Upload, 'uploadFileToPresignedUrl').mockImplementation(
+      (_url, _file, _ct, onProgress, signal) => {
+        emitR2Progress = onProgress;
+        capturedR2Signal = signal;
+        onProgress(40);
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener('abort', () => {
+            reject(
+              new r2Upload.R2UploadError('Envio cancelado pelo usuário.', { isAborted: true }),
+            );
+          });
+        });
+      },
+    );
+    const confirmSpy = vi
+      .spyOn(clipsService, 'confirmUpload')
+      .mockResolvedValue(MOCK_CONFIRMED_CLIP);
+
+    render(
+      <ToastProvider>
+        <UploadClipModal isOpen onClose={onClose} onUploadSuccess={onUploadSuccess} />
+        <ToastViewport />
+      </ToastProvider>,
+    );
+
+    const file = new File(['video-bytes'], 'clutch_r2_abort.mp4', { type: 'video/mp4' });
+    fireEvent.change(screen.getByTestId('clip-file-input'), { target: { files: [file] } });
+    await waitFor(() => {
+      expect(screen.getByTestId('clip-video-editor')).toBeInTheDocument();
+    });
+
+    await user.selectOptions(screen.getByLabelText('Jogo'), 'g-cs2');
+    await user.click(screen.getByRole('button', { name: 'PUBLICAR CLIPE' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('upload-progress-panel')).toHaveTextContent(
+        'Enviando vídeo para o R2 (40%)',
+      );
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar envio' }));
+    expect(screen.getByTestId('cancel-upload-confirm-dialog')).toBeInTheDocument();
+    expect(capturedR2Signal?.aborted).toBe(false);
+
+    // Late R2 progress events while confirmation dialog is open MUST NOT update UI
+    emitR2Progress?.(88);
+    expect(screen.getByTestId('upload-progress-panel')).toHaveTextContent(
+      'Enviando vídeo para o R2 (40%)',
+    );
+    expect(screen.getByTestId('upload-progress-panel')).not.toHaveTextContent('88%');
+
+    await user.click(screen.getByRole('button', { name: 'Sim, cancelar' }));
+    expect(capturedR2Signal?.aborted).toBe(true);
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onUploadSuccess).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
