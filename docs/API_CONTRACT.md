@@ -706,7 +706,8 @@ Lista paginada de clipes (`status = 'ready'`) com suporte a busca, filtros e reg
   - `mine` (opcional, default `false`): Lista apenas clipes do usuário autenticado
   - `favorited` (opcional, default `false`): Lista apenas clipes favoritados pelo usuário autenticado (requer auth)
   - `collection_id` (opcional): Filtra clipes pertencentes à coleção informada
-  - `sort` (opcional): `recent` (default), `popular` ou `featured` (engajamento/destaques)
+  - `sort` (opcional): `recent` (default), `popular`, `featured` (destaques ranqueados por `favorites * 2 + likes`, exigindo ao menos 1 interação) ou `most_viewed` (mais vistos com `views > 0`)
+  - `period` (opcional): `7d`, `30d` ou `all` (default `all`) — janela temporal de engajamento (`clip_likes`, `clip_favorites`, `clip_views`) para `featured` e `most_viewed`, ou criação em `recent`
   - `page` (default: `1`), `page_size` (default: `20`, máx: `50`)
 - **Response `200 OK`:**
 ```json
@@ -727,6 +728,7 @@ Lista paginada de clipes (`status = 'ready'`) com suporte a busca, filtros e reg
       "is_favorited": false,
       "is_liked_by_me": false,
       "is_favorited_by_me": false,
+      "is_top_highlight": true,
       "author": {
         "id": "550e8400-e29b-41d4-a716-446655440000",
         "username": "fallen_br",

@@ -4,12 +4,23 @@ import { ChevronLeft, ChevronRight, Film, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { formatDurationBadge } from '@/lib/validators';
-import { isClipFavorited, isClipLiked, type ClipSummary } from '@/types/clip';
+import { isClipFavorited, isClipLiked, type ClipPeriod, type ClipSummary } from '@/types/clip';
 import { getUserDisplayName } from '@/types/user';
+
+const PERIOD_OPTIONS: readonly { value: ClipPeriod; label: string }[] = [
+  { value: '7d', label: '7 dias' },
+  { value: '30d', label: '30 dias' },
+  { value: 'all', label: 'Todo período' },
+] as const;
 
 export interface ClipQueueListProps {
   clips: ClipSummary[];
   activeClipId: string | null;
+  sectionTitle?: string;
+  emptyMessage?: string;
+  showPeriodFilter?: boolean;
+  period?: ClipPeriod;
+  onPeriodChange?: (period: ClipPeriod) => void;
   isLoading: boolean;
   searchValue: string;
   page: number;
@@ -20,9 +31,9 @@ export interface ClipQueueListProps {
   onPageChange: (nextPage: number) => void;
 }
 
-function getAccentBarColor(clip: ClipSummary, isActive: boolean): string {
+function getAccentBarColor(clip: ClipSummary, isActive: boolean, isTopHighlight: boolean): string {
   if (isActive) return 'bg-success';
-  if (isClipFavorited(clip)) return 'bg-warning';
+  if (isTopHighlight || isClipFavorited(clip)) return 'bg-warning';
   if (isClipLiked(clip) || clip.likes_count >= 10) return 'bg-danger';
   return 'bg-border-muted';
 }
@@ -30,6 +41,7 @@ function getAccentBarColor(clip: ClipSummary, isActive: boolean): string {
 interface ClipQueueListBodyProps {
   clips: ClipSummary[];
   activeClipId: string | null;
+  emptyMessage: string;
   isLoading: boolean;
   onSelectClip: (clip: ClipSummary) => void;
 }
@@ -37,6 +49,7 @@ interface ClipQueueListBodyProps {
 function ClipQueueListBody({
   clips,
   activeClipId,
+  emptyMessage,
   isLoading,
   onSelectClip,
 }: Readonly<ClipQueueListBodyProps>) {
@@ -61,9 +74,7 @@ function ClipQueueListBody({
     return (
       <div className="flex flex-col items-center justify-center gap-2 rounded-card border-[1.5px] border-dashed border-border-muted bg-bg-deep p-6 text-center xl:min-h-0 xl:flex-1">
         <Film className="h-7 w-7 text-text-muted" aria-hidden="true" />
-        <p className="font-mono text-mono-meta text-text-secondary">
-          Nenhum clipe na fila para este filtro.
-        </p>
+        <p className="font-mono text-mono-meta text-text-secondary">{emptyMessage}</p>
       </div>
     );
   }
@@ -72,7 +83,8 @@ function ClipQueueListBody({
     <div className="flex flex-col gap-[10px] xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-0.5">
       {clips.map((clip) => {
         const isActive = clip.id === activeClipId;
-        const accentClass = getAccentBarColor(clip, isActive);
+        const isTopHighlight = Boolean(clip.is_top_highlight);
+        const accentClass = getAccentBarColor(clip, isActive, isTopHighlight);
         const authorDisplayName = getUserDisplayName(clip.author);
 
         return (
@@ -102,13 +114,23 @@ function ClipQueueListBody({
               </div>
 
               <div className="min-w-0 flex-1 space-y-1">
-                <p
-                  className={`truncate font-mono text-mono-body font-semibold ${
-                    isActive ? 'text-success' : 'text-text-primary'
-                  }`}
-                >
-                  {clip.title}
-                </p>
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <p
+                    className={`min-w-0 truncate font-mono text-mono-body font-semibold ${
+                      isActive ? 'text-success' : 'text-text-primary'
+                    }`}
+                  >
+                    {clip.title}
+                  </p>
+                  {isTopHighlight && (
+                    <span
+                      data-testid="queue-highlight-badge"
+                      className="inline-flex h-4 shrink-0 items-center rounded-[4px] bg-warning px-1.5 font-mono text-[10px] font-bold uppercase leading-none text-bg-deep"
+                    >
+                      ★ DESTAQUE
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-1.5 font-mono text-mono-badge text-text-muted">
                   <UserAvatar
                     username={clip.author.username}
@@ -133,6 +155,11 @@ function ClipQueueListBody({
 export function ClipQueueList({
   clips,
   activeClipId,
+  sectionTitle = 'NA FILA / RECENTES',
+  emptyMessage = 'Nenhum clipe na fila para este filtro.',
+  showPeriodFilter = false,
+  period = 'all',
+  onPeriodChange,
   isLoading,
   searchValue,
   page,
@@ -177,8 +204,8 @@ export function ClipQueueList({
 
       {/* Cabeçalho da fila com paginação */}
       <div className="flex w-full min-w-0 shrink-0 items-center justify-between gap-2 border-b border-border-muted pb-2.5">
-        <h2 className="min-w-0 truncate font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
-          NA FILA / RECENTES
+        <h2 className="min-w-0 truncate font-display text-display-md uppercase text-text-primary">
+          {sectionTitle}
         </h2>
 
         <div className="flex shrink-0 items-center gap-1.5">
@@ -206,10 +233,39 @@ export function ClipQueueList({
         </div>
       </div>
 
+      {showPeriodFilter && onPeriodChange && (
+        <div
+          role="group"
+          aria-label="Filtro de período"
+          data-testid="queue-period-filter"
+          className="flex shrink-0 flex-wrap items-center gap-1.5"
+        >
+          {PERIOD_OPTIONS.map((option) => {
+            const isSelected = period === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={isSelected}
+                onClick={() => onPeriodChange(option.value)}
+                className={`rounded-control border px-2.5 py-1 font-mono text-mono-badge transition-colors ${
+                  isSelected
+                    ? 'border-success bg-bg-deep text-success'
+                    : 'border-border-muted bg-bg-elevated text-text-secondary hover:border-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Lista limpa vertical (gap: 10px, zero sobreposição) com scroll interno sutil em xl+ */}
       <ClipQueueListBody
         clips={clips}
         activeClipId={activeClipId}
+        emptyMessage={emptyMessage}
         isLoading={isLoading}
         onSelectClip={onSelectClip}
       />

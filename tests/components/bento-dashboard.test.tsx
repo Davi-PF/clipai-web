@@ -210,20 +210,20 @@ describe('BentoDashboardWorkspace — Sprint 3 Signature Components', () => {
     await user.click(screen.getByText('Ace de Vandal na Ascent'));
     expect(screen.getByRole('heading', { name: 'Ace de Vandal na Ascent' })).toBeInTheDocument();
 
-    // Switch to Destaques (sort=popular) and Favoritos (favorited=true)
-    const listClipsSpy = vi.spyOn(clipsService, 'listClips');
-    await user.click(screen.getAllByRole('button', { name: 'Destaques' })[0]!);
-    await waitFor(() => {
-      expect(listClipsSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ sort: 'popular', page_size: 4 }),
-      );
-    });
-
     // Pagination controls in ClipQueueList header remain accessible and functional
+    const listClipsSpy = vi.spyOn(clipsService, 'listClips');
     expect(screen.getByText('1/2')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Próxima página da fila' }));
     await waitFor(() => {
       expect(listClipsSpy).toHaveBeenCalledWith(expect.objectContaining({ page: 2, page_size: 4 }));
+    });
+
+    // Switch to Destaques (sort=featured, period=all, page_size=4) and Favoritos (favorited=true)
+    await user.click(screen.getAllByRole('button', { name: 'Destaques' })[0]!);
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: 'featured', period: 'all', page: 1, page_size: 4 }),
+      );
     });
 
     await user.click(screen.getAllByRole('button', { name: 'Favoritos' })[0]!);
@@ -458,5 +458,123 @@ describe('BentoDashboardWorkspace — Sprint 3 Signature Components', () => {
     expect(screen.getByRole('button', { name: 'Editar coleção ativa' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Excluir coleção ativa' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Remover filtro de coleção' })).toBeInTheDocument();
+  });
+
+  it('supports Destaques and Mais Vistos tabs with period filters, mobile quick pills, and API-driven DESTAQUE badge', async () => {
+    const user = userEvent.setup();
+    const rankedClips: ClipSummary[] = [
+      {
+        ...CLIPS[1]!,
+        id: 'clip-top-fav',
+        title: 'Ace Favoritado #1',
+        favorites_count: 8,
+        views_count: 200,
+        likes_count: 3,
+        is_top_highlight: true,
+      },
+      {
+        ...CLIPS[0]!,
+        id: 'clip-second',
+        title: 'Clutch #2 Sem Selo',
+        favorites_count: 4,
+        views_count: 150,
+        likes_count: 25,
+        is_top_highlight: false,
+      },
+    ];
+
+    const listClipsSpy = vi.spyOn(clipsService, 'listClips').mockResolvedValue({
+      items: rankedClips,
+      page: 1,
+      page_size: 4,
+      total: rankedClips.length,
+      total_pages: 1,
+    });
+
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Destaques' }).length).toBeGreaterThan(0);
+    });
+
+    // Click Destaques in sidebar
+    await user.click(screen.getAllByRole('button', { name: 'Destaques' })[0]!);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Ace Favoritado #1' })).toBeInTheDocument();
+    });
+    expect(screen.getByRole('heading', { name: 'TOP DESTAQUES' })).toBeInTheDocument();
+
+    // Strictly 1 DESTAQUE badge on #1
+    expect(screen.getByTestId('hero-highlight-badge')).toHaveTextContent('★ DESTAQUE');
+    expect(screen.getAllByTestId('queue-highlight-badge')).toHaveLength(1);
+
+    // Period filter (7 dias / 30 dias) triggers API query with period & resets page to 1
+    await user.click(screen.getByRole('button', { name: '7 dias' }));
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: 'featured', period: '7d', page: 1, page_size: 4 }),
+      );
+    });
+
+    // Selecting rank #2 removes DESTAQUE badge from Hero Player (even with likes_count >= 10)
+    await user.click(screen.getByText('Clutch #2 Sem Selo'));
+    expect(screen.getByRole('heading', { name: 'Clutch #2 Sem Selo' })).toBeInTheDocument();
+    expect(screen.queryByTestId('hero-highlight-badge')).not.toBeInTheDocument();
+
+    // Switch to Mais Vistos via mobile quick pill -> sort=most_viewed & keeps selected period
+    const mobilePills = screen.getByTestId('mobile-feed-pills');
+    const mostViewedPill = mobilePills.querySelector('button:nth-child(3)');
+    expect(mostViewedPill).toHaveTextContent('Mais Vistos');
+    await user.click(mostViewedPill!);
+
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: 'most_viewed', period: '7d', page: 1, page_size: 4 }),
+      );
+    });
+    expect(screen.getByRole('heading', { name: 'MAIS VISTOS' })).toBeInTheDocument();
+
+    // Switch period to 30 dias in Mais Vistos
+    await user.click(screen.getByRole('button', { name: '30 dias' }));
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: 'most_viewed', period: '30d', page: 1, page_size: 4 }),
+      );
+    });
+  });
+
+  it('shows clean empty states in Destaques and Mais Vistos when backend returns empty list', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(clipsService, 'listClips').mockResolvedValue({
+      items: [],
+      page: 1,
+      page_size: 4,
+      total: 0,
+      total_pages: 1,
+    });
+
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Destaques' }).length).toBeGreaterThan(0);
+    });
+
+    await user.click(screen.getAllByRole('button', { name: 'Destaques' })[0]!);
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'NENHUM DESTAQUE AINDA' })).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText('Nenhum clipe com curtidas ou favoritos em destaque neste período.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('hero-highlight-badge')).not.toBeInTheDocument();
+
+    await user.click(screen.getAllByRole('button', { name: 'Mais Vistos' })[0]!);
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'NENHUM CLIPE VISTO AINDA' })).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText('Nenhum clipe com visualizações registradas neste período.'),
+    ).toBeInTheDocument();
   });
 });

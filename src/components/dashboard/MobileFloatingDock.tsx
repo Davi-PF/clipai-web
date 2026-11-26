@@ -40,7 +40,8 @@ const LEFT_DOCK_ITEMS: readonly DockItemConfig[] = [
     label: 'Explorar',
     section: 'featured',
     Icon: Compass,
-    isActive: (section) => section === 'featured' || section === 'recent',
+    isActive: (section) =>
+      section === 'featured' || section === 'most_viewed' || section === 'recent',
   },
 ] as const;
 
