@@ -101,7 +101,11 @@ describe('ClipDetailView (/c/[slug]) & ClipPlayer', () => {
 
     expect(screen.getByText('Valorant')).toBeInTheDocument();
     expect(screen.getByText('#ace')).toBeInTheDocument();
-    expect(screen.getByText('1080p • 00:28 • 20.0 MB')).toBeInTheDocument();
+    expect(screen.queryByText('METADADOS TÉCNICOS')).not.toBeInTheDocument();
+    expect(screen.queryByText('1080p • 00:28 • 20.0 MB')).not.toBeInTheDocument();
+    expect(screen.queryByText('1080p')).not.toBeInTheDocument();
+    expect(screen.getByTestId('clip-info-grid')).toHaveClass('sm:grid-cols-3');
+    expect(screen.getByTestId('clip-info-grid')).not.toHaveClass('lg:grid-cols-4');
     expect(screen.queryByRole('button', { name: 'EXCLUIR' })).not.toBeInTheDocument();
 
     // Exercise player controls & events
@@ -261,6 +265,11 @@ describe('ClipDetailView (/c/[slug]) & ClipPlayer', () => {
       expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument();
     });
 
+    expect(screen.getByText('METADADOS TÉCNICOS')).toBeInTheDocument();
+    expect(screen.getByText('1080p • 00:28 • 20.0 MB')).toBeInTheDocument();
+    expect(screen.getByTestId('clip-info-grid')).toHaveClass('sm:grid-cols-2', 'lg:grid-cols-4');
+    expect(screen.getByTestId('clip-info-grid')).not.toHaveClass('sm:grid-cols-3');
+
     // Social like and favorite actions
     await user.click(screen.getByRole('button', { name: 'Curtir clipe' }));
     await waitFor(() => {
@@ -294,5 +303,102 @@ describe('ClipDetailView (/c/[slug]) & ClipPlayer', () => {
       expect(deleteSpy).toHaveBeenCalledWith('clip-123');
     });
     expect(replaceMock).toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('hides technical metadata and uses 3-column grid for authenticated non-owner users', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ access_token: 'viewer_jwt', token_type: 'bearer', expires_in: 900 }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: 'viewer-99',
+            username: 'coldzera',
+            email: 'cold@clipai.com.br',
+            display_name: 'Marcelo David',
+            avatar_url: null,
+            is_email_verified: true,
+            is_2fa_enabled: false,
+          }),
+          { status: 200 },
+        ),
+      );
+
+    vi.spyOn(clipsService, 'getClipBySlug').mockResolvedValue(SAMPLE_CLIP);
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Ace de Vandal na Ascent' })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('METADADOS TÉCNICOS')).not.toBeInTheDocument();
+    expect(screen.queryByText('1080p • 00:28 • 20.0 MB')).not.toBeInTheDocument();
+    expect(screen.queryByText('1080p')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Editar' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('clip-info-grid')).toHaveClass('sm:grid-cols-3');
+    expect(screen.getByTestId('clip-info-grid')).not.toHaveClass('lg:grid-cols-4');
+  });
+
+  it('renders cleanly when technical_metadata and file_size_bytes are null from API', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 401 }));
+    vi.spyOn(clipsService, 'getClipBySlug').mockResolvedValue({
+      ...SAMPLE_CLIP,
+      file_size_bytes: null,
+      technical_metadata: null,
+    });
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Ace de Vandal na Ascent' })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('METADADOS TÉCNICOS')).not.toBeInTheDocument();
+    expect(screen.getByTestId('clip-info-grid')).toHaveClass('sm:grid-cols-3');
+  });
+
+  it('hides technical metadata card for owner when metadata fields are null', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ access_token: 'owner_jwt', token_type: 'bearer', expires_in: 900 }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: 'owner-1',
+            username: 'aspas_br',
+            email: 'aspas@clipai.com.br',
+            display_name: 'Erick Santos',
+            avatar_url: null,
+            is_email_verified: true,
+            is_2fa_enabled: false,
+          }),
+          { status: 200 },
+        ),
+      );
+
+    vi.spyOn(clipsService, 'getClipBySlug').mockResolvedValue({
+      ...SAMPLE_CLIP,
+      file_size_bytes: null,
+      technical_metadata: null,
+    });
+
+    renderView();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Editar' })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('METADADOS TÉCNICOS')).not.toBeInTheDocument();
+    expect(screen.getByTestId('clip-info-grid')).toHaveClass('sm:grid-cols-3');
+    expect(screen.getByTestId('clip-info-grid')).not.toHaveClass('lg:grid-cols-4');
   });
 });
