@@ -35,7 +35,13 @@ import { useClipSocial, type SocialMutationPatch } from '@/hooks/useClipSocial';
 import { ApiClientError } from '@/lib/api-client';
 import { formatDurationBadge, formatFileSizeMb } from '@/lib/validators';
 import { clipsService } from '@/services/clips-service';
-import { isClipFavorited, isClipLiked, type Clip, type PrivacyLevel } from '@/types/clip';
+import {
+  hasClipTechnicalMetadata,
+  isClipFavorited,
+  isClipLiked,
+  type Clip,
+  type PrivacyLevel,
+} from '@/types/clip';
 
 type DetailLoadState = 'loading' | 'ready' | 'not_found' | 'restricted' | 'error';
 
@@ -55,6 +61,26 @@ function formatCreatedDatePtBr(isoDate: string): string {
   } catch {
     return isoDate;
   }
+}
+
+function formatTechnicalMetadataSummary(clip: Clip): string | null {
+  if (!hasClipTechnicalMetadata(clip)) {
+    return null;
+  }
+
+  const parts: string[] = [];
+
+  if (clip.technical_metadata?.resolution_label) {
+    parts.push(clip.technical_metadata.resolution_label);
+  }
+
+  parts.push(formatDurationBadge(clip.duration_seconds));
+
+  if (typeof clip.file_size_bytes === 'number') {
+    parts.push(formatFileSizeMb(clip.file_size_bytes));
+  }
+
+  return parts.join(' • ');
 }
 
 export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
@@ -159,8 +185,9 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
     }
   };
 
-  const currentUserId = user?.id;
-  const isOwner = Boolean(currentUserId && currentUserId === clip?.author.id);
+  const isOwner = Boolean(user && clip?.author && user.id === clip.author.id);
+  const technicalMetadataSummary = isOwner && clip ? formatTechnicalMetadataSummary(clip) : null;
+  const showTechnicalMetadata = Boolean(technicalMetadataSummary);
   const liked = clip ? isClipLiked(clip) : false;
   const favorited = clip ? isClipFavorited(clip) : false;
   const clipDetailPath = `/c/${slug}`;
@@ -255,7 +282,9 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
               poster={clip.thumbnail_url}
               title={clip.title}
               initialDuration={clip.duration_seconds}
-              resolutionLabel={clip.technical_metadata.resolution_label}
+              resolutionLabel={
+                showTechnicalMetadata ? clip.technical_metadata?.resolution_label : undefined
+              }
               onPlayStart={handleRegisterView}
               onQualifiedView={handleRegisterView}
             />
@@ -389,7 +418,12 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-4 border-t border-border-muted pt-5 sm:grid-cols-2 lg:grid-cols-4">
+              <div
+                data-testid="clip-info-grid"
+                className={`grid grid-cols-1 gap-4 border-t border-border-muted pt-5 ${
+                  showTechnicalMetadata ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'
+                }`}
+              >
                 <div className="min-w-0 rounded-card bg-bg-deep p-3.5">
                   <span className="flex items-center gap-1.5 font-mono text-mono-badge uppercase text-text-muted">
                     <UserIcon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -440,16 +474,16 @@ export function ClipDetailView({ slug }: Readonly<{ slug: string }>) {
                   </p>
                 </div>
 
-                <div className="min-w-0 rounded-card bg-bg-deep p-3.5">
-                  <span className="block font-mono text-mono-badge uppercase text-text-muted">
-                    METADADOS TÉCNICOS
-                  </span>
-                  <p className="mt-1 font-mono text-mono-body font-semibold text-success">
-                    {clip.technical_metadata.resolution_label} •{' '}
-                    {formatDurationBadge(clip.duration_seconds)} •{' '}
-                    {formatFileSizeMb(clip.file_size_bytes)}
-                  </p>
-                </div>
+                {technicalMetadataSummary && (
+                  <div className="min-w-0 rounded-card bg-bg-deep p-3.5">
+                    <span className="block font-mono text-mono-badge uppercase text-text-muted">
+                      METADADOS TÉCNICOS
+                    </span>
+                    <p className="mt-1 font-mono text-mono-body font-semibold text-success">
+                      {technicalMetadataSummary}
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
 
