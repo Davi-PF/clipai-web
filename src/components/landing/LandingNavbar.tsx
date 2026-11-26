@@ -6,7 +6,6 @@ import { BrandLogo } from '@/components/ui/BrandLogo';
 import { Button } from '@/components/ui/Button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useAuth } from '@/hooks/useAuth';
-import { getUserDisplayName } from '@/types/user';
 
 export function LandingNavbar() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -31,49 +30,49 @@ export function LandingNavbar() {
         <nav aria-label="Navegação da landing page" className="hidden items-center gap-6 md:flex">
           <a
             href="#recursos"
-            className="font-mono text-mono-meta text-text-secondary transition-colors hover:text-text-primary"
+            className="inline-flex h-10 items-center font-mono text-mono-meta leading-none text-text-secondary transition-colors hover:text-text-primary"
           >
             Recursos
           </a>
           <a
             href="#como-funciona"
-            className="font-mono text-mono-meta text-text-secondary transition-colors hover:text-text-primary"
+            className="inline-flex h-10 items-center font-mono text-mono-meta leading-none text-text-secondary transition-colors hover:text-text-primary"
           >
             Como Funciona
           </a>
           <a
             href="#estudio"
-            className="font-mono text-mono-meta text-text-secondary transition-colors hover:text-text-primary"
+            className="inline-flex h-10 items-center font-mono text-mono-meta leading-none text-text-secondary transition-colors hover:text-text-primary"
           >
             Estúdio
           </a>
         </nav>
 
         {/* Ações à direita (Visitante vs Autenticado) */}
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
           {!isLoading && isAuthenticated && user ? (
             <>
               <Link
                 href="/settings"
                 data-testid="landing-nav-user"
-                className="hidden items-center gap-2 rounded-control border border-border-muted bg-bg-surface px-2.5 py-1.5 transition-colors hover:border-success sm:inline-flex"
+                title={user.username}
+                aria-label={`Abrir configurações da conta (${user.username})`}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border-muted bg-bg-surface transition-colors hover:border-success focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success"
               >
                 <UserAvatar
                   username={user.username}
                   displayName={user.display_name}
                   avatarUrl={user.avatar_url}
-                  size="xs"
+                  size="md"
+                  className="border-0"
                 />
-                <span className="max-w-[140px] truncate font-mono text-mono-meta text-text-primary">
-                  {getUserDisplayName(user)}
-                </span>
               </Link>
-              <Link href="/dashboard">
+              <Link href="/dashboard" className="inline-flex items-center">
                 <Button
                   type="button"
                   variant="primary"
                   size="sm"
-                  className="px-2.5 sm:px-3.5"
+                  className="h-10"
                   leftIcon={<LayoutDashboard className="h-4 w-4" />}
                 >
                   ABRIR DASHBOARD
@@ -84,12 +83,12 @@ export function LandingNavbar() {
             <>
               <Link
                 href="/login"
-                className="inline-flex min-h-9 items-center rounded-control border border-border-muted bg-bg-surface px-2.5 py-1.5 font-mono text-mono-meta font-medium text-text-primary transition-colors hover:border-success sm:px-3.5 sm:py-2"
+                className="inline-flex h-10 items-center justify-center rounded-control border border-border-muted bg-bg-surface px-3.5 font-mono text-mono-meta font-medium leading-none text-text-primary transition-colors hover:border-success"
               >
                 ENTRAR
               </Link>
-              <Link href="/register">
-                <Button type="button" variant="primary" size="sm" className="px-2.5 sm:px-3.5">
+              <Link href="/register" className="inline-flex items-center">
+                <Button type="button" variant="primary" size="sm" className="h-10">
                   CRIAR CONTA
                 </Button>
               </Link>

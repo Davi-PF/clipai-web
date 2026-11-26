@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2, Link2Off } from 'lucide-react';
+import { AlertTriangle, Link2Off } from 'lucide-react';
+import { SettingsStatusBadge } from '@/components/settings/SettingsStatusBadge';
 import { Button } from '@/components/ui/Button';
 import { DiscordBadge, DiscordIcon } from '@/components/ui/DiscordBadge';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -73,39 +74,30 @@ export function ConnectionsSettingsTab({
 
   return (
     <div data-testid="settings-tab-connections" className="space-y-6">
-      <section className="rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6">
-        <div className="flex flex-col justify-between gap-4 border-b border-border-muted pb-5 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-3.5">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
-              <DiscordIcon className="h-6 w-6 text-success" />
-            </span>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h2 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
-                  DISCORD
-                </h2>
-                {isDiscordLinked ? (
-                  <span
-                    data-testid="discord-status-badge"
-                    className="inline-flex items-center gap-1.5 rounded-control border border-success bg-success-surface px-2.5 py-0.5 font-mono text-mono-badge font-semibold text-success"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden="true" />
-                    Vinculado
-                  </span>
-                ) : (
-                  <span
-                    data-testid="discord-status-badge"
-                    className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-deep px-2.5 py-0.5 font-mono text-mono-badge text-text-secondary"
-                  >
-                    Não vinculado
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 font-mono text-mono-meta text-text-secondary">
-                Conecte sua conta do Discord para login rápido, selo verificado no perfil e
-                sincronização de avatar.
-              </p>
+      <section className="rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 sm:p-6">
+        <div className="flex items-start gap-3.5 border-b border-border-muted pb-5 sm:items-center">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep sm:h-12 sm:w-12">
+            <DiscordIcon className="h-6 w-6 text-success" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div
+              data-testid="discord-header-row"
+              className="flex items-start justify-between gap-2.5 sm:items-center sm:justify-start"
+            >
+              <h2 className="min-w-0 translate-y-[0.5px] font-display text-display-md uppercase leading-none text-text-primary sm:translate-y-[1.5px]">
+                DISCORD
+              </h2>
+              <SettingsStatusBadge
+                testId="discord-status-badge"
+                tone={isDiscordLinked ? 'success' : 'muted'}
+                label={isDiscordLinked ? 'Vinculado' : 'Não vinculado'}
+                pulsing={isDiscordLinked}
+              />
             </div>
+            <p className="mt-1.5 font-mono text-mono-meta text-text-secondary">
+              Conecte sua conta do Discord para login rápido, selo verificado no perfil e
+              sincronização de avatar.
+            </p>
           </div>
         </div>
 
@@ -122,15 +114,15 @@ export function ConnectionsSettingsTab({
         {isDiscordLinked ? (
           <div className="mt-5 space-y-4">
             <div className="flex flex-col justify-between gap-4 rounded-card border border-border-muted bg-bg-deep p-4 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-3.5">
+              <div className="flex min-w-0 flex-1 items-center gap-3.5">
                 <UserAvatar
                   username={user.discord_username || user.username}
                   displayName={user.discord_username || user.display_name}
                   avatarUrl={discordAvatarUrl}
                   size="lg"
                 />
-                <div className="space-y-1">
-                  <p className="font-mono text-mono-body font-semibold text-text-primary">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="truncate font-mono text-mono-body font-semibold text-text-primary">
                     {user.discord_username
                       ? `@${user.discord_username}`
                       : 'Conta Discord conectada'}
@@ -143,6 +135,7 @@ export function ConnectionsSettingsTab({
                 type="button"
                 variant="danger"
                 size="sm"
+                className="shrink-0 self-start sm:self-center"
                 leftIcon={<Link2Off className="h-4 w-4" />}
                 disabled={!hasLocalPassword || isUnlinking}
                 isLoading={isUnlinking}
@@ -180,6 +173,7 @@ export function ConnectionsSettingsTab({
             <Button
               type="button"
               variant="primary"
+              className="shrink-0 self-start sm:self-center"
               leftIcon={<DiscordIcon className="h-4 w-4" />}
               isLoading={isLinking}
               loadingText="REDIRECIONANDO..."

@@ -99,9 +99,9 @@ export function UserSettingsWorkspace() {
       <main className="min-w-0 flex-1 p-4 pb-24 md:p-6 lg:p-8">
         <div className="mx-auto max-w-4xl space-y-6">
           {/* Cabeçalho da Página de Configurações */}
-          <header className="flex flex-col justify-between gap-4 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6 sm:flex-row sm:items-center">
-            <div className="space-y-1">
-              <h1 className="font-display text-display-hero uppercase tracking-[0.06em] text-text-primary">
+          <header className="flex flex-col justify-between gap-4 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 sm:flex-row sm:items-center sm:p-6">
+            <div className="min-w-0 space-y-1.5">
+              <h1 className="font-display text-display-hero uppercase text-text-primary">
                 CONFIGURAÇÕES DA CONTA
               </h1>
               <p className="font-mono text-mono-meta text-text-secondary">
@@ -112,9 +112,9 @@ export function UserSettingsWorkspace() {
             <button
               type="button"
               onClick={() => router.push('/dashboard')}
-              className="inline-flex items-center gap-2 self-start rounded-control border border-border-muted bg-bg-elevated px-3.5 py-2 font-mono text-mono-meta text-text-primary transition-colors hover:border-success sm:self-auto"
+              className="inline-flex shrink-0 items-center gap-2 self-start whitespace-nowrap rounded-control border border-border-muted bg-bg-elevated px-3.5 py-2 font-mono text-mono-meta text-text-primary transition-colors hover:border-success sm:self-auto"
             >
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
               Voltar ao Dashboard
             </button>
           </header>
@@ -134,7 +134,7 @@ export function UserSettingsWorkspace() {
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => setActiveTab(id)}
-                  className={`inline-flex flex-1 items-center justify-center gap-2 rounded-card border px-4 py-2.5 font-mono text-mono-body transition-colors ${
+                  className={`inline-flex min-w-fit flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-card border px-4 py-2.5 font-mono text-mono-body transition-colors ${
                     isActive
                       ? 'border-success bg-bg-deep font-semibold text-text-primary'
                       : 'border-transparent bg-transparent text-text-secondary hover:bg-bg-elevated hover:text-text-primary'

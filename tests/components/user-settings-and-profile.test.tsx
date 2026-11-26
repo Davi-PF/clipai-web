@@ -167,7 +167,28 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
       expect(screen.getByTestId('settings-tab-connections')).toBeInTheDocument();
     });
 
-    expect(screen.getByTestId('discord-status-badge')).toHaveTextContent('Vinculado');
+    const discordHeaderRow = screen.getByTestId('discord-header-row');
+    expect(discordHeaderRow).toHaveClass(
+      'flex',
+      'items-start',
+      'justify-between',
+      'gap-2.5',
+      'sm:items-center',
+      'sm:justify-start',
+    );
+    const discordBadge = screen.getByTestId('discord-status-badge');
+    expect(discordBadge).toHaveTextContent('Vinculado');
+    expect(discordBadge).toHaveClass(
+      'inline-flex',
+      'h-5',
+      'sm:h-6',
+      'items-center',
+      'whitespace-nowrap',
+      'text-mono-badge',
+      'leading-none',
+      'text-text-primary',
+    );
+    expect(discordBadge.querySelector('.animate-pulse')).toBeInTheDocument();
     const unlinkBtn = screen.getByRole('button', { name: 'DESVINCULAR' });
     expect(unlinkBtn).toBeDisabled();
     expect(screen.getByTestId('unlink-password-warning')).toBeInTheDocument();
@@ -231,7 +252,26 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
     });
 
     await user.click(screen.getByRole('tab', { name: 'Segurança (2FA)' }));
-    expect(screen.getByTestId('two-factor-status-badge')).toHaveTextContent('DESATIVADO');
+    const twoFactorHeaderRow = screen.getByTestId('two-factor-header-row');
+    expect(twoFactorHeaderRow).toHaveClass(
+      'flex',
+      'items-start',
+      'justify-between',
+      'gap-2.5',
+      'sm:items-center',
+      'sm:justify-start',
+    );
+    const twoFactorBadge = screen.getByTestId('two-factor-status-badge');
+    expect(twoFactorBadge).toHaveTextContent('DESATIVADO');
+    expect(twoFactorBadge).toHaveClass(
+      'inline-flex',
+      'h-5',
+      'sm:h-6',
+      'items-center',
+      'whitespace-nowrap',
+      'text-mono-badge',
+      'leading-none',
+    );
 
     // Step 1: Start setup -> renders local QR Code SVG and manual secret
     await user.click(screen.getByRole('button', { name: 'CONFIGURAR 2FA' }));
@@ -273,7 +313,9 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
     expect(finishBtn).not.toBeDisabled();
     await user.click(finishBtn);
 
-    expect(screen.getByTestId('two-factor-status-badge')).toHaveTextContent('ATIVADO');
+    const activeTwoFactorBadge = screen.getByTestId('two-factor-status-badge');
+    expect(activeTwoFactorBadge).toHaveTextContent('ATIVADO');
+    expect(activeTwoFactorBadge.querySelector('.animate-pulse')).toBeInTheDocument();
 
     // Deactivation flow via modal
     await user.click(screen.getByRole('button', { name: 'DESATIVAR 2FA' }));
