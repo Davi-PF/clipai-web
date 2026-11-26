@@ -210,20 +210,20 @@ describe('BentoDashboardWorkspace — Sprint 3 Signature Components', () => {
     await user.click(screen.getByText('Ace de Vandal na Ascent'));
     expect(screen.getByRole('heading', { name: 'Ace de Vandal na Ascent' })).toBeInTheDocument();
 
-    // Switch to Destaques (sort=popular) and Favoritos (favorited=true)
-    const listClipsSpy = vi.spyOn(clipsService, 'listClips');
-    await user.click(screen.getAllByRole('button', { name: 'Destaques' })[0]!);
-    await waitFor(() => {
-      expect(listClipsSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ sort: 'popular', page_size: 4 }),
-      );
-    });
-
     // Pagination controls in ClipQueueList header remain accessible and functional
+    const listClipsSpy = vi.spyOn(clipsService, 'listClips');
     expect(screen.getByText('1/2')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Próxima página da fila' }));
     await waitFor(() => {
       expect(listClipsSpy).toHaveBeenCalledWith(expect.objectContaining({ page: 2, page_size: 4 }));
+    });
+
+    // Switch to Destaques (sort=popular, pool fetch) and Favoritos (favorited=true)
+    await user.click(screen.getAllByRole('button', { name: 'Destaques' })[0]!);
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: 'popular', page: 1, page_size: 50 }),
+      );
     });
 
     await user.click(screen.getAllByRole('button', { name: 'Favoritos' })[0]!);
@@ -458,5 +458,110 @@ describe('BentoDashboardWorkspace — Sprint 3 Signature Components', () => {
     expect(screen.getByRole('button', { name: 'Editar coleção ativa' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Excluir coleção ativa' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Remover filtro de coleção' })).toBeInTheDocument();
+  });
+
+  it('filters zero-engagement clips in Destaques, breaks ties by newest created_at, and shows DESTAQUE badge only on rank #1', async () => {
+    const user = userEvent.setup();
+    const highlightPool: ClipSummary[] = [
+      {
+        ...CLIPS[0]!,
+        id: 'clip-zero',
+        title: 'Clipe Recém Criado Sem Engajamento',
+        favorites_count: 0,
+        views_count: 0,
+        likes_count: 0,
+        created_at: '2026-11-26T12:00:00Z',
+      },
+      {
+        ...CLIPS[0]!,
+        id: 'clip-older-tie',
+        title: 'Clutch Empatado Mais Antigo',
+        favorites_count: 6,
+        views_count: 200,
+        likes_count: 25,
+        created_at: '2026-11-20T12:00:00Z',
+      },
+      {
+        ...CLIPS[1]!,
+        id: 'clip-newer-tie',
+        title: 'Ace Empatado Mais Recente',
+        favorites_count: 6,
+        views_count: 200,
+        likes_count: 3,
+        created_at: '2026-11-25T12:00:00Z',
+      },
+    ];
+
+    vi.spyOn(clipsService, 'listClips').mockResolvedValue({
+      items: highlightPool,
+      page: 1,
+      page_size: 50,
+      total: highlightPool.length,
+      total_pages: 1,
+    });
+
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Destaques' }).length).toBeGreaterThan(0);
+    });
+
+    await user.click(screen.getAllByRole('button', { name: 'Destaques' })[0]!);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Ace Empatado Mais Recente' }),
+      ).toBeInTheDocument();
+    });
+
+    // Zero-engagement clip must NOT appear in Destaques
+    expect(screen.queryByText('Clipe Recém Criado Sem Engajamento')).not.toBeInTheDocument();
+
+    // Rank #1 receives the DESTAQUE badge in Hero and Queue (strictly 1 badge in queue)
+    expect(screen.getByTestId('hero-highlight-badge')).toHaveTextContent('★ DESTAQUE');
+    expect(screen.getAllByTestId('queue-highlight-badge')).toHaveLength(1);
+
+    // Selecting rank #2 clip removes DESTAQUE badge from Hero Player (even with likes_count >= 10)
+    await user.click(screen.getByText('Clutch Empatado Mais Antigo'));
+    expect(
+      screen.getByRole('heading', { name: 'Clutch Empatado Mais Antigo' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('hero-highlight-badge')).not.toBeInTheDocument();
+  });
+
+  it('shows a clean empty state in Destaques when no clips have engagement yet', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(clipsService, 'listClips').mockResolvedValue({
+      items: [
+        {
+          ...CLIPS[0]!,
+          id: 'clip-empty-1',
+          title: 'Clipe Sem Views',
+          favorites_count: 0,
+          views_count: 0,
+          likes_count: 0,
+        },
+      ],
+      page: 1,
+      page_size: 50,
+      total: 1,
+      total_pages: 1,
+    });
+
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Destaques' }).length).toBeGreaterThan(0);
+    });
+
+    await user.click(screen.getAllByRole('button', { name: 'Destaques' })[0]!);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'NENHUM DESTAQUE AINDA' })).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText('Nenhum clipe com favoritos ou visualizações em destaque ainda.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('hero-highlight-badge')).not.toBeInTheDocument();
   });
 });
