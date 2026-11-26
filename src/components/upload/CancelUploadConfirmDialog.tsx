@@ -14,10 +14,10 @@ export interface CancelUploadConfirmDialogProps {
 
 function getConfirmDescription(isRendering: boolean, isUploading: boolean): string {
   if (isRendering) {
-    return 'A renderização do clipe no navegador está em andamento. Se cancelar agora, todo o progresso da renderização e da edição será perdido.';
+    return 'A renderização do clipe no navegador continua em andamento enquanto você decide. Se cancelar agora, todo o progresso da renderização e da edição será perdido.';
   }
   if (isUploading) {
-    return 'O envio do clipe para o servidor está em andamento. Se cancelar agora, o upload será interrompido e o progresso será perdido.';
+    return 'O envio do clipe continua em andamento enquanto você decide. Se cancelar agora, o envio será interrompido e os arquivos já enviados serão removidos.';
   }
   return 'Você já carregou um vídeo neste formulário. Se sair agora, os cortes, ajustes e metadados preenchidos serão perdidos.';
 }

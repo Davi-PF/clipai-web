@@ -573,8 +573,6 @@ export function UploadClipModal({
     updateEditSettings,
     updateThumbnailFromCapture,
     startUpload,
-    pauseUpload,
-    resumeUpload,
     cancelUpload,
     resetUploadState,
   } = useClipUpload();
@@ -618,19 +616,15 @@ export function UploadClipModal({
 
   const handleContinueUpload = useCallback(() => {
     setIsCancelConfirmOpen(false);
-    resumeUpload();
-  }, [resumeUpload]);
+  }, []);
 
   const handleRequestClose = useCallback(() => {
     if (shouldConfirmClose) {
-      if (isUploading) {
-        pauseUpload();
-      }
       setIsCancelConfirmOpen(true);
       return;
     }
     forceCloseModal();
-  }, [shouldConfirmClose, isUploading, pauseUpload, forceCloseModal]);
+  }, [shouldConfirmClose, forceCloseModal]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -846,7 +840,7 @@ export function UploadClipModal({
       </dialog>
 
       <CancelUploadConfirmDialog
-        isOpen={isCancelConfirmOpen}
+        isOpen={isCancelConfirmOpen && stage !== 'success'}
         isRendering={isRendering}
         isUploading={isUploading}
         onContinue={handleContinueUpload}

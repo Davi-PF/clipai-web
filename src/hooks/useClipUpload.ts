@@ -57,16 +57,8 @@ export interface UseClipUploadResult {
     capturedAtSeconds: number,
   ) => void;
   startUpload: (payload: StartUploadPayload) => Promise<Clip | null>;
-  pauseUpload: () => void;
-  resumeUpload: () => void;
   cancelUpload: () => void;
   resetUploadState: () => void;
-}
-
-interface PauseGateState {
-  isPaused: boolean;
-  promise: Promise<void> | null;
-  resolve: (() => void) | null;
 }
 
 function isAbortedError(err: unknown): boolean {
@@ -74,6 +66,13 @@ function isAbortedError(err: unknown): boolean {
     (err instanceof R2UploadError && err.isAborted) ||
     (err instanceof FfmpegProcessingError && err.isAborted)
   );
+}
+
+function cleanupPendingClip(clipId: string | null): void {
+  if (!clipId) {
+    return;
+  }
+  void clipsService.cancelUpload(clipId).catch(() => undefined);
 }
 
 function resolveUploadErrorMessage(err: unknown): string {
@@ -166,13 +165,7 @@ export function useClipUpload(): UseClipUploadResult {
   const [uploadedClip, setUploadedClip] = useState<Clip | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const pauseGateRef = useRef<PauseGateState>({
-    isPaused: false,
-    promise: null,
-    resolve: null,
-  });
-  const latestRenderProgressRef = useRef(0);
-  const latestVideoProgressRef = useRef(0);
+  const pendingClipIdRef = useRef<string | null>(null);
   const metaRef = useRef<ExtractedVideoResult | null>(null);
   const videoObjectUrlRef = useRef<{ file: File | null; url: string | null }>({
     file: null,
@@ -184,73 +177,14 @@ export function useClipUpload(): UseClipUploadResult {
     if (!abortControllerRef.current || abortControllerRef.current.signal.aborted) {
       return;
     }
-    latestRenderProgressRef.current = percent;
-    if (!pauseGateRef.current.isPaused) {
-      setRenderProgress(percent);
-    }
+    setRenderProgress(percent);
   }, []);
 
   const reportVideoProgress = useCallback((percent: number) => {
     if (!abortControllerRef.current || abortControllerRef.current.signal.aborted) {
       return;
     }
-    latestVideoProgressRef.current = percent;
-    if (!pauseGateRef.current.isPaused) {
-      setVideoProgress(percent);
-    }
-  }, []);
-
-  const pauseUpload = useCallback(() => {
-    const gate = pauseGateRef.current;
-    if (gate.isPaused) {
-      return;
-    }
-    gate.isPaused = true;
-    gate.promise = new Promise<void>((resolve) => {
-      gate.resolve = resolve;
-    });
-  }, []);
-
-  const resumeUpload = useCallback(() => {
-    const gate = pauseGateRef.current;
-    if (!gate.isPaused) {
-      return;
-    }
-    gate.isPaused = false;
-    const release = gate.resolve;
-    gate.promise = null;
-    gate.resolve = null;
-    if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
-      setRenderProgress(latestRenderProgressRef.current);
-      setVideoProgress(latestVideoProgressRef.current);
-    }
-    release?.();
-  }, []);
-
-  const waitIfPausedOrAborted = useCallback(async (signal: AbortSignal): Promise<void> => {
-    if (signal.aborted) {
-      throw new R2UploadError('Envio cancelado pelo usuário.', { isAborted: true });
-    }
-
-    const pendingPause = pauseGateRef.current.promise;
-    if (!pendingPause) {
-      return;
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      const handleAbort = () => {
-        reject(new R2UploadError('Envio cancelado pelo usuário.', { isAborted: true }));
-      };
-      signal.addEventListener('abort', handleAbort, { once: true });
-      void pendingPause.then(() => {
-        signal.removeEventListener('abort', handleAbort);
-        if (signal.aborted) {
-          reject(new R2UploadError('Envio cancelado pelo usuário.', { isAborted: true }));
-        } else {
-          resolve();
-        }
-      });
-    });
+    setVideoProgress(percent);
   }, []);
 
   useEffect(() => {
@@ -272,14 +206,21 @@ export function useClipUpload(): UseClipUploadResult {
     return nextUrl;
   }, []);
 
+  const cancelUpload = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    const clipIdToCleanup = pendingClipIdRef.current;
+    pendingClipIdRef.current = null;
+    cleanupPendingClip(clipIdToCleanup);
+  }, []);
+
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort();
-      resumeUpload();
+      cancelUpload();
       revokeUrl(metaRef.current?.thumbnailPreviewUrl);
       releaseVideoPreviewUrl();
     };
-  }, [releaseVideoPreviewUrl, resumeUpload]);
+  }, [cancelUpload, releaseVideoPreviewUrl]);
 
   const editEstimate = useMemo<ClipEditEstimate | null>(() => {
     if (!extractedMeta || !editSettings) {
@@ -375,21 +316,9 @@ export function useClipUpload(): UseClipUploadResult {
     [],
   );
 
-  const cancelUpload = useCallback(() => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    latestRenderProgressRef.current = 0;
-    latestVideoProgressRef.current = 0;
-    resumeUpload();
-  }, [resumeUpload]);
-
   const resetUploadState = useCallback(() => {
     selectionRequestIdRef.current += 1;
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    latestRenderProgressRef.current = 0;
-    latestVideoProgressRef.current = 0;
-    resumeUpload();
+    cancelUpload();
     revokeUrl(metaRef.current?.thumbnailPreviewUrl);
     releaseVideoPreviewUrl();
     setSelectedFile(null);
@@ -403,7 +332,7 @@ export function useClipUpload(): UseClipUploadResult {
     setVideoProgress(0);
     setUploadError(null);
     setUploadedClip(null);
-  }, [releaseVideoPreviewUrl, resumeUpload]);
+  }, [cancelUpload, releaseVideoPreviewUrl]);
 
   const startUpload = useCallback(
     async (payload: StartUploadPayload): Promise<Clip | null> => {
@@ -422,9 +351,10 @@ export function useClipUpload(): UseClipUploadResult {
         return null;
       }
 
-      latestRenderProgressRef.current = 0;
-      latestVideoProgressRef.current = 0;
-      resumeUpload();
+      const previousPendingId = pendingClipIdRef.current;
+      pendingClipIdRef.current = null;
+      cleanupPendingClip(previousPendingId);
+
       const controller = new AbortController();
       abortControllerRef.current = controller;
       setUploadError(null);
@@ -432,7 +362,6 @@ export function useClipUpload(): UseClipUploadResult {
       setVideoProgress(0);
 
       try {
-        await waitIfPausedOrAborted(controller.signal);
         setStage('rendering');
         const processed = await processClipWithFfmpeg({
           file: selectedFile,
@@ -441,7 +370,6 @@ export function useClipUpload(): UseClipUploadResult {
           onProgress: reportRenderProgress,
           signal: controller.signal,
         });
-        await waitIfPausedOrAborted(controller.signal);
 
         const uploadFile = processed.file;
         const uploadMimeType = processed.mimeType;
@@ -468,8 +396,13 @@ export function useClipUpload(): UseClipUploadResult {
             uploadMimeType,
             finalDuration,
           }),
+          { signal: controller.signal },
         );
-        await waitIfPausedOrAborted(controller.signal);
+        if (controller.signal.aborted) {
+          cleanupPendingClip(presigned.clip_id);
+          throw new R2UploadError('Envio cancelado pelo usuário.', { isAborted: true });
+        }
+        pendingClipIdRef.current = presigned.clip_id;
 
         setStage('uploading_video');
         await uploadFileToPresignedUrl(
@@ -479,7 +412,6 @@ export function useClipUpload(): UseClipUploadResult {
           reportVideoProgress,
           controller.signal,
         );
-        await waitIfPausedOrAborted(controller.signal);
 
         if (presigned.thumbnail_upload) {
           setStage('uploading_thumbnail');
@@ -490,20 +422,22 @@ export function useClipUpload(): UseClipUploadResult {
             () => undefined,
             controller.signal,
           );
-          await waitIfPausedOrAborted(controller.signal);
         }
 
         setStage('confirming');
-        const confirmedClip = await clipsService.confirmUpload(presigned.clip_id);
-        await waitIfPausedOrAborted(controller.signal);
+        const confirmedClip = await clipsService.confirmUpload(presigned.clip_id, {
+          signal: controller.signal,
+        });
+        pendingClipIdRef.current = null;
 
         setUploadedClip(confirmedClip);
         setStage('success');
         return confirmedClip;
       } catch (err: unknown) {
         if (controller.signal.aborted || isAbortedError(err)) {
-          latestRenderProgressRef.current = 0;
-          latestVideoProgressRef.current = 0;
+          const danglingClipId = pendingClipIdRef.current;
+          pendingClipIdRef.current = null;
+          cleanupPendingClip(danglingClipId);
           setStage('idle');
           setRenderProgress(0);
           setVideoProgress(0);
@@ -519,15 +453,7 @@ export function useClipUpload(): UseClipUploadResult {
         }
       }
     },
-    [
-      selectedFile,
-      extractedMeta,
-      editSettings,
-      reportRenderProgress,
-      reportVideoProgress,
-      resumeUpload,
-      waitIfPausedOrAborted,
-    ],
+    [selectedFile, extractedMeta, editSettings, reportRenderProgress, reportVideoProgress],
   );
 
   return {
@@ -547,8 +473,6 @@ export function useClipUpload(): UseClipUploadResult {
     updateEditSettings,
     updateThumbnailFromCapture,
     startUpload,
-    pauseUpload,
-    resumeUpload,
     cancelUpload,
     resetUploadState,
   };
