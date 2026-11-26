@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Compass,
+  Eye,
   Flame,
   FolderKanban,
   LogOut,
@@ -19,7 +20,14 @@ import type { User } from '@/types/api';
 import { getUserDisplayName } from '@/types/user';
 
 export type DashboardSection =
-  'home' | 'recent' | 'featured' | 'favorites' | 'collections' | 'studio' | 'settings';
+  | 'home'
+  | 'recent'
+  | 'featured'
+  | 'most_viewed'
+  | 'favorites'
+  | 'collections'
+  | 'studio'
+  | 'settings';
 
 interface NavItemConfig {
   id: DashboardSection;
@@ -31,6 +39,7 @@ const NAV_ITEMS: readonly NavItemConfig[] = [
   { id: 'home', label: 'Início', Icon: Compass },
   { id: 'recent', label: 'Novos Clipes', Icon: Sparkles },
   { id: 'featured', label: 'Destaques', Icon: Flame },
+  { id: 'most_viewed', label: 'Mais Vistos', Icon: Eye },
   { id: 'favorites', label: 'Favoritos', Icon: Bookmark },
   { id: 'collections', label: 'Coleções', Icon: FolderKanban },
   { id: 'studio', label: 'Estúdio', Icon: BarChart3 },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Edit3, FolderKanban, Trash2, X } from 'lucide-react';
 import { AddToCollectionModal } from '@/components/collections/AddToCollectionModal';
@@ -21,58 +21,75 @@ import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
 import { useClipSocial, type SocialMutationPatch } from '@/hooks/useClipSocial';
 import { ApiClientError } from '@/lib/api-client';
-import {
-  getTopHighlightClipId,
-  MAX_HIGHLIGHT_CLIPS,
-  selectHighlightClips,
-} from '@/lib/highlight-ranking';
 import { authService } from '@/services/auth-service';
 import { clipsService } from '@/services/clips-service';
 import { collectionsService } from '@/services/collections-service';
-import { getClipShareSlug, type Clip, type ClipSummary, type Game, type Tag } from '@/types/clip';
+import {
+  getClipShareSlug,
+  type Clip,
+  type ClipPeriod,
+  type ClipSortOption,
+  type ClipSummary,
+  type Game,
+  type Tag,
+} from '@/types/clip';
 import type { Collection } from '@/types/collection';
 
 const QUEUE_PAGE_SIZE = 4;
-const HIGHLIGHTS_FETCH_PAGE_SIZE = 50;
 const SEARCH_DEBOUNCE_MS = 300;
 const DASHBOARD_SECTIONS: readonly DashboardContentSection[] = [
   'home',
   'recent',
   'featured',
+  'most_viewed',
   'favorites',
   'collections',
 ] as const;
 
-interface ResolvedClipsResult {
-  items: ClipSummary[];
-  totalPages: number;
-  topHighlightId: string | null;
+const MOBILE_FEED_PILLS: readonly { id: DashboardContentSection; label: string }[] = [
+  { id: 'recent', label: 'Novos' },
+  { id: 'featured', label: 'Destaques' },
+  { id: 'most_viewed', label: 'Mais Vistos' },
+] as const;
+
+interface SectionPresentation {
+  sort: ClipSortOption;
+  showPeriodFilter: boolean;
+  queueTitle: string;
+  queueEmpty?: string;
+  heroEmptyTitle?: string;
+  heroEmptyDescription?: string;
 }
 
-function resolveClipsForSection(params: {
-  rawItems: ClipSummary[];
-  apiTotalPages: number;
-  activeSection: DashboardContentSection;
-  page: number;
-}): ResolvedClipsResult {
-  if (params.activeSection !== 'featured') {
-    return {
-      items: params.rawItems,
-      totalPages: Math.max(1, params.apiTotalPages),
-      topHighlightId: getTopHighlightClipId(params.rawItems),
-    };
-  }
+const SECTION_PRESENTATIONS: Partial<Record<DashboardContentSection, SectionPresentation>> = {
+  featured: {
+    sort: 'featured',
+    showPeriodFilter: true,
+    queueTitle: 'TOP DESTAQUES',
+    queueEmpty: 'Nenhum clipe com curtidas ou favoritos em destaque neste período.',
+    heroEmptyTitle: 'NENHUM DESTAQUE AINDA',
+    heroEmptyDescription:
+      'Ainda não há clipes com curtidas ou favoritos para o período selecionado. Ajuste o filtro de tempo ou envie uma jogada.',
+  },
+  most_viewed: {
+    sort: 'most_viewed',
+    showPeriodFilter: true,
+    queueTitle: 'MAIS VISTOS',
+    queueEmpty: 'Nenhum clipe com visualizações registradas neste período.',
+    heroEmptyTitle: 'NENHUM CLIPE VISTO AINDA',
+    heroEmptyDescription:
+      'Ainda não há clipes com visualizações registradas no período selecionado.',
+  },
+};
 
-  const rankedHighlights = selectHighlightClips(params.rawItems, MAX_HIGHLIGHT_CLIPS);
-  const totalPages = Math.max(1, Math.ceil(rankedHighlights.length / QUEUE_PAGE_SIZE));
-  const safePage = Math.min(Math.max(1, params.page), totalPages);
-  const startIndex = (safePage - 1) * QUEUE_PAGE_SIZE;
-
-  return {
-    items: rankedHighlights.slice(startIndex, startIndex + QUEUE_PAGE_SIZE),
-    totalPages,
-    topHighlightId: rankedHighlights[0]?.id ?? null,
-  };
+function getSectionPresentation(section: DashboardContentSection): SectionPresentation {
+  return (
+    SECTION_PRESENTATIONS[section] ?? {
+      sort: 'recent',
+      showPeriodFilter: false,
+      queueTitle: 'NA FILA / RECENTES',
+    }
+  );
 }
 
 function resolveDashboardSectionFromUrl(): DashboardContentSection | null {
@@ -105,13 +122,13 @@ export function BentoDashboardWorkspace() {
 
   const [searchInput, setSearchInput] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [period, setPeriod] = useState<ClipPeriod>('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   const [games, setGames] = useState<Game[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [clips, setClips] = useState<ClipSummary[]>([]);
-  const [featuredTopHighlightId, setFeaturedTopHighlightId] = useState<string | null>(null);
   const [activeClip, setActiveClip] = useState<ClipSummary | null>(null);
   const [isLoadingClips, setIsLoadingClips] = useState(true);
 
@@ -200,43 +217,35 @@ export function BentoDashboardWorkspace() {
   const loadClips = useCallback(async () => {
     setIsLoadingClips(true);
     try {
-      const isFeaturedSection = activeSection === 'featured';
+      const presentation = getSectionPresentation(activeSection);
       const response = await clipsService.listClips({
         q: debouncedQuery || undefined,
         game_slug: quickFilter.gameSlug,
         tag: quickFilter.tagSlug,
         favorited: activeSection === 'favorites' ? true : undefined,
         collection_id: activeCollection?.id,
-        sort: isFeaturedSection ? 'popular' : 'recent',
-        page: isFeaturedSection ? 1 : page,
-        page_size: isFeaturedSection ? HIGHLIGHTS_FETCH_PAGE_SIZE : QUEUE_PAGE_SIZE,
-      });
-
-      const resolved = resolveClipsForSection({
-        rawItems: response.items,
-        apiTotalPages: response.total_pages,
-        activeSection,
+        sort: presentation.sort,
+        period: presentation.showPeriodFilter ? period : undefined,
         page,
+        page_size: QUEUE_PAGE_SIZE,
       });
 
-      setClips(resolved.items);
-      setTotalPages(resolved.totalPages);
-      setFeaturedTopHighlightId(resolved.topHighlightId);
+      setClips(response.items);
+      setTotalPages(Math.max(1, response.total_pages));
       setActiveClip((prev) => {
-        if (prev && resolved.items.some((item) => item.id === prev.id)) {
-          return resolved.items.find((item) => item.id === prev.id) ?? resolved.items[0] ?? null;
+        if (prev && response.items.some((item) => item.id === prev.id)) {
+          return response.items.find((item) => item.id === prev.id) ?? response.items[0] ?? null;
         }
-        return resolved.items[0] ?? null;
+        return response.items[0] ?? null;
       });
     } catch {
       setClips([]);
-      setFeaturedTopHighlightId(null);
       setActiveClip(null);
       setTotalPages(1);
     } finally {
       setIsLoadingClips(false);
     }
-  }, [debouncedQuery, quickFilter, activeSection, activeCollection, page]);
+  }, [debouncedQuery, quickFilter, activeSection, activeCollection, period, page]);
 
   useEffect(() => {
     void loadClips();
@@ -366,24 +375,19 @@ export function BentoDashboardWorkspace() {
   };
 
   const handleUploadSuccess = (newClip: Clip) => {
-    if (activeSection === 'featured') {
+    if (activeSection === 'featured' || activeSection === 'most_viewed') {
       return;
     }
     setClips((prev) => [newClip, ...prev.filter((item) => item.id !== newClip.id)]);
     setActiveClip(newClip);
   };
 
-  const topHighlightClipId = useMemo(
-    () => (activeSection === 'featured' ? featuredTopHighlightId : getTopHighlightClipId(clips)),
-    [activeSection, featuredTopHighlightId, clips],
-  );
-
   if (!user) {
     return null;
   }
 
   const isCollectionOwner = activeCollection?.owner.id === user.id;
-  const isHighlightsSection = activeSection === 'featured';
+  const presentation = getSectionPresentation(activeSection);
 
   return (
     <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary md:flex-row">
@@ -505,19 +509,42 @@ export function BentoDashboardWorkspace() {
             </div>
           )}
 
+          {/* Pílulas rápidas mobile (< 768px) para alternar entre Novos, Destaques e Mais Vistos */}
+          <div
+            role="group"
+            aria-label="Navegação rápida do feed"
+            data-testid="mobile-feed-pills"
+            className="flex flex-wrap items-center gap-2 md:hidden"
+          >
+            {MOBILE_FEED_PILLS.map((pill) => {
+              const isSelected = activeSection === pill.id;
+              return (
+                <button
+                  key={pill.id}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => handleSelectSection(pill.id)}
+                  className={`rounded-full border px-3 py-1.5 font-mono text-mono-badge transition-colors ${
+                    isSelected
+                      ? 'border-success bg-bg-surface font-semibold text-success'
+                      : 'border-border-muted bg-bg-surface text-text-secondary hover:border-text-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {pill.label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Grid Principal Bento: 2 colunas completas em Desktop (>= 1280px); 2x1 inferior em Tablet/Compacto */}
           <div className="grid w-full min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-stretch">
             {/* Coluna Central: Hero Player em formato "L" + Filtros Rápidos 3x3 encaixados */}
             <HeroPlayerBento
               clip={activeClip}
               isLoading={isLoadingClips}
-              isFeaturedHighlight={Boolean(activeClip && activeClip.id === topHighlightClipId)}
-              emptyStateTitle={isHighlightsSection ? 'NENHUM DESTAQUE AINDA' : undefined}
-              emptyStateDescription={
-                isHighlightsSection
-                  ? 'Ainda não há clipes com favoritos ou visualizações para entrar nos destaques. Envie uma jogada ou interaja com os clipes recentes.'
-                  : undefined
-              }
+              isFeaturedHighlight={Boolean(activeClip?.is_top_highlight)}
+              emptyStateTitle={presentation.heroEmptyTitle}
+              emptyStateDescription={presentation.heroEmptyDescription}
               isSidebarCollapsed={isSidebarCollapsed}
               isLikePending={activeClip ? isLikePending(activeClip.id) : false}
               isFavoritePending={activeClip ? isFavoritePending(activeClip.id) : false}
@@ -553,13 +580,14 @@ export function BentoDashboardWorkspace() {
                 <ClipQueueList
                   clips={clips}
                   activeClipId={activeClip?.id ?? null}
-                  topHighlightClipId={topHighlightClipId}
-                  sectionTitle={isHighlightsSection ? 'TOP DESTAQUES' : 'NA FILA / RECENTES'}
-                  emptyMessage={
-                    isHighlightsSection
-                      ? 'Nenhum clipe com favoritos ou visualizações em destaque ainda.'
-                      : undefined
-                  }
+                  sectionTitle={presentation.queueTitle}
+                  emptyMessage={presentation.queueEmpty}
+                  showPeriodFilter={presentation.showPeriodFilter}
+                  period={period}
+                  onPeriodChange={(nextPeriod) => {
+                    setPeriod(nextPeriod);
+                    setPage(1);
+                  }}
                   isLoading={isLoadingClips}
                   searchValue={searchInput}
                   page={page}

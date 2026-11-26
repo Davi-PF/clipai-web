@@ -4,15 +4,23 @@ import { ChevronLeft, ChevronRight, Film, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { formatDurationBadge } from '@/lib/validators';
-import { isClipFavorited, isClipLiked, type ClipSummary } from '@/types/clip';
+import { isClipFavorited, isClipLiked, type ClipPeriod, type ClipSummary } from '@/types/clip';
 import { getUserDisplayName } from '@/types/user';
+
+const PERIOD_OPTIONS: readonly { value: ClipPeriod; label: string }[] = [
+  { value: '7d', label: '7 dias' },
+  { value: '30d', label: '30 dias' },
+  { value: 'all', label: 'Todo período' },
+] as const;
 
 export interface ClipQueueListProps {
   clips: ClipSummary[];
   activeClipId: string | null;
-  topHighlightClipId?: string | null;
   sectionTitle?: string;
   emptyMessage?: string;
+  showPeriodFilter?: boolean;
+  period?: ClipPeriod;
+  onPeriodChange?: (period: ClipPeriod) => void;
   isLoading: boolean;
   searchValue: string;
   page: number;
@@ -33,7 +41,6 @@ function getAccentBarColor(clip: ClipSummary, isActive: boolean, isTopHighlight:
 interface ClipQueueListBodyProps {
   clips: ClipSummary[];
   activeClipId: string | null;
-  topHighlightClipId: string | null;
   emptyMessage: string;
   isLoading: boolean;
   onSelectClip: (clip: ClipSummary) => void;
@@ -42,7 +49,6 @@ interface ClipQueueListBodyProps {
 function ClipQueueListBody({
   clips,
   activeClipId,
-  topHighlightClipId,
   emptyMessage,
   isLoading,
   onSelectClip,
@@ -77,7 +83,7 @@ function ClipQueueListBody({
     <div className="flex flex-col gap-[10px] xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-0.5">
       {clips.map((clip) => {
         const isActive = clip.id === activeClipId;
-        const isTopHighlight = clip.id === topHighlightClipId;
+        const isTopHighlight = Boolean(clip.is_top_highlight);
         const accentClass = getAccentBarColor(clip, isActive, isTopHighlight);
         const authorDisplayName = getUserDisplayName(clip.author);
 
@@ -149,9 +155,11 @@ function ClipQueueListBody({
 export function ClipQueueList({
   clips,
   activeClipId,
-  topHighlightClipId = null,
   sectionTitle = 'NA FILA / RECENTES',
   emptyMessage = 'Nenhum clipe na fila para este filtro.',
+  showPeriodFilter = false,
+  period = 'all',
+  onPeriodChange,
   isLoading,
   searchValue,
   page,
@@ -225,11 +233,38 @@ export function ClipQueueList({
         </div>
       </div>
 
+      {showPeriodFilter && onPeriodChange && (
+        <div
+          role="group"
+          aria-label="Filtro de período"
+          data-testid="queue-period-filter"
+          className="flex shrink-0 flex-wrap items-center gap-1.5"
+        >
+          {PERIOD_OPTIONS.map((option) => {
+            const isSelected = period === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={isSelected}
+                onClick={() => onPeriodChange(option.value)}
+                className={`rounded-control border px-2.5 py-1 font-mono text-mono-badge transition-colors ${
+                  isSelected
+                    ? 'border-success bg-bg-deep text-success'
+                    : 'border-border-muted bg-bg-elevated text-text-secondary hover:border-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Lista limpa vertical (gap: 10px, zero sobreposição) com scroll interno sutil em xl+ */}
       <ClipQueueListBody
         clips={clips}
         activeClipId={activeClipId}
-        topHighlightClipId={topHighlightClipId}
         emptyMessage={emptyMessage}
         isLoading={isLoading}
         onSelectClip={onSelectClip}
