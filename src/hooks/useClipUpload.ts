@@ -61,6 +61,67 @@ export interface UseClipUploadResult {
   resetUploadState: () => void;
 }
 
+function isAbortedError(err: unknown): boolean {
+  return (
+    (err instanceof R2UploadError && err.isAborted) ||
+    (err instanceof FfmpegProcessingError && err.isAborted)
+  );
+}
+
+function cleanupPendingClip(clipId: string | null): void {
+  if (!clipId) {
+    return;
+  }
+  void clipsService.cancelUpload(clipId).catch(() => undefined);
+}
+
+function resolveUploadErrorMessage(err: unknown): string {
+  if (
+    err instanceof ApiClientError ||
+    err instanceof R2UploadError ||
+    err instanceof FfmpegProcessingError
+  ) {
+    return err.message;
+  }
+  return 'Ocorreu um erro inesperado ao enviar o clipe. Tente novamente.';
+}
+
+function buildUploadUrlPayload(params: {
+  payload: StartUploadPayload;
+  extractedMeta: ExtractedVideoResult;
+  activeSettings: ClipEditSettings;
+  uploadFile: File;
+  uploadMimeType: ExtractedVideoResult['videoMimeType'];
+  finalDuration: number;
+}) {
+  const { payload, extractedMeta, activeSettings, uploadFile, uploadMimeType, finalDuration } =
+    params;
+  const finalDims = resolveFinalDimensions(extractedMeta, activeSettings);
+  const finalBitrateKbps = Math.max(1, Math.round((uploadFile.size * 8) / finalDuration / 1000));
+  const finalContainer: 'webm' | 'mp4' = uploadMimeType === 'video/webm' ? 'webm' : 'mp4';
+
+  return {
+    title: payload.title.trim(),
+    description: payload.description.trim() || null,
+    game_id: payload.gameId,
+    privacy: payload.privacy,
+    tags: payload.tags,
+    video_mime_type: uploadMimeType,
+    video_size_bytes: uploadFile.size,
+    duration_seconds: finalDuration,
+    thumbnail_mime_type: extractedMeta.thumbnailMimeType,
+    thumbnail_size_bytes: extractedMeta.thumbnailSizeBytes,
+    technical_metadata: {
+      ...extractedMeta.technicalMetadata,
+      container: finalContainer,
+      width: finalDims.width,
+      height: finalDims.height,
+      resolution_label: finalDims.resolutionLabel,
+      bitrate_kbps: finalBitrateKbps,
+    },
+  };
+}
+
 function revokeUrl(url: string | null | undefined): void {
   if (url) {
     URL.revokeObjectURL(url);
@@ -104,12 +165,27 @@ export function useClipUpload(): UseClipUploadResult {
   const [uploadedClip, setUploadedClip] = useState<Clip | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  const pendingClipIdRef = useRef<string | null>(null);
   const metaRef = useRef<ExtractedVideoResult | null>(null);
   const videoObjectUrlRef = useRef<{ file: File | null; url: string | null }>({
     file: null,
     url: null,
   });
   const selectionRequestIdRef = useRef(0);
+
+  const reportRenderProgress = useCallback((percent: number) => {
+    if (!abortControllerRef.current || abortControllerRef.current.signal.aborted) {
+      return;
+    }
+    setRenderProgress(percent);
+  }, []);
+
+  const reportVideoProgress = useCallback((percent: number) => {
+    if (!abortControllerRef.current || abortControllerRef.current.signal.aborted) {
+      return;
+    }
+    setVideoProgress(percent);
+  }, []);
 
   useEffect(() => {
     metaRef.current = extractedMeta;
@@ -130,13 +206,21 @@ export function useClipUpload(): UseClipUploadResult {
     return nextUrl;
   }, []);
 
+  const cancelUpload = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    const clipIdToCleanup = pendingClipIdRef.current;
+    pendingClipIdRef.current = null;
+    cleanupPendingClip(clipIdToCleanup);
+  }, []);
+
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort();
+      cancelUpload();
       revokeUrl(metaRef.current?.thumbnailPreviewUrl);
       releaseVideoPreviewUrl();
     };
-  }, [releaseVideoPreviewUrl]);
+  }, [cancelUpload, releaseVideoPreviewUrl]);
 
   const editEstimate = useMemo<ClipEditEstimate | null>(() => {
     if (!extractedMeta || !editSettings) {
@@ -232,15 +316,9 @@ export function useClipUpload(): UseClipUploadResult {
     [],
   );
 
-  const cancelUpload = useCallback(() => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-  }, []);
-
   const resetUploadState = useCallback(() => {
     selectionRequestIdRef.current += 1;
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
+    cancelUpload();
     revokeUrl(metaRef.current?.thumbnailPreviewUrl);
     releaseVideoPreviewUrl();
     setSelectedFile(null);
@@ -254,7 +332,7 @@ export function useClipUpload(): UseClipUploadResult {
     setVideoProgress(0);
     setUploadError(null);
     setUploadedClip(null);
-  }, [releaseVideoPreviewUrl]);
+  }, [cancelUpload, releaseVideoPreviewUrl]);
 
   const startUpload = useCallback(
     async (payload: StartUploadPayload): Promise<Clip | null> => {
@@ -273,6 +351,10 @@ export function useClipUpload(): UseClipUploadResult {
         return null;
       }
 
+      const previousPendingId = pendingClipIdRef.current;
+      pendingClipIdRef.current = null;
+      cleanupPendingClip(previousPendingId);
+
       const controller = new AbortController();
       abortControllerRef.current = controller;
       setUploadError(null);
@@ -285,9 +367,10 @@ export function useClipUpload(): UseClipUploadResult {
           file: selectedFile,
           totalDuration: extractedMeta.durationSeconds,
           settings: activeSettings,
-          onProgress: (percent) => setRenderProgress(percent),
+          onProgress: reportRenderProgress,
           signal: controller.signal,
         });
+
         const uploadFile = processed.file;
         const uploadMimeType = processed.mimeType;
 
@@ -303,41 +386,30 @@ export function useClipUpload(): UseClipUploadResult {
           return null;
         }
 
-        const finalDims = resolveFinalDimensions(extractedMeta, activeSettings);
-        const finalBitrateKbps = Math.max(
-          1,
-          Math.round((uploadFile.size * 8) / finalDuration / 1000),
-        );
-        const finalContainer = uploadMimeType === 'video/webm' ? 'webm' : 'mp4';
-
         setStage('preparing');
-        const presigned = await clipsService.requestUploadUrl({
-          title: payload.title.trim(),
-          description: payload.description.trim() || null,
-          game_id: payload.gameId,
-          privacy: payload.privacy,
-          tags: payload.tags,
-          video_mime_type: uploadMimeType,
-          video_size_bytes: uploadFile.size,
-          duration_seconds: finalDuration,
-          thumbnail_mime_type: extractedMeta.thumbnailMimeType,
-          thumbnail_size_bytes: extractedMeta.thumbnailSizeBytes,
-          technical_metadata: {
-            ...extractedMeta.technicalMetadata,
-            container: finalContainer,
-            width: finalDims.width,
-            height: finalDims.height,
-            resolution_label: finalDims.resolutionLabel,
-            bitrate_kbps: finalBitrateKbps,
-          },
-        });
+        const presigned = await clipsService.requestUploadUrl(
+          buildUploadUrlPayload({
+            payload,
+            extractedMeta,
+            activeSettings,
+            uploadFile,
+            uploadMimeType,
+            finalDuration,
+          }),
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted) {
+          cleanupPendingClip(presigned.clip_id);
+          throw new R2UploadError('Envio cancelado pelo usuário.', { isAborted: true });
+        }
+        pendingClipIdRef.current = presigned.clip_id;
 
         setStage('uploading_video');
         await uploadFileToPresignedUrl(
           presigned.video_upload.url,
           uploadFile,
           presigned.video_upload.headers['Content-Type'] || uploadMimeType,
-          (percent) => setVideoProgress(percent),
+          reportVideoProgress,
           controller.signal,
         );
 
@@ -353,35 +425,35 @@ export function useClipUpload(): UseClipUploadResult {
         }
 
         setStage('confirming');
-        const confirmedClip = await clipsService.confirmUpload(presigned.clip_id);
+        const confirmedClip = await clipsService.confirmUpload(presigned.clip_id, {
+          signal: controller.signal,
+        });
+        pendingClipIdRef.current = null;
+
         setUploadedClip(confirmedClip);
         setStage('success');
         return confirmedClip;
       } catch (err: unknown) {
-        if (
-          (err instanceof R2UploadError && err.isAborted) ||
-          (err instanceof FfmpegProcessingError && err.isAborted)
-        ) {
+        if (controller.signal.aborted || isAbortedError(err)) {
+          const danglingClipId = pendingClipIdRef.current;
+          pendingClipIdRef.current = null;
+          cleanupPendingClip(danglingClipId);
           setStage('idle');
           setRenderProgress(0);
           setVideoProgress(0);
           return null;
         }
 
-        const message =
-          err instanceof ApiClientError ||
-          err instanceof R2UploadError ||
-          err instanceof FfmpegProcessingError
-            ? err.message
-            : 'Ocorreu um erro inesperado ao enviar o clipe. Tente novamente.';
-        setUploadError(message);
+        setUploadError(resolveUploadErrorMessage(err));
         setStage('error');
         return null;
       } finally {
-        abortControllerRef.current = null;
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+        }
       }
     },
-    [selectedFile, extractedMeta, editSettings],
+    [selectedFile, extractedMeta, editSettings, reportRenderProgress, reportVideoProgress],
   );
 
   return {

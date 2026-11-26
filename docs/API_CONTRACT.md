@@ -681,6 +681,15 @@ Confirma que o upload direto ao Cloudflare R2 foi concluído, executa `HeadObjec
 
 ---
 
+### 7.2.1. `POST /api/v1/clips/{clip_id}/cancel-upload`
+Cancela um upload ainda não finalizado (`status` `pending_upload` ou `failed`), remove o registro do PostgreSQL (liberando a cota de envios pendentes) e exclui eventuais objetos órfãos de vídeo e thumbnail no Cloudflare R2.
+- **Auth:** Bearer JWT obrigatório (`is_email_verified = true`, apenas o autor do clipe)
+- **Request Body:** Nenhum
+- **Response `204 No Content`**
+- **Erros:** `400 BAD_REQUEST` (clipe já está com `status = 'ready'`), `403 FORBIDDEN`, `404 RESOURCE_NOT_FOUND`.
+
+---
+
 ### 7.3. `GET /api/v1/clips`
 Lista paginada de clipes (`status = 'ready'`) com suporte a busca, filtros e regras de visibilidade:
 - **Anônimo:** retorna apenas `privacy = 'public'`.

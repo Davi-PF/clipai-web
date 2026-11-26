@@ -92,6 +92,7 @@ describe('clips-service', () => {
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ clip_id: 'clip-1', views_count: 10 }), { status: 200 }),
       )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     const uploadRes = await clipsService.requestUploadUrl({
@@ -130,6 +131,12 @@ describe('clips-service', () => {
     expect(view.views_count).toBe(10);
 
     await expect(clipsService.deleteClip('clip-1')).resolves.toBeUndefined();
+
+    await expect(clipsService.cancelUpload('clip-1')).resolves.toBeUndefined();
+    const lastCall = fetchMock.mock.calls.at(-1);
+    expect(String(lastCall?.[0])).toContain('/clips/clip-1/cancel-upload');
+    expect((lastCall?.[1] as RequestInit | undefined)?.method).toBe('POST');
+    expect((lastCall?.[1] as RequestInit | undefined)?.keepalive).toBe(true);
 
     fetchMock.mockResolvedValueOnce(
       new Response(

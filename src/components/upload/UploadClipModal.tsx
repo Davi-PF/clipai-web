@@ -614,6 +614,10 @@ export function UploadClipModal({
     onClose();
   }, [isUploading, cancelUpload, resetUploadState, onClose]);
 
+  const handleContinueUpload = useCallback(() => {
+    setIsCancelConfirmOpen(false);
+  }, []);
+
   const handleRequestClose = useCallback(() => {
     if (shouldConfirmClose) {
       setIsCancelConfirmOpen(true);
@@ -633,7 +637,7 @@ export function UploadClipModal({
       }
       event.preventDefault();
       if (isCancelConfirmOpen) {
-        setIsCancelConfirmOpen(false);
+        handleContinueUpload();
         return;
       }
       handleRequestClose();
@@ -643,7 +647,7 @@ export function UploadClipModal({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, isCancelConfirmOpen, handleRequestClose]);
+  }, [isOpen, isCancelConfirmOpen, handleContinueUpload, handleRequestClose]);
 
   if (!isOpen) {
     return null;
@@ -706,140 +710,142 @@ export function UploadClipModal({
   const progressPercent = getUploadProgressPercent(stage, renderProgress, videoProgress);
 
   return (
-    <dialog
-      open
-      aria-modal="true"
-      aria-labelledby="upload-modal-title"
-      className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
-    >
-      <button
-        type="button"
-        tabIndex={-1}
-        data-testid="upload-modal-backdrop"
-        aria-label="Fechar modal de upload ao clicar fora"
-        onClick={handleRequestClose}
-        className="fixed inset-0 bg-bg-deep/75"
-      />
+    <>
+      <dialog
+        open
+        aria-modal="true"
+        aria-labelledby="upload-modal-title"
+        className="fixed inset-0 z-50 !m-0 flex h-full max-h-none w-full max-w-none items-center justify-center border-0 bg-transparent p-4 text-text-primary backdrop-blur-sm"
+      >
+        <button
+          type="button"
+          tabIndex={-1}
+          data-testid="upload-modal-backdrop"
+          aria-label="Fechar modal de upload ao clicar fora"
+          onClick={handleRequestClose}
+          className="fixed inset-0 bg-bg-deep/75"
+        />
 
-      <div className="relative z-10 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-bento border-[1.5px] border-border-muted bg-bg-surface text-text-primary shadow-2xl">
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border-muted px-4 py-4 sm:items-center sm:px-6 sm:py-5">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
-              <BrandLogo variant="icon" size="xs" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2
-                id="upload-modal-title"
-                className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary"
-              >
-                ENVIAR CLIPE
-              </h2>
-              <p className="break-words font-mono text-mono-meta text-text-secondary">
-                Upload direto para o Cloudflare R2 • MP4 ou WebM até 100 MB e 120s
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleRequestClose}
-            aria-label="Fechar modal de upload"
-            className="shrink-0 rounded-control p-2 text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </header>
-
-        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
-          {stage === 'success' && uploadedClip ? (
-            <UploadSuccessPanel uploadedClip={uploadedClip} onClose={forceCloseModal} />
-          ) : (
-            <form onSubmit={handleSubmit} noValidate className="space-y-5">
-              <UploadDropzoneSection
-                fileInputRef={fileInputRef}
-                selectedFile={selectedFile}
-                videoPreviewUrl={videoPreviewUrl}
-                extractedMeta={extractedMeta}
-                editSettings={editSettings}
-                editEstimate={editEstimate}
-                isInspecting={isInspecting}
-                isUploading={isUploading}
-                isDragging={isDragging}
-                inspectionError={inspectionError}
-                fileError={formErrors.file}
-                onSetDragging={setIsDragging}
-                onDrop={handleDrop}
-                onFileInputChange={handleFileInputChange}
-                onUpdateEditSettings={updateEditSettings}
-                onCaptureThumbnail={updateThumbnailFromCapture}
-              />
-
-              <UploadMetadataFields
-                title={title}
-                description={description}
-                gameId={gameId}
-                tags={tags}
-                privacy={privacy}
-                games={games}
-                isLoadingGames={isLoadingGames}
-                isUploading={isUploading}
-                formErrors={formErrors}
-                onChangeTitle={setTitle}
-                onChangeDescription={setDescription}
-                onChangeGameId={setGameId}
-                onChangeTags={setTags}
-                onChangePrivacy={setPrivacy}
-              />
-
-              {isUploading && (
-                <UploadProgressPanel
-                  isRendering={isRendering}
-                  stageLabel={stageLabel}
-                  progressPercent={progressPercent}
-                />
-              )}
-
-              {stage === 'error' && uploadError && (
-                <div
-                  role="alert"
-                  className="flex flex-col gap-3 rounded-card border border-danger bg-danger-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+        <div className="relative z-10 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-bento border-[1.5px] border-border-muted bg-bg-surface text-text-primary shadow-2xl">
+          <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border-muted px-4 py-4 sm:items-center sm:px-6 sm:py-5">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
+                <BrandLogo variant="icon" size="xs" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2
+                  id="upload-modal-title"
+                  className="font-display text-display-lg uppercase text-text-primary"
                 >
-                  <div className="flex min-w-0 flex-1 items-start gap-2 font-mono text-mono-meta text-danger-text">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-                    <span className="min-w-0 flex-1 break-words">{uploadError}</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
-                    onClick={() => void executeUpload()}
-                  >
-                    Tentar novamente
-                  </Button>
-                </div>
-              )}
+                  ENVIAR CLIPE
+                </h2>
+                <p className="break-words font-mono text-mono-meta text-text-secondary">
+                  Upload direto para o Cloudflare R2 • MP4 ou WebM até 100 MB e 120s
+                </p>
+              </div>
+            </div>
 
-              <UploadModalFooter
-                isRendering={isRendering}
-                isUploading={isUploading}
-                isInspecting={isInspecting}
-                exceedsMaxSize={Boolean(editEstimate?.exceedsMaxSize)}
-                stageLabel={stageLabel}
-                onCancel={handleRequestClose}
-              />
-            </form>
-          )}
+            <button
+              type="button"
+              onClick={handleRequestClose}
+              aria-label="Fechar modal de upload"
+              className="shrink-0 rounded-control p-2 text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </header>
+
+          <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+            {stage === 'success' && uploadedClip ? (
+              <UploadSuccessPanel uploadedClip={uploadedClip} onClose={forceCloseModal} />
+            ) : (
+              <form onSubmit={handleSubmit} noValidate className="space-y-5">
+                <UploadDropzoneSection
+                  fileInputRef={fileInputRef}
+                  selectedFile={selectedFile}
+                  videoPreviewUrl={videoPreviewUrl}
+                  extractedMeta={extractedMeta}
+                  editSettings={editSettings}
+                  editEstimate={editEstimate}
+                  isInspecting={isInspecting}
+                  isUploading={isUploading}
+                  isDragging={isDragging}
+                  inspectionError={inspectionError}
+                  fileError={formErrors.file}
+                  onSetDragging={setIsDragging}
+                  onDrop={handleDrop}
+                  onFileInputChange={handleFileInputChange}
+                  onUpdateEditSettings={updateEditSettings}
+                  onCaptureThumbnail={updateThumbnailFromCapture}
+                />
+
+                <UploadMetadataFields
+                  title={title}
+                  description={description}
+                  gameId={gameId}
+                  tags={tags}
+                  privacy={privacy}
+                  games={games}
+                  isLoadingGames={isLoadingGames}
+                  isUploading={isUploading}
+                  formErrors={formErrors}
+                  onChangeTitle={setTitle}
+                  onChangeDescription={setDescription}
+                  onChangeGameId={setGameId}
+                  onChangeTags={setTags}
+                  onChangePrivacy={setPrivacy}
+                />
+
+                {isUploading && (
+                  <UploadProgressPanel
+                    isRendering={isRendering}
+                    stageLabel={stageLabel}
+                    progressPercent={progressPercent}
+                  />
+                )}
+
+                {stage === 'error' && uploadError && (
+                  <div
+                    role="alert"
+                    className="flex flex-col gap-3 rounded-card border border-danger bg-danger-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex min-w-0 flex-1 items-start gap-2 font-mono text-mono-meta text-danger-text">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="min-w-0 flex-1 break-words">{uploadError}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      leftIcon={<RotateCcw className="h-3.5 w-3.5" />}
+                      onClick={() => void executeUpload()}
+                    >
+                      Tentar novamente
+                    </Button>
+                  </div>
+                )}
+
+                <UploadModalFooter
+                  isRendering={isRendering}
+                  isUploading={isUploading}
+                  isInspecting={isInspecting}
+                  exceedsMaxSize={Boolean(editEstimate?.exceedsMaxSize)}
+                  stageLabel={stageLabel}
+                  onCancel={handleRequestClose}
+                />
+              </form>
+            )}
+          </div>
         </div>
-      </div>
+      </dialog>
 
       <CancelUploadConfirmDialog
-        isOpen={isCancelConfirmOpen}
+        isOpen={isCancelConfirmOpen && stage !== 'success'}
         isRendering={isRendering}
         isUploading={isUploading}
-        onContinue={() => setIsCancelConfirmOpen(false)}
+        onContinue={handleContinueUpload}
         onConfirmCancel={forceCloseModal}
       />
-    </dialog>
+    </>
   );
 }

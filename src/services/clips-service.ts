@@ -52,12 +52,27 @@ export const clipsService = {
     });
   },
 
-  async requestUploadUrl(payload: PresignedUploadRequest): Promise<PresignedUploadResponse> {
-    return apiClient.post<PresignedUploadResponse>('/api/v1/clips/upload-url', payload);
+  async requestUploadUrl(
+    payload: PresignedUploadRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<PresignedUploadResponse> {
+    return apiClient.post<PresignedUploadResponse>('/api/v1/clips/upload-url', payload, options);
   },
 
-  async confirmUpload(clipId: string): Promise<Clip> {
-    return apiClient.post<Clip>(`/api/v1/clips/${encodeURIComponent(clipId)}/confirm-upload`);
+  async confirmUpload(clipId: string, options?: { signal?: AbortSignal }): Promise<Clip> {
+    return apiClient.post<Clip>(
+      `/api/v1/clips/${encodeURIComponent(clipId)}/confirm-upload`,
+      undefined,
+      options,
+    );
+  },
+
+  async cancelUpload(clipId: string): Promise<void> {
+    return apiClient.post<void>(
+      `/api/v1/clips/${encodeURIComponent(clipId)}/cancel-upload`,
+      undefined,
+      { keepalive: true },
+    );
   },
 
   async listClips(params: ListClipsParams = {}): Promise<PaginatedResponse<ClipSummary>> {
