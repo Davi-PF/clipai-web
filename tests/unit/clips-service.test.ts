@@ -145,5 +145,15 @@ describe('clips-service', () => {
     );
     const userClips = await clipsService.listUserClips('fallen_br', { privacy: 'unlisted' });
     expect(userClips.items[0]?.id).toBe('clip-2');
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ items: [], page: 1, page_size: 4, total: 0, total_pages: 1 }), {
+        status: 200,
+      }),
+    );
+    await clipsService.listClips({ sort: 'most_viewed', period: '7d', page: 1, page_size: 4 });
+    const lastUrl = String(fetchMock.mock.calls.at(-1)?.[0]);
+    expect(lastUrl).toContain('sort=most_viewed');
+    expect(lastUrl).toContain('period=7d');
   });
 });

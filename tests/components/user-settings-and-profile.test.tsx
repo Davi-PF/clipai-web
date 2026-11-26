@@ -486,7 +486,9 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
     );
 
     await waitFor(() => {
-      expect(listClipsSpy).toHaveBeenCalledWith(expect.objectContaining({ sort: 'popular' }));
+      expect(listClipsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: 'featured', period: 'all' }),
+      );
     });
     window.history.replaceState(null, '', '/');
   });

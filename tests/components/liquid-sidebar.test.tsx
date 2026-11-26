@@ -87,10 +87,10 @@ describe('LiquidSidebar & MobileFloatingDock', () => {
     await user.click(profileBtn);
     expect(onSelectSection).toHaveBeenCalledWith('settings');
 
-    // Rerender with 'recent' active -> Explorar is highlighted
+    // Rerender with 'most_viewed' active -> Explorar is highlighted and Mais Vistos nav is active
     rerender(
       <LiquidSidebar
-        activeSection="recent"
+        activeSection="most_viewed"
         onSelectSection={onSelectSection}
         isCollapsed={false}
         onToggleCollapse={vi.fn()}
@@ -106,6 +106,10 @@ describe('LiquidSidebar & MobileFloatingDock', () => {
     expect(
       within(mobileDock).getByTestId('mobile-dock-active-indicator-explore'),
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mais Vistos' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 
   it('toggles the central floating + button (rotates 45deg), opens radial actions and triggers callbacks', async () => {
