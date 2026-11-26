@@ -111,7 +111,7 @@ export function LandingPageContent() {
                 SUAS MELHORES JOGADAS. <span className="text-success">SALVAS EM SEGUNDOS.</span>
               </h1>
 
-              <p className="max-w-xl font-mono text-mono-body leading-relaxed text-text-secondary">
+              <p className="max-w-xl font-mono text-mono-body/relaxed text-text-secondary">
                 Upload direto para a nuvem de até 100 MB, links limpos prontos para o Discord,
                 coleções organizadas para a sua squad e um Estúdio de Criador com curva de retenção
                 real para cada clipe.
@@ -162,7 +162,7 @@ export function LandingPageContent() {
               <span className="font-mono text-mono-badge font-semibold uppercase text-success">
                 RECURSOS DO CLIPAÍ
               </span>
-              <h2 className="font-display text-display-hero uppercase tracking-[0.06em] text-text-primary">
+              <h2 className="font-display text-display-hero uppercase text-text-primary">
                 CONSTRUÍDO COMO UM ESTÚDIO TÁTICO DE REPLAY
               </h2>
               <p className="font-mono text-mono-body text-text-secondary">
@@ -187,7 +187,7 @@ export function LandingPageContent() {
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
+                    <h3 className="font-display text-display-lg uppercase text-text-primary">
                       {title}
                     </h3>
                     <p className="font-mono text-mono-body text-text-secondary">{description}</p>
@@ -206,7 +206,7 @@ export function LandingPageContent() {
                 <Activity className="h-3.5 w-3.5" aria-hidden="true" />
                 ESTÚDIO DO CRIADOR
               </span>
-              <h2 className="font-display text-display-hero uppercase tracking-[0.06em] text-text-primary">
+              <h2 className="font-display text-display-hero uppercase text-text-primary">
                 SAIBA O SEGUNDO EXATO EM QUE SUA JOGADA PRENDE A GALERA
               </h2>
               <p className="font-mono text-mono-body text-text-secondary">
@@ -278,7 +278,7 @@ export function LandingPageContent() {
               <span className="font-mono text-mono-badge font-semibold uppercase text-success">
                 COMO FUNCIONA
               </span>
-              <h2 className="font-display text-display-hero uppercase tracking-[0.06em] text-text-primary">
+              <h2 className="font-display text-display-hero uppercase text-text-primary">
                 DO REPLAY AO LINK NA CALL EM 3 PASSOS
               </h2>
             </div>
@@ -290,16 +290,14 @@ export function LandingPageContent() {
                   className="flex flex-col justify-between gap-5 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-display text-display-hero tracking-[0.06em] text-success">
-                      {number}
-                    </span>
+                    <span className="font-display text-display-hero text-success">{number}</span>
                     <span className="flex h-10 w-10 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
                       <Icon className="h-5 w-5 text-text-primary" aria-hidden="true" />
                     </span>
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+                    <h3 className="font-display text-display-md uppercase text-text-primary">
                       {title}
                     </h3>
                     <p className="font-mono text-mono-meta text-text-secondary">{description}</p>
@@ -316,7 +314,7 @@ export function LandingPageContent() {
             <span className="rounded-control bg-warning px-2.5 py-0.5 font-mono text-mono-badge font-bold uppercase text-bg-deep">
               ACESSO GRATUITO NA BETA
             </span>
-            <h2 className="font-display text-display-hero uppercase tracking-[0.06em] text-text-primary sm:text-[2.75rem]">
+            <h2 className="font-display text-display-hero uppercase text-text-primary sm:text-[2.75rem]">
               PRONTO PARA GUARDAR SUAS MELHORES JOGADAS?
             </h2>
             <p className="max-w-xl font-mono text-mono-body text-text-secondary">
