@@ -158,13 +158,13 @@ export function ProfileSettingsTab({ user, onUserUpdated }: Readonly<ProfileSett
   return (
     <div data-testid="settings-tab-profile" className="space-y-6">
       {/* Seção de Avatar */}
-      <section className="rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6">
+      <section className="rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 sm:p-6">
         <div className="flex flex-col justify-between gap-4 border-b border-border-muted pb-5 sm:flex-row sm:items-center">
-          <div>
-            <h2 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+          <div className="min-w-0 flex-1">
+            <h2 className="font-display text-display-md/none uppercase text-text-primary">
               FOTO DE PERFIL
             </h2>
-            <p className="mt-1 font-mono text-mono-meta text-text-secondary">
+            <p className="mt-1.5 font-mono text-mono-meta text-text-secondary">
               Envie uma imagem personalizada (.JPG, .PNG ou .WEBP até 5 MB) ou use seu avatar do
               Discord.
             </p>
@@ -172,10 +172,10 @@ export function ProfileSettingsTab({ user, onUserUpdated }: Readonly<ProfileSett
 
           <Link
             href={`/u/${user.username}`}
-            className="inline-flex items-center gap-1.5 rounded-control border border-border-muted bg-bg-elevated px-3 py-1.5 font-mono text-mono-badge text-text-primary transition-colors hover:border-success"
+            className="inline-flex h-8 max-w-full min-w-0 shrink-0 items-center gap-1.5 self-start rounded-control border border-border-muted bg-bg-elevated px-3 font-mono text-mono-badge/none text-text-primary transition-colors hover:border-success sm:self-center"
           >
-            <ExternalLink className="h-3.5 w-3.5 text-success" aria-hidden="true" />
-            <span>Ver perfil público (@{user.username})</span>
+            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-success" aria-hidden="true" />
+            <span className="truncate">Ver perfil público (@{user.username})</span>
           </Link>
         </div>
 
@@ -260,12 +260,12 @@ export function ProfileSettingsTab({ user, onUserUpdated }: Readonly<ProfileSett
       </section>
 
       {/* Formulário de Informações do Perfil */}
-      <section className="rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6">
+      <section className="rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 sm:p-6">
         <header className="mb-5 border-b border-border-muted pb-4">
-          <h2 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+          <h2 className="font-display text-display-md/none uppercase text-text-primary">
             INFORMAÇÕES PÚBLICAS
           </h2>
-          <p className="mt-1 font-mono text-mono-meta text-text-secondary">
+          <p className="mt-1.5 font-mono text-mono-meta text-text-secondary">
             Personalize como seu perfil é exibido nos seus clipes e coleções.
           </p>
         </header>
@@ -318,7 +318,7 @@ export function ProfileSettingsTab({ user, onUserUpdated }: Readonly<ProfileSett
               </label>
               <span
                 data-testid="bio-char-counter"
-                className={`font-mono text-mono-badge ${
+                className={`inline-flex items-center font-mono text-mono-badge/none ${
                   bio.length > MAX_BIO_LENGTH ? 'text-danger-text' : 'text-text-muted'
                 }`}
               >

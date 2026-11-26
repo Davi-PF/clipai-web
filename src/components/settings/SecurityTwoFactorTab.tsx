@@ -3,7 +3,6 @@
 import { useState, type SubmitEvent } from 'react';
 import {
   AlertTriangle,
-  CheckCircle2,
   Copy,
   Download,
   KeyRound,
@@ -14,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { SettingsStatusBadge } from '@/components/settings/SettingsStatusBadge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/contexts/toast-context';
@@ -205,7 +205,7 @@ function DisableTwoFactorModal({
         <div className="flex shrink-0 items-center justify-between border-b border-border-muted px-5 py-4 sm:px-6">
           <h3
             id="disable-2fa-dialog-title"
-            className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary"
+            className="font-display text-display-md/none uppercase text-text-primary"
           >
             DESATIVAR 2FA AUTHENTICATOR
           </h3>
@@ -367,43 +367,35 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
 
   return (
     <div data-testid="settings-tab-security" className="space-y-6">
-      <section className="rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-6">
-        <div className="flex flex-col justify-between gap-4 border-b border-border-muted pb-5 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-3.5">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep">
-              {is2faEnabled ? (
-                <ShieldCheck className="h-6 w-6 text-success" aria-hidden="true" />
-              ) : (
-                <ShieldAlert className="h-6 w-6 text-warning" aria-hidden="true" />
-              )}
-            </span>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h2 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
-                  AUTENTICAÇÃO EM DUAS ETAPAS (2FA)
-                </h2>
-                {is2faEnabled ? (
-                  <span
-                    data-testid="two-factor-status-badge"
-                    className="inline-flex items-center gap-1.5 rounded-control border border-success bg-success-surface px-2.5 py-0.5 font-mono text-mono-badge font-bold uppercase text-success"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 text-success" aria-hidden="true" />
-                    ATIVADO
-                  </span>
-                ) : (
-                  <span
-                    data-testid="two-factor-status-badge"
-                    className="inline-flex items-center gap-1.5 rounded-control border border-warning bg-bg-deep px-2.5 py-0.5 font-mono text-mono-badge font-bold uppercase text-warning"
-                  >
-                    DESATIVADO
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 font-mono text-mono-meta text-text-secondary">
-                Proteja sua conta com códigos TOTP temporários gerados no Google Authenticator,
-                Authy ou 1Password.
-              </p>
+      <section className="rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 sm:p-6">
+        <div className="flex items-start gap-3.5 border-b border-border-muted pb-5 sm:items-center">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-card border border-border-muted bg-bg-deep sm:h-12 sm:w-12">
+            {is2faEnabled ? (
+              <ShieldCheck className="h-6 w-6 text-success" aria-hidden="true" />
+            ) : (
+              <ShieldAlert className="h-6 w-6 text-warning" aria-hidden="true" />
+            )}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div
+              data-testid="two-factor-header-row"
+              className="flex items-start justify-between gap-2.5 sm:items-center sm:justify-start"
+            >
+              <h2 className="min-w-0 font-display text-display-md/none uppercase text-text-primary">
+                AUTENTICAÇÃO EM DUAS ETAPAS (2FA)
+              </h2>
+              <SettingsStatusBadge
+                testId="two-factor-status-badge"
+                tone={is2faEnabled ? 'success' : 'warning'}
+                label={is2faEnabled ? 'ATIVADO' : 'DESATIVADO'}
+                pulsing={is2faEnabled}
+                uppercase
+              />
             </div>
+            <p className="mt-1.5 font-mono text-mono-meta text-text-secondary">
+              Proteja sua conta com códigos TOTP temporários gerados no Google Authenticator, Authy
+              ou 1Password.
+            </p>
           </div>
         </div>
 
@@ -443,6 +435,7 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
               type="button"
               variant="danger"
               size="sm"
+              className="shrink-0 self-start sm:self-center"
               onClick={() => setIsDisableModalOpen(true)}
             >
               DESATIVAR 2FA
@@ -461,6 +454,7 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
             <Button
               type="button"
               variant="primary"
+              className="shrink-0 self-start sm:self-center"
               leftIcon={<QrCode className="h-4 w-4" />}
               isLoading={isStartingSetup}
               loadingText="GERANDO CHAVE..."
@@ -477,11 +471,11 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Passo 1: QR Code Local + Chave Secreta */}
               <div className="space-y-4 rounded-card border border-border-muted bg-bg-deep p-5">
-                <div className="space-y-1">
-                  <span className="font-mono text-mono-badge font-bold uppercase text-success">
+                <div className="space-y-2">
+                  <span className="inline-flex h-5 items-center rounded-full border border-success/40 bg-bg-surface px-2 font-mono text-mono-badge/none font-bold uppercase text-success">
                     PASSO 1 DE 3
                   </span>
-                  <h3 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+                  <h3 className="font-display text-display-md/none uppercase text-text-primary">
                     ESCANEAR QR CODE NO AUTENTICADOR
                   </h3>
                   <p className="font-mono text-mono-meta text-text-secondary">
@@ -529,11 +523,11 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
 
               {/* Passo 2: Digitar Código de 6 Dígitos */}
               <div className="flex flex-col justify-between rounded-card border border-border-muted bg-bg-deep p-5">
-                <div className="space-y-1">
-                  <span className="font-mono text-mono-badge font-bold uppercase text-success">
+                <div className="space-y-2">
+                  <span className="inline-flex h-5 items-center rounded-full border border-success/40 bg-bg-surface px-2 font-mono text-mono-badge/none font-bold uppercase text-success">
                     PASSO 2 DE 3
                   </span>
-                  <h3 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+                  <h3 className="font-display text-display-md/none uppercase text-text-primary">
                     CONFIRMAR CÓDIGO DE 6 DÍGITOS
                   </h3>
                   <p className="font-mono text-mono-meta text-text-secondary">
