@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, type KeyboardEvent, type PointerEvent } from 'react';
+import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { GripVertical, Scissors } from 'lucide-react';
 import { MAX_DURATION_SECONDS } from '@/lib/validators';
 import { clampTrimRange, formatPreciseTime } from '@/lib/video-editor-utils';
@@ -24,6 +24,15 @@ export interface ClipTrimTimelineProps {
 
 const KEYBOARD_STEP_SECONDS = 1;
 const SKELETON_SLOTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
+
+function getTrimHandleClassName(side: 'start' | 'end', isDragging: boolean): string {
+  const roundedClass = side === 'start' ? 'rounded-l-control' : 'rounded-r-control';
+  const shadowClass = isDragging
+    ? 'shadow-[0_0_10px_rgba(46,184,134,0.55)]'
+    : 'shadow-[0_2px_10px_rgba(2,10,18,0.85)]';
+
+  return `absolute -bottom-[1px] -top-[1px] z-20 flex w-4 -translate-x-1/2 cursor-ew-resize items-center justify-center ${roundedClass} bg-success text-bg-deep ${shadowClass} transition-[color,background-color,box-shadow] duration-150 hover:bg-success-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-1 focus-visible:ring-offset-bg-deep disabled:cursor-not-allowed`;
+}
 
 function FilmstripLayerContent({
   filmstripFrames,
@@ -84,12 +93,19 @@ export function ClipTrimTimeline({
 }: Readonly<ClipTrimTimelineProps>) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const activeDragRef = useRef<TrimDragMode | null>(null);
+  const [activeDragMode, setActiveDragMode] = useState<TrimDragMode | null>(null);
 
   const safeTotal = Math.max(0.1, totalDuration);
   const startPct = Math.min(100, Math.max(0, (startTime / safeTotal) * 100));
   const endPct = Math.min(100, Math.max(startPct, (endTime / safeTotal) * 100));
+  const rightMaskPct = Math.max(0, 100 - endPct);
+  const selectedPct = Math.max(0, endPct - startPct);
   const playheadPct = Math.min(100, Math.max(0, (currentTime / safeTotal) * 100));
   const selectedDuration = Math.max(0, endTime - startTime);
+
+  const isDraggingStart = !disabled && activeDragMode === 'start';
+  const isDraggingEnd = !disabled && activeDragMode === 'end';
+  const isDraggingTrimHandle = isDraggingStart || isDraggingEnd;
 
   const resolveTimeFromClientX = (clientX: number): number => {
     const rect = trackRef.current?.getBoundingClientRect();
@@ -133,6 +149,7 @@ export function ClipTrimTimeline({
     }
     if (activeDragRef.current !== mode) {
       activeDragRef.current = mode;
+      setActiveDragMode(mode);
       onDragStart?.(mode);
     }
     applyPointerTime(mode, event.clientX);
@@ -152,6 +169,7 @@ export function ClipTrimTimeline({
       return;
     }
     activeDragRef.current = null;
+    setActiveDragMode(null);
     onDragEnd?.(endedMode);
   };
 
@@ -218,26 +236,39 @@ export function ClipTrimTimeline({
           />
         </div>
 
-        {/* Regiões descartadas escurecidas fora de [startTime, endTime] */}
+        {/* Máscaras visuais de escurecimento + blur para regiões descartadas fora de [startTime, endTime] */}
         <div
           aria-hidden="true"
-          style={{ width: `${startPct}%` }}
-          className="pointer-events-none absolute inset-y-0 left-0 rounded-l-control bg-bg-deep/80"
-        />
-        <div
-          aria-hidden="true"
-          style={{ width: `${Math.max(0, 100 - endPct)}%` }}
-          className="pointer-events-none absolute inset-y-0 right-0 rounded-r-control bg-bg-deep/80"
-        />
+          data-testid="trim-masks-container"
+          className="pointer-events-none absolute inset-0 z-[5] overflow-hidden rounded-control"
+        >
+          <div
+            aria-hidden="true"
+            data-testid="trim-mask-left"
+            style={{ width: `${startPct}%` }}
+            className="pointer-events-none absolute inset-y-0 left-0 bg-[#061C2C]/75 backdrop-blur-[2px]"
+          />
+          <div
+            aria-hidden="true"
+            data-testid="trim-mask-right"
+            style={{ width: `${rightMaskPct}%` }}
+            className="pointer-events-none absolute inset-y-0 right-0 bg-[#061C2C]/75 backdrop-blur-[2px]"
+          />
+        </div>
 
         {/* Moldura nítida #2EB886 envolvendo o trecho selecionado */}
         <div
           aria-hidden="true"
+          data-testid="trim-selection-region"
           style={{
             left: `${startPct}%`,
-            width: `${Math.max(0, endPct - startPct)}%`,
+            width: `${selectedPct}%`,
           }}
-          className="pointer-events-none absolute inset-y-0 border-y-2 border-success shadow-[inset_0_0_0_1px_rgba(46,184,134,0.3)]"
+          className={`pointer-events-none absolute inset-y-0 z-[6] border-y-2 border-success transition-shadow ${
+            isDraggingTrimHandle
+              ? 'ring-1 ring-inset ring-[#2EB886]/60 shadow-[inset_0_0_8px_rgba(46,184,134,0.35)]'
+              : 'shadow-[inset_0_0_0_1px_rgba(46,184,134,0.3)]'
+          }`}
         />
 
         {/* Agulha de tempo atual (playhead) */}
@@ -254,19 +285,21 @@ export function ClipTrimTimeline({
         <button
           type="button"
           disabled={disabled}
-          aria-label="Alça de início do corte"
+          aria-label="Ajustar início do corte"
           aria-valuemin={0}
           aria-valuemax={Math.round(endTime)}
           aria-valuenow={Math.round(startTime)}
+          aria-valuetext={formatPreciseTime(startTime)}
           role="slider"
           data-testid="trim-handle-start"
+          data-dragging={isDraggingStart ? 'true' : 'false'}
           style={{ left: `${startPct}%` }}
           onPointerDown={handleStartDrag('start')}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           onKeyDown={handleHandleKeyDown('start')}
-          className="absolute -bottom-[1px] -top-[1px] z-20 flex w-4 -translate-x-1/2 cursor-ew-resize items-center justify-center rounded-l-control bg-success text-bg-deep shadow-[0_2px_10px_rgba(2,10,18,0.85)] transition-colors hover:bg-success-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary disabled:cursor-not-allowed"
+          className={getTrimHandleClassName('start', isDraggingStart)}
         >
           <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
@@ -275,19 +308,21 @@ export function ClipTrimTimeline({
         <button
           type="button"
           disabled={disabled}
-          aria-label="Alça de fim do corte"
+          aria-label="Ajustar fim do corte"
           aria-valuemin={Math.round(startTime)}
           aria-valuemax={Math.round(totalDuration)}
           aria-valuenow={Math.round(endTime)}
+          aria-valuetext={formatPreciseTime(endTime)}
           role="slider"
           data-testid="trim-handle-end"
+          data-dragging={isDraggingEnd ? 'true' : 'false'}
           style={{ left: `${endPct}%` }}
           onPointerDown={handleStartDrag('end')}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           onKeyDown={handleHandleKeyDown('end')}
-          className="absolute -bottom-[1px] -top-[1px] z-20 flex w-4 -translate-x-1/2 cursor-ew-resize items-center justify-center rounded-r-control bg-success text-bg-deep shadow-[0_2px_10px_rgba(2,10,18,0.85)] transition-colors hover:bg-success-surface hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary disabled:cursor-not-allowed"
+          className={getTrimHandleClassName('end', isDraggingEnd)}
         >
           <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
