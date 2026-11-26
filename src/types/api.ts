@@ -318,7 +318,9 @@ export interface ClipSummary {
   privacy: PrivacyLevel;
   video_url: string;
   thumbnail_url: string;
+  file_size_bytes?: number | null;
   duration_seconds: number;
+  technical_metadata?: ClipTechnicalMetadata | null;
   views_count: number;
   likes_count: number;
   favorites_count: number;
@@ -336,9 +338,9 @@ export interface ClipSummary {
 export interface Clip extends ClipSummary {
   description: string | null;
   status: ClipStatus;
-  file_size_bytes: number;
+  file_size_bytes?: number | null;
   mime_type: VideoMimeType;
-  technical_metadata: ClipTechnicalMetadata;
+  technical_metadata?: ClipTechnicalMetadata | null;
   updated_at: string;
 }
 
@@ -393,7 +395,9 @@ export interface CollectionClipItem {
     title: string;
     video_url?: string;
     thumbnail_url: string;
+    file_size_bytes?: number | null;
     duration_seconds: number;
+    technical_metadata?: ClipTechnicalMetadata | null;
     views_count: number;
     likes_count: number;
     is_liked?: boolean;
