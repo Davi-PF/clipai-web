@@ -1,5 +1,6 @@
 'use client';
 
+import { createPortal } from 'react-dom';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -32,16 +33,19 @@ export function CancelUploadConfirmDialog({
     return null;
   }
 
-  return (
+  const dialogOverlay = (
     <div
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="cancel-upload-confirm-title"
       aria-describedby="cancel-upload-confirm-description"
       data-testid="cancel-upload-confirm-dialog"
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-bg-deep/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-bg-deep/80 p-4 backdrop-blur-sm"
     >
-      <div className="w-full max-w-md rounded-bento border-[1.5px] border-danger bg-bg-surface p-6 text-text-primary shadow-2xl">
+      <div
+        data-testid="cancel-upload-confirm-card"
+        className="my-auto max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-bento border-[1.5px] border-danger bg-bg-surface p-6 text-text-primary shadow-2xl"
+      >
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card bg-danger-surface text-danger-text">
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />
@@ -74,4 +78,10 @@ export function CancelUploadConfirmDialog({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') {
+    return dialogOverlay;
+  }
+
+  return createPortal(dialogOverlay, document.body);
 }

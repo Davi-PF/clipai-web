@@ -96,15 +96,22 @@ async function getLoadedFfmpeg(adapter: FfmpegLoaderAdapter): Promise<FfmpegInst
   return instance;
 }
 
-export function resetFfmpegCache(): void {
-  if (cachedFfmpeg) {
-    try {
-      cachedFfmpeg.terminate();
-    } catch {
-      // Ignore termination errors during cleanup
-    }
+function terminateFfmpegInstance(instance: FfmpegInstanceLike | null): void {
+  if (!instance) {
+    return;
+  }
+  try {
+    instance.terminate();
+  } catch {
+    // Ignore termination failure
+  }
+  if (cachedFfmpeg === instance) {
     cachedFfmpeg = null;
   }
+}
+
+export function resetFfmpegCache(): void {
+  terminateFfmpegInstance(cachedFfmpeg);
   cachedCoreBlobUrl = null;
   cachedWasmBlobUrl = null;
 }
@@ -128,6 +135,36 @@ function normalizeProgressPercent(rawProgress: number): number {
   }
   const scaled = Math.round(rawProgress * 100);
   return Math.max(1, Math.min(99, scaled));
+}
+
+function runWithAbort<T>(work: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) {
+    return work;
+  }
+  if (signal.aborted) {
+    work.catch(() => undefined);
+    return Promise.reject(
+      new FfmpegProcessingError('Renderização cancelada pelo usuário.', { isAborted: true }),
+    );
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => {
+      reject(
+        new FfmpegProcessingError('Renderização cancelada pelo usuário.', { isAborted: true }),
+      );
+    };
+    signal.addEventListener('abort', onAbort, { once: true });
+    work.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort);
+        resolve(value);
+      },
+      (err: unknown) => {
+        signal.removeEventListener('abort', onAbort);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      },
+    );
+  });
 }
 
 async function runExecWithFallback(params: {
@@ -201,43 +238,47 @@ export async function processClipWithFfmpeg(params: ProcessClipParams): Promise<
 
   const handleAbort = () => {
     aborted = true;
-    if (ffmpeg) {
-      try {
-        ffmpeg.terminate();
-      } catch {
-        // Ignore termination failure
-      }
-      if (cachedFfmpeg === ffmpeg) {
-        cachedFfmpeg = null;
-      }
-    }
+    terminateFfmpegInstance(ffmpeg);
   };
 
   signal?.addEventListener('abort', handleAbort, { once: true });
 
   try {
-    ffmpeg = await getLoadedFfmpeg(adapter);
+    const loadPromise = getLoadedFfmpeg(adapter);
+    void loadPromise.then(
+      (loadedInstance) => {
+        if (aborted || signal?.aborted) {
+          terminateFfmpegInstance(loadedInstance);
+        }
+      },
+      () => undefined,
+    );
+    ffmpeg = await runWithAbort(loadPromise, signal);
     if (aborted || signal?.aborted) {
+      terminateFfmpegInstance(ffmpeg);
       throw new FfmpegProcessingError('Renderização cancelada pelo usuário.', { isAborted: true });
     }
 
     ffmpeg.on('progress', handleProgress);
-    const inputBytes = await adapter.fileToBytes(file);
-    await ffmpeg.writeFile(inputName, inputBytes);
+    const inputBytes = await runWithAbort(adapter.fileToBytes(file), signal);
+    await runWithAbort(ffmpeg.writeFile(inputName, inputBytes), signal);
 
-    await runExecWithFallback({
-      ffmpeg,
-      inputName,
-      outputName,
-      settings,
-      totalDuration,
-    });
+    await runWithAbort(
+      runExecWithFallback({
+        ffmpeg,
+        inputName,
+        outputName,
+        settings,
+        totalDuration,
+      }),
+      signal,
+    );
 
     if (aborted || signal?.aborted) {
       throw new FfmpegProcessingError('Renderização cancelada pelo usuário.', { isAborted: true });
     }
 
-    const rawOutput = await ffmpeg.readFile(outputName);
+    const rawOutput = await runWithAbort(ffmpeg.readFile(outputName), signal);
     if (!(rawOutput instanceof Uint8Array) || rawOutput.byteLength === 0) {
       throw new FfmpegProcessingError('O vídeo renderizado resultou vazio. Tente novamente.');
     }
