@@ -3,6 +3,7 @@ import type {
   ClipAuthorSummary,
   ClipFavoriteResponse,
   ClipLikeResponse,
+  ClipPeriod,
   ClipSortOption,
   ClipStatus,
   ClipSummary,
@@ -24,6 +25,7 @@ export type {
   ClipAuthorSummary,
   ClipFavoriteResponse,
   ClipLikeResponse,
+  ClipPeriod,
   ClipSortOption,
   ClipStatus,
   ClipSummary,
@@ -51,6 +53,7 @@ export interface ListClipsParams {
   favorited?: boolean;
   collection_id?: string;
   sort?: ClipSortOption;
+  period?: ClipPeriod;
   page?: number;
   page_size?: number;
 }

@@ -16,7 +16,9 @@ export type AvatarSource = 'custom' | 'discord' | 'none';
 
 export type DiscordAuthMode = 'login' | 'link';
 
-export type ClipSortOption = 'recent' | 'popular' | 'featured';
+export type ClipSortOption = 'recent' | 'popular' | 'featured' | 'most_viewed';
+
+export type ClipPeriod = '7d' | '30d' | 'all';
 
 export type ApiErrorCode =
   | 'BAD_REQUEST'
@@ -324,6 +326,7 @@ export interface ClipSummary {
   is_favorited?: boolean;
   is_liked_by_me: boolean;
   is_favorited_by_me: boolean;
+  is_top_highlight?: boolean;
   author: ClipAuthorSummary;
   game: Game;
   tags: string[];

@@ -72,6 +72,7 @@ export const clipsService = {
       favorited: params.favorited ? 'true' : undefined,
       collection_id: params.collection_id,
       sort: params.sort,
+      period: params.period,
       page: params.page,
       page_size: params.page_size,
     });
