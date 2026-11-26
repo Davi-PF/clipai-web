@@ -184,7 +184,9 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
       'sm:h-6',
       'items-center',
       'whitespace-nowrap',
-      'text-mono-badge/none',
+      'text-mono-badge',
+      'leading-none',
+      'text-text-primary',
     );
     expect(discordBadge.querySelector('.animate-pulse')).toBeInTheDocument();
     const unlinkBtn = screen.getByRole('button', { name: 'DESVINCULAR' });
@@ -267,7 +269,8 @@ describe('SettingsPage (/settings) & PublicProfileView (/u/[username])', () => {
       'sm:h-6',
       'items-center',
       'whitespace-nowrap',
-      'text-mono-badge/none',
+      'text-mono-badge',
+      'leading-none',
     );
 
     // Step 1: Start setup -> renders local QR Code SVG and manual secret

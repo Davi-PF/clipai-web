@@ -84,7 +84,7 @@ export function ConnectionsSettingsTab({
               data-testid="discord-header-row"
               className="flex items-start justify-between gap-2.5 sm:items-center sm:justify-start"
             >
-              <h2 className="min-w-0 font-display text-display-md/none uppercase text-text-primary">
+              <h2 className="min-w-0 translate-y-[0.5px] font-display text-display-md uppercase leading-none text-text-primary sm:translate-y-[1.5px]">
                 DISCORD
               </h2>
               <SettingsStatusBadge

@@ -14,7 +14,7 @@ export interface SettingsStatusBadgeProps {
 
 const TONE_CLASSES: Record<SettingsStatusTone, { container: string; dot: string }> = {
   success: {
-    container: 'border-success bg-success-surface text-success',
+    container: 'border-success bg-success-surface text-text-primary',
     dot: 'bg-success',
   },
   warning: {
@@ -40,7 +40,7 @@ export function SettingsStatusBadge({
   return (
     <span
       data-testid={testId}
-      className={`inline-flex h-5 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 font-mono text-mono-badge/none font-semibold sm:h-6 sm:px-2.5 ${
+      className={`inline-flex h-5 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 font-mono text-mono-badge font-semibold leading-none sm:h-6 sm:px-2.5 ${
         uppercase ? 'uppercase' : ''
       } ${styles.container}`.trim()}
     >
@@ -56,7 +56,7 @@ export function SettingsStatusBadge({
           aria-hidden="true"
         />
       )}
-      <span>{label}</span>
+      <span className="translate-y-px leading-none">{label}</span>
     </span>
   );
 }

@@ -205,7 +205,7 @@ function DisableTwoFactorModal({
         <div className="flex shrink-0 items-center justify-between border-b border-border-muted px-5 py-4 sm:px-6">
           <h3
             id="disable-2fa-dialog-title"
-            className="font-display text-display-md/none uppercase text-text-primary"
+            className="font-display text-display-md uppercase leading-none text-text-primary"
           >
             DESATIVAR 2FA AUTHENTICATOR
           </h3>
@@ -381,7 +381,7 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
               data-testid="two-factor-header-row"
               className="flex items-start justify-between gap-2.5 sm:items-center sm:justify-start"
             >
-              <h2 className="min-w-0 font-display text-display-md/none uppercase text-text-primary">
+              <h2 className="min-w-0 translate-y-[0.5px] font-display text-display-md uppercase leading-none text-text-primary sm:translate-y-[1.5px]">
                 AUTENTICAÇÃO EM DUAS ETAPAS (2FA)
               </h2>
               <SettingsStatusBadge
@@ -472,10 +472,10 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
               {/* Passo 1: QR Code Local + Chave Secreta */}
               <div className="space-y-4 rounded-card border border-border-muted bg-bg-deep p-5">
                 <div className="space-y-2">
-                  <span className="inline-flex h-5 items-center rounded-full border border-success/40 bg-bg-surface px-2 font-mono text-mono-badge/none font-bold uppercase text-success">
+                  <span className="inline-flex h-5 items-center rounded-full border border-success/40 bg-bg-surface px-2 font-mono text-mono-badge font-bold uppercase leading-none text-success">
                     PASSO 1 DE 3
                   </span>
-                  <h3 className="font-display text-display-md/none uppercase text-text-primary">
+                  <h3 className="font-display text-display-md uppercase leading-none text-text-primary">
                     ESCANEAR QR CODE NO AUTENTICADOR
                   </h3>
                   <p className="font-mono text-mono-meta text-text-secondary">
@@ -524,10 +524,10 @@ export function SecurityTwoFactorTab({ user }: Readonly<SecurityTwoFactorTabProp
               {/* Passo 2: Digitar Código de 6 Dígitos */}
               <div className="flex flex-col justify-between rounded-card border border-border-muted bg-bg-deep p-5">
                 <div className="space-y-2">
-                  <span className="inline-flex h-5 items-center rounded-full border border-success/40 bg-bg-surface px-2 font-mono text-mono-badge/none font-bold uppercase text-success">
+                  <span className="inline-flex h-5 items-center rounded-full border border-success/40 bg-bg-surface px-2 font-mono text-mono-badge font-bold uppercase leading-none text-success">
                     PASSO 2 DE 3
                   </span>
-                  <h3 className="font-display text-display-md/none uppercase text-text-primary">
+                  <h3 className="font-display text-display-md uppercase leading-none text-text-primary">
                     CONFIRMAR CÓDIGO DE 6 DÍGITOS
                   </h3>
                   <p className="font-mono text-mono-meta text-text-secondary">
