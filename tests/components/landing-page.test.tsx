@@ -48,9 +48,12 @@ describe('Public Landing Page (/)', () => {
       ).toBeInTheDocument();
     });
 
-    // Visitor navbar & hero CTAs
-    expect(screen.getByRole('link', { name: 'ENTRAR' })).toHaveAttribute('href', '/login');
-    expect(screen.getByRole('button', { name: 'CRIAR CONTA' })).toBeInTheDocument();
+    // Visitor navbar & hero CTAs (matching h-10 vertical alignment)
+    const loginLink = screen.getByRole('link', { name: 'ENTRAR' });
+    expect(loginLink).toHaveAttribute('href', '/login');
+    expect(loginLink).toHaveClass('inline-flex', 'h-10', 'items-center', 'justify-center');
+    const registerBtn = screen.getByRole('button', { name: 'CRIAR CONTA' });
+    expect(registerBtn).toHaveClass('h-10', 'inline-flex', 'items-center', 'justify-center');
     expect(screen.getByRole('button', { name: 'COMEÇAR GRÁTIS' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ENTRAR COM DISCORD' })).toBeInTheDocument();
 
@@ -105,10 +108,34 @@ describe('Public Landing Page (/)', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('landing-nav-user')).toHaveTextContent('FalleN');
+      expect(screen.getByTestId('landing-nav-user')).toBeInTheDocument();
     });
 
-    expect(screen.getAllByRole('button', { name: 'ABRIR DASHBOARD' }).length).toBeGreaterThan(0);
+    const userPill = screen.getByTestId('landing-nav-user');
+    expect(userPill).toHaveAttribute('href', '/settings');
+    expect(userPill).toHaveAttribute('title', 'fallen_br');
+    expect(userPill).toHaveAttribute('aria-label', 'Abrir configurações da conta (fallen_br)');
+    expect(userPill).toHaveClass(
+      'inline-flex',
+      'h-10',
+      'w-10',
+      'items-center',
+      'justify-center',
+      'rounded-full',
+      'border-border-muted',
+      'hover:border-success',
+    );
+    expect(userPill).not.toHaveTextContent('FalleN');
+    expect(screen.getByAltText('Avatar de FalleN')).toBeInTheDocument();
+
+    const dashboardButtons = screen.getAllByRole('button', { name: 'ABRIR DASHBOARD' });
+    expect(dashboardButtons.length).toBeGreaterThan(0);
+    expect(dashboardButtons[0]).toHaveClass(
+      'h-10',
+      'inline-flex',
+      'items-center',
+      'justify-center',
+    );
     expect(replaceMock).not.toHaveBeenCalled();
   });
 });
