@@ -40,7 +40,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${bebasNeue.variable} ${jetbrainsMono.variable}`}>
+    <html
+      lang="pt-BR"
+      suppressHydrationWarning
+      className={`${bebasNeue.variable} ${jetbrainsMono.variable}`}
+    >
       <body className="min-h-screen bg-bg-deep font-mono text-mono-body text-text-primary antialiased">
         <AppProviders>{children}</AppProviders>
       </body>
