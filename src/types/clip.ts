@@ -146,3 +146,11 @@ export function isClipFavorited(
 export function getClipShareSlug(clip: Pick<ClipSummary, 'id' | 'slug'>): string {
   return clip.slug || clip.id;
 }
+
+export function hasClipTechnicalMetadata(
+  clip: Pick<ClipSummary, 'technical_metadata' | 'file_size_bytes'>,
+): boolean {
+  return Boolean(
+    clip.technical_metadata?.resolution_label || typeof clip.file_size_bytes === 'number',
+  );
+}

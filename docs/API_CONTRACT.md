@@ -720,7 +720,21 @@ Lista paginada de clipes (`status = 'ready'`) com suporte a busca, filtros e reg
       "privacy": "public",
       "video_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../video.mp4",
       "thumbnail_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../thumb.webp",
+      "file_size_bytes": 48234496,
       "duration_seconds": 34.5,
+      "technical_metadata": {
+        "codec": "h264",
+        "container": "mp4",
+        "width": 1920,
+        "height": 1080,
+        "resolution_label": "1080p",
+        "fps": 60,
+        "bitrate_kbps": 11180,
+        "audio_codec": "aac",
+        "audio_channels": 2,
+        "aspect_ratio": "16:9",
+        "mime_type": "video/mp4"
+      },
       "views_count": 128,
       "likes_count": 24,
       "favorites_count": 7,
@@ -754,6 +768,7 @@ Lista paginada de clipes (`status = 'ready'`) com suporte a busca, filtros e reg
   "total_pages": 1
 }
 ```
+> **Restrição de Privacidade de Metadados Técnicos:** Os campos `file_size_bytes` e `technical_metadata` são retornados **exclusivamente para o proprietário do clipe** (`current_user.id == clip.user_id`). Para terceiros autenticados e visitantes anônimos, ambos os campos são retornados como `null` (mantendo `duration_seconds` disponível para player e cards).
 
 ---
 
@@ -810,6 +825,7 @@ Retorna os detalhes completos de um clipe (`status = 'ready'`), respeitando sua 
   "updated_at": "2026-11-21T22:06:10Z"
 }
 ```
+> **Restrição de Privacidade de Metadados Técnicos:** Os campos `file_size_bytes` e `technical_metadata` são retornados **apenas para o proprietário do clipe** (usuário autenticado cujo `id` seja igual ao `user_id` do clipe). Para terceiros autenticados e visitantes anônimos, ambos os campos são retornados como `null` (mantendo `duration_seconds` disponível para o player).
 
 ---
 
@@ -982,7 +998,9 @@ Retorna os metadados da coleção e a lista paginada e ordenada de clipes `ready
         "title": "Clutch 1v4 de AWP na Mirage",
         "video_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../video.mp4",
         "thumbnail_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../thumb.webp",
+        "file_size_bytes": null,
         "duration_seconds": 34.5,
+        "technical_metadata": null,
         "views_count": 129,
         "likes_count": 25,
         "is_liked": true,
@@ -999,6 +1017,7 @@ Retorna os metadados da coleção e a lista paginada e ordenada de clipes `ready
   "updated_at": "2026-11-21T22:12:00Z"
 }
 ```
+> **Restrição de Privacidade de Metadados Técnicos:** Assim como nos demais endpoints de clipes, `file_size_bytes` e `technical_metadata` em `clips[].clip` são preenchidos apenas para o proprietário de cada clipe e retornados como `null` para terceiros e visitantes anônimos.
 
 ### 8.5. `PATCH /api/v1/collections/{collection_id}`
 Atualiza título (`title`/`name`), descrição, cor de destaque (`accent_color`) ou privacidade da coleção.
