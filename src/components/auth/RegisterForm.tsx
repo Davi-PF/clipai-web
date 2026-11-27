@@ -1,15 +1,20 @@
 'use client';
 
-import { useState, type SubmitEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, Lock, Mail, User as UserIcon } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Lock, Mail, User as UserIcon, UserPlus } from 'lucide-react';
 import { AuthCardLayout } from '@/components/auth/AuthCardLayout';
 import { DiscordOAuthButton } from '@/components/auth/DiscordOAuthButton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
-import { ApiClientError } from '@/lib/api-client';
+import { ApiClientError, getAccessToken } from '@/lib/api-client';
+import {
+  acceptPendingInviteIfPresent,
+  capturePendingInviteCode,
+  clearPendingInviteCode,
+} from '@/lib/pending-invite';
 import {
   validateDisplayName,
   validateEmail,
@@ -18,6 +23,7 @@ import {
   validateUsername,
 } from '@/lib/validators';
 import { authService } from '@/services/auth-service';
+import type { RegisterRequest } from '@/types/api';
 
 interface RegisterFieldErrors {
   username?: string;
@@ -42,6 +48,11 @@ export function RegisterForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
+  const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPendingInviteCode(capturePendingInviteCode());
+  }, []);
 
   const validateFields = (): boolean => {
     const nextErrors: RegisterFieldErrors = {};
@@ -85,16 +96,43 @@ export function RegisterForm() {
     setErrors({});
 
     const normalizedEmail = email.trim();
+    const activeInviteCode = capturePendingInviteCode();
     try {
-      const response = await register({
-        username: username.trim(),
-        display_name: displayName.trim(),
-        email: normalizedEmail,
-        password,
-      });
+      const registerPayload: RegisterRequest = activeInviteCode
+        ? {
+            username: username.trim(),
+            display_name: displayName.trim(),
+            email: normalizedEmail,
+            password,
+            invite_code: activeInviteCode,
+          }
+        : {
+            username: username.trim(),
+            display_name: displayName.trim(),
+            email: normalizedEmail,
+            password,
+          };
+
+      const response = await register(registerPayload);
 
       setRegisteredEmail(response.user.email || normalizedEmail);
       success(response.message);
+
+      if (activeInviteCode) {
+        if (getAccessToken()) {
+          const accepted = await acceptPendingInviteIfPresent();
+          if (accepted) {
+            success(
+              accepted.message ||
+                `Convite aceito! Você e @${accepted.inviter.username} agora são amigos.`,
+            );
+          }
+        } else {
+          clearPendingInviteCode();
+          success('Convite aplicado! Vocês já foram conectados como amigos no CLIPAÍ.');
+        }
+        setPendingInviteCode(null);
+      }
     } catch (err: unknown) {
       const message =
         err instanceof ApiClientError
@@ -179,7 +217,11 @@ export function RegisterForm() {
         <p className="text-center">
           Já possui uma conta?{' '}
           <Link
-            href="/login"
+            href={
+              pendingInviteCode
+                ? `/login?invite=${encodeURIComponent(pendingInviteCode)}`
+                : '/login'
+            }
             className="font-semibold text-success transition-colors hover:underline"
           >
             Fazer login
@@ -188,6 +230,17 @@ export function RegisterForm() {
       }
     >
       <div className="space-y-4">
+        {pendingInviteCode && (
+          <div
+            data-testid="register-invite-banner"
+            className="flex items-start gap-2.5 rounded-card border border-success bg-success-surface/50 p-3 font-mono text-mono-meta text-text-primary"
+          >
+            <UserPlus className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+            <span>
+              Convite detectado! Ao criar sua conta, a amizade será confirmada automaticamente.
+            </span>
+          </div>
+        )}
         <form onSubmit={(event) => void handleSubmit(event)} noValidate className="space-y-4">
           {errors.form && (
             <div

@@ -11,6 +11,7 @@ import { DiscordIcon } from '@/components/ui/DiscordBadge';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
 import { ApiClientError } from '@/lib/api-client';
+import { acceptPendingInviteIfPresent } from '@/lib/pending-invite';
 import { resolveChallengeToken } from '@/types/auth';
 
 type CallbackViewState = 'loading' | 'challenge_2fa' | 'error';
@@ -82,6 +83,13 @@ export function DiscordCallbackContent() {
         }
 
         success(response.message || 'Login com Discord realizado com sucesso!');
+        const acceptedInvite = await acceptPendingInviteIfPresent();
+        if (acceptedInvite) {
+          success(
+            acceptedInvite.message ||
+              `Convite aceito! Você e @${acceptedInvite.inviter.username} agora são amigos.`,
+          );
+        }
         router.replace('/dashboard');
       } catch (err: unknown) {
         const message =
@@ -115,7 +123,17 @@ export function DiscordCallbackContent() {
         <TwoFactorChallengeStep
           challengeToken={challengeToken}
           userEmail={challengeEmail}
-          onSuccess={() => router.replace('/dashboard')}
+          onSuccess={() => {
+            void acceptPendingInviteIfPresent().then((acceptedInvite) => {
+              if (acceptedInvite) {
+                success(
+                  acceptedInvite.message ||
+                    `Convite aceito! Você e @${acceptedInvite.inviter.username} agora são amigos.`,
+                );
+              }
+              router.replace('/dashboard');
+            });
+          }}
           onCancel={() => router.replace('/login')}
         />
       </AuthCardLayout>
