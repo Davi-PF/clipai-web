@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import StudioPage from '@/app/studio/page';
 import { AppProviders } from '@/components/providers/AppProviders';
+import { ITEMS_PER_PAGE, resolveStudioClipsPage } from '@/components/studio/CreatorStudioWorkspace';
 import { clearAccessToken } from '@/lib/api-client';
 import { analyticsService } from '@/services/analytics-service';
 import { clipsService } from '@/services/clips-service';
@@ -204,7 +205,7 @@ describe('CreatorStudioWorkspace (/studio)', () => {
     const listClipsSpy = vi.spyOn(analyticsService, 'listCreatorClips').mockResolvedValue({
       items: MOCK_CLIPS,
       page: 1,
-      page_size: 10,
+      page_size: 5,
       total: 2,
       total_pages: 1,
     });
@@ -322,5 +323,143 @@ describe('CreatorStudioWorkspace (/studio)', () => {
     expect(screen.getByTestId('views-chart-empty')).toBeInTheDocument();
     expect(screen.getByTestId('retention-chart-empty')).toBeInTheDocument();
     expect(screen.getByTestId('kpi-avg-retention-value')).toHaveAttribute('data-tone', 'low');
+  });
+
+  it('locks desktop layout shell for fixed sidebar with internal main scroll and paginates clips 5 per page resetting on filter/sort/search', async () => {
+    const user = userEvent.setup();
+    const sevenClips: CreatorClipAnalyticsItem[] = Array.from({ length: 7 }, (_, index) => ({
+      ...MOCK_CLIPS[0]!,
+      id: `clip-${index + 1}`,
+      slug: `clip-slug-${index + 1}`,
+      title: `Jogada Destaque #${index + 1}`,
+      views_count: 500 - index * 20,
+    }));
+
+    vi.spyOn(analyticsService, 'getOverview').mockResolvedValue(MOCK_OVERVIEW);
+    vi.spyOn(analyticsService, 'getClipRetention').mockResolvedValue(RETENTION_CLIP_1);
+    const listClipsSpy = vi
+      .spyOn(analyticsService, 'listCreatorClips')
+      .mockImplementation(async (params = {}) => {
+        const currentPage = params.page ?? 1;
+        const pageSize = params.page_size ?? 5;
+        const start = (currentPage - 1) * pageSize;
+        return {
+          items: sevenClips.slice(start, start + pageSize),
+          page: currentPage,
+          page_size: pageSize,
+          total: sevenClips.length,
+          total_pages: Math.ceil(sevenClips.length / pageSize),
+        };
+      });
+
+    render(
+      <AppProviders>
+        <StudioPage />
+      </AppProviders>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('studio-clip-row-clip-1')).toBeInTheDocument();
+    });
+
+    // 1. Desktop shell fixes sidebar (md:h-dvh md:overflow-hidden) and main content scrolls internally
+    expect(screen.getByTestId('studio-layout-shell')).toHaveClass(
+      'md:h-dvh',
+      'md:overflow-hidden',
+      'md:flex-row',
+    );
+    expect(screen.getByTestId('studio-main-content')).toHaveClass(
+      'flex-1',
+      'min-h-0',
+      'overflow-y-auto',
+    );
+
+    // 2. Requests 5 items per page and renders exactly 5 rows on page 1
+    expect(listClipsSpy).toHaveBeenCalledWith(expect.objectContaining({ page: 1, page_size: 5 }));
+    expect(screen.getByTestId('studio-clips-pagination')).toHaveTextContent('Página 1 de 2');
+    expect(screen.getByTestId('studio-clip-row-clip-5')).toBeInTheDocument();
+    expect(screen.queryByTestId('studio-clip-row-clip-6')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Página anterior do estúdio' })).toBeDisabled();
+
+    // Navigate to page 2 -> displays clips 6 and 7
+    await user.click(screen.getByRole('button', { name: 'Próxima página do estúdio' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('studio-clip-row-clip-6')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('studio-clip-row-clip-7')).toBeInTheDocument();
+    expect(screen.queryByTestId('studio-clip-row-clip-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('studio-clips-pagination')).toHaveTextContent('Página 2 de 2');
+    expect(screen.getByRole('button', { name: 'Próxima página do estúdio' })).toBeDisabled();
+
+    // Changing privacy filter resets back to page 1
+    await user.selectOptions(screen.getByLabelText('Filtrar por privacidade'), 'public');
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({ privacy: 'public', page: 1, page_size: 5 }),
+      );
+    });
+    expect(screen.getByTestId('studio-clips-pagination')).toHaveTextContent('Página 1 de 2');
+
+    // Go to page 2 again, then change sort -> resets back to page 1
+    await user.click(screen.getByRole('button', { name: 'Próxima página do estúdio' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('studio-clips-pagination')).toHaveTextContent('Página 2 de 2');
+    });
+    await user.selectOptions(screen.getByLabelText('Ordenar clipes'), 'likes');
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sort: 'likes', page: 1, page_size: 5 }),
+      );
+    });
+    expect(screen.getByTestId('studio-clips-pagination')).toHaveTextContent('Página 1 de 2');
+
+    // Go to page 2 again, then search -> resets back to page 1 after debounce
+    await user.click(screen.getByRole('button', { name: 'Próxima página do estúdio' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('studio-clips-pagination')).toHaveTextContent('Página 2 de 2');
+    });
+    await user.type(screen.getByLabelText('Buscar clipe no estúdio'), 'Jogada');
+    await waitFor(() => {
+      expect(listClipsSpy).toHaveBeenLastCalledWith(
+        expect.objectContaining({ q: 'Jogada', page: 1, page_size: 5 }),
+      );
+    });
+    expect(screen.getByTestId('studio-clips-pagination')).toHaveTextContent('Página 1 de 2');
+  });
+
+  it('resolveStudioClipsPage caps overflowing payloads to ITEMS_PER_PAGE (5) and clamps out-of-range pages', () => {
+    const eightClips: CreatorClipAnalyticsItem[] = Array.from({ length: 8 }, (_, index) => ({
+      ...MOCK_CLIPS[0]!,
+      id: `overflow-${index + 1}`,
+      title: `Clipe ${index + 1}`,
+    }));
+
+    const page1 = resolveStudioClipsPage({
+      rawItems: eightClips,
+      apiTotalPages: 1,
+      page: 1,
+    });
+    expect(ITEMS_PER_PAGE).toBe(5);
+    expect(page1.items.map((item) => item.id)).toEqual([
+      'overflow-1',
+      'overflow-2',
+      'overflow-3',
+      'overflow-4',
+      'overflow-5',
+    ]);
+    expect(page1.totalPages).toBe(2);
+    expect(page1.safePage).toBe(1);
+
+    const clampedPage = resolveStudioClipsPage({
+      rawItems: eightClips,
+      apiTotalPages: 1,
+      page: 99,
+    });
+    expect(clampedPage.safePage).toBe(2);
+    expect(clampedPage.items.map((item) => item.id)).toEqual([
+      'overflow-6',
+      'overflow-7',
+      'overflow-8',
+    ]);
   });
 });
