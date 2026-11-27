@@ -12,10 +12,13 @@ import {
   LogOut,
   Settings,
   Sparkles,
+  Users,
 } from 'lucide-react';
 import { MobileFloatingDock } from '@/components/dashboard/MobileFloatingDock';
+import { NotificationsBell } from '@/components/notifications/NotificationsBell';
 import { BrandLogo } from '@/components/ui/BrandLogo';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { useOptionalNotifications } from '@/contexts/notifications-context';
 import type { User } from '@/types/api';
 import { getUserDisplayName } from '@/types/user';
 
@@ -26,6 +29,7 @@ export type DashboardSection =
   | 'most_viewed'
   | 'favorites'
   | 'collections'
+  | 'friends'
   | 'studio'
   | 'settings';
 
@@ -42,6 +46,7 @@ const NAV_ITEMS: readonly NavItemConfig[] = [
   { id: 'most_viewed', label: 'Mais Vistos', Icon: Eye },
   { id: 'favorites', label: 'Favoritos', Icon: Bookmark },
   { id: 'collections', label: 'Coleções', Icon: FolderKanban },
+  { id: 'friends', label: 'Amigos', Icon: Users },
   { id: 'studio', label: 'Estúdio', Icon: BarChart3 },
   { id: 'settings', label: 'Ajustes', Icon: Settings },
 ] as const;
@@ -70,6 +75,7 @@ export function LiquidSidebar({
   onLogout,
 }: Readonly<LiquidSidebarProps>) {
   const displayName = getUserDisplayName(user);
+  const hasNotificationsContext = Boolean(useOptionalNotifications());
 
   return (
     <>
@@ -85,6 +91,22 @@ export function LiquidSidebar({
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onSelectSection('friends')}
+            aria-label="Abrir página de amigos"
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-control border transition-colors ${
+              activeSection === 'friends'
+                ? 'border-success bg-bg-deep text-success'
+                : 'border-border-muted bg-bg-elevated text-text-secondary hover:border-success hover:text-text-primary'
+            }`}
+          >
+            <Users className="h-4 w-4 shrink-0" aria-hidden="true" />
+          </button>
+          <NotificationsBell
+            placement="bottom-right"
+            disableStandaloneAutoFetch={!hasNotificationsContext}
+          />
           <button
             type="button"
             onClick={() => onSelectSection('settings')}
@@ -130,9 +152,13 @@ export function LiquidSidebar({
         }`}
       >
         <div className={`w-full space-y-8 ${isCollapsed ? 'flex flex-col items-center' : ''}`}>
-          {/* Logo CLIPAÍ */}
+          {/* Logo CLIPAÍ e Sino de Notificações */}
           <div
-            className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between pr-4'}`}
+            className={`flex ${
+              isCollapsed
+                ? 'flex-col items-center gap-3'
+                : 'items-center justify-between gap-1.5 pr-3'
+            }`}
           >
             {isCollapsed ? (
               <button
@@ -153,20 +179,32 @@ export function LiquidSidebar({
                 />
               </button>
             ) : (
-              <BrandLogo variant="horizontal" size="md" showBeta />
+              <BrandLogo
+                variant="horizontal"
+                size={showInlineCollapseToggle ? 'sm' : 'md'}
+                showBeta
+              />
             )}
 
-            {!isCollapsed && showInlineCollapseToggle && (
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                aria-label="Recolher sidebar"
-                title="Recolher sidebar"
-                className="rounded-control p-1 text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary"
-              >
-                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
+            <div className="flex shrink-0 items-center gap-1">
+              <NotificationsBell
+                placement="right-start"
+                compact={isCollapsed}
+                disableStandaloneAutoFetch={!hasNotificationsContext}
+              />
+
+              {!isCollapsed && showInlineCollapseToggle && (
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  aria-label="Recolher sidebar"
+                  title="Recolher sidebar"
+                  className="rounded-control p-1 text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary"
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Lista de Itens Líquidos */}

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { AuthProvider } from '@/contexts/auth-context';
+import { NotificationsProvider } from '@/contexts/notifications-context';
 import { SidebarProvider } from '@/contexts/sidebar-context';
 import { ToastProvider } from '@/contexts/toast-context';
 import { ToastViewport } from '@/components/ui/Toast';
@@ -10,10 +11,12 @@ export function AppProviders({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <ToastProvider>
       <AuthProvider>
-        <SidebarProvider>
-          {children}
-          <ToastViewport />
-        </SidebarProvider>
+        <NotificationsProvider>
+          <SidebarProvider>
+            {children}
+            <ToastViewport />
+          </SidebarProvider>
+        </NotificationsProvider>
       </AuthProvider>
     </ToastProvider>
   );
