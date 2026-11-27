@@ -6,37 +6,53 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  Eye,
   Film,
-  Gamepad2,
-  Heart,
+  FolderKanban,
   Settings,
   UserX,
 } from 'lucide-react';
+import { ProfileClipCard } from '@/components/profile/ProfileClipCard';
+import {
+  ProfileCollectionsSection,
+  type ProfileCollectionsLoadState,
+} from '@/components/profile/ProfileCollectionsSection';
 import { BrandLogo } from '@/components/ui/BrandLogo';
 import { Button } from '@/components/ui/Button';
 import { DiscordBadge } from '@/components/ui/DiscordBadge';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useAuth } from '@/hooks/useAuth';
 import { ApiClientError } from '@/lib/api-client';
-import { formatDurationBadge } from '@/lib/validators';
+import { normalizeCollectionVisibility } from '@/lib/collection-privacy';
 import { userService } from '@/services/user-service';
-import { getClipShareSlug, type ClipSummary } from '@/types/clip';
+import type { ClipSummary } from '@/types/clip';
+import type { Collection } from '@/types/collection';
 import { getUserDisplayName, type PublicUserProfile } from '@/types/user';
 
 type ProfileLoadState = 'loading' | 'ready' | 'not_found' | 'error';
+type ProfileTabId = 'clips' | 'collections';
 
 const CLIPS_PAGE_SIZE = 12;
+const COLLECTIONS_PAGE_SIZE = 12;
 
 export function PublicProfileView({ username }: Readonly<{ username: string }>) {
   const { user: currentUser, isLoading: isAuthLoading } = useAuth();
 
   const [loadState, setLoadState] = useState<ProfileLoadState>('loading');
   const [profile, setProfile] = useState<PublicUserProfile | null>(null);
+  const [activeTab, setActiveTab] = useState<ProfileTabId>('clips');
+
   const [clips, setClips] = useState<ClipSummary[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [collectionsLoadState, setCollectionsLoadState] =
+    useState<ProfileCollectionsLoadState>('idle');
+  const [collectionsPage, setCollectionsPage] = useState(1);
+  const [collectionsTotalPages, setCollectionsTotalPages] = useState(1);
+  const [collectionsTotal, setCollectionsTotal] = useState<number | null>(null);
+  const [collectionsError, setCollectionsError] = useState<string | null>(null);
 
   const fetchProfileAndClips = useCallback(async () => {
     setLoadState('loading');
@@ -83,9 +99,58 @@ export function PublicProfileView({ username }: Readonly<{ username: string }>) 
     normalizedCurrentUsername && normalizedCurrentUsername === normalizedProfileUsername,
   );
 
+  const globalVisibility = normalizeCollectionVisibility(profile?.collections_visibility);
+  const canShowCollectionsTab = isOwnProfile || globalVisibility !== 'private';
+  const isAnonymousFriendsGate = !isOwnProfile && !currentUser && globalVisibility === 'friends';
+  const resolvedTab: ProfileTabId =
+    activeTab === 'collections' && canShowCollectionsTab ? 'collections' : 'clips';
+
+  const fetchProfileCollections = useCallback(async () => {
+    setCollectionsLoadState('loading');
+    setCollectionsError(null);
+
+    try {
+      const res = await userService.listUserCollections(username, {
+        page: collectionsPage,
+        page_size: COLLECTIONS_PAGE_SIZE,
+      });
+      setCollections(res.items);
+      setCollectionsTotal(res.total);
+      setCollectionsTotalPages(Math.max(1, res.total_pages));
+      setCollectionsLoadState('ready');
+    } catch (err: unknown) {
+      setCollections([]);
+      setCollectionsError(
+        err instanceof ApiClientError
+          ? err.message
+          : 'Não foi possível carregar as coleções deste perfil.',
+      );
+      setCollectionsLoadState('error');
+    }
+  }, [username, collectionsPage]);
+
+  useEffect(() => {
+    if (
+      loadState === 'ready' &&
+      resolvedTab === 'collections' &&
+      canShowCollectionsTab &&
+      !isAnonymousFriendsGate
+    ) {
+      void fetchProfileCollections();
+    }
+  }, [
+    loadState,
+    resolvedTab,
+    canShowCollectionsTab,
+    isAnonymousFriendsGate,
+    fetchProfileCollections,
+  ]);
+
   const clipsCount = profile?.stats?.clips_count ?? profile?.clips_count ?? clips.length;
   const totalViews = profile?.stats?.total_views ?? profile?.total_views ?? 0;
   const totalLikes = profile?.stats?.total_likes ?? profile?.total_likes ?? 0;
+  const collectionsCount =
+    collectionsTotal ?? profile?.stats?.collections_count ?? profile?.collections_count ?? 0;
 
   return (
     <main className="min-h-screen bg-bg-deep px-4 py-8 text-text-primary md:px-8">
@@ -228,101 +293,154 @@ export function PublicProfileView({ username }: Readonly<{ username: string }>) 
               </div>
             </section>
 
-            {/* Listagem de Clipes Públicos do Usuário */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between border-b border-border-muted pb-3">
-                <h2 className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
-                  CLIPES DE @{profile.username}
-                </h2>
+            {/* Barra de Abas: Clipes & Coleções */}
+            <div
+              role="tablist"
+              aria-label="Seções do perfil"
+              className="flex flex-wrap gap-2 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-2"
+            >
+              <button
+                type="button"
+                role="tab"
+                id="profile-tab-clips"
+                aria-selected={resolvedTab === 'clips'}
+                aria-controls="profile-tabpanel-clips"
+                onClick={() => setActiveTab('clips')}
+                className={`inline-flex min-w-fit flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-card border px-4 py-2.5 font-mono text-mono-body transition-colors sm:flex-none ${
+                  resolvedTab === 'clips'
+                    ? 'border-success bg-bg-deep font-semibold text-text-primary'
+                    : 'border-transparent bg-transparent text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
+                }`}
+              >
+                <Film
+                  className={`h-4 w-4 shrink-0 ${
+                    resolvedTab === 'clips' ? 'text-success' : 'text-text-muted'
+                  }`}
+                  aria-hidden="true"
+                />
+                <span>Clipes</span>
+                <span className="rounded-control border border-border-muted bg-bg-surface px-1.5 py-0.5 font-mono text-mono-badge text-text-secondary">
+                  {clipsCount}
+                </span>
+              </button>
 
-                {totalPages > 1 && (
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-mono-badge text-text-muted">
-                      Página {page} de {totalPages}
+              {canShowCollectionsTab && (
+                <button
+                  type="button"
+                  role="tab"
+                  id="profile-tab-collections"
+                  aria-selected={resolvedTab === 'collections'}
+                  aria-controls="profile-tabpanel-collections"
+                  onClick={() => setActiveTab('collections')}
+                  className={`inline-flex min-w-fit flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-card border px-4 py-2.5 font-mono text-mono-body transition-colors sm:flex-none ${
+                    resolvedTab === 'collections'
+                      ? 'border-success bg-bg-deep font-semibold text-text-primary'
+                      : 'border-transparent bg-transparent text-text-secondary hover:bg-bg-elevated hover:text-text-primary'
+                  }`}
+                >
+                  <FolderKanban
+                    className={`h-4 w-4 shrink-0 ${
+                      resolvedTab === 'collections' ? 'text-success' : 'text-text-muted'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <span>Coleções</span>
+                  {!isAnonymousFriendsGate && (
+                    <span className="rounded-control border border-border-muted bg-bg-surface px-1.5 py-0.5 font-mono text-mono-badge text-text-secondary">
+                      {collectionsCount}
                     </span>
-                    <button
-                      type="button"
-                      disabled={page <= 1}
-                      onClick={() => setPage((p) => p - 1)}
-                      aria-label="Página anterior de clipes"
-                      className="flex h-8 w-8 items-center justify-center rounded-control border border-border-muted bg-bg-surface text-text-secondary hover:border-success hover:text-text-primary disabled:opacity-45"
-                    >
-                      <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={page >= totalPages}
-                      onClick={() => setPage((p) => p + 1)}
-                      aria-label="Próxima página de clipes"
-                      className="flex h-8 w-8 items-center justify-center rounded-control border border-border-muted bg-bg-surface text-text-secondary hover:border-success hover:text-text-primary disabled:opacity-45"
-                    >
-                      <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                    </button>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {resolvedTab === 'clips' ? (
+              <section
+                id="profile-tabpanel-clips"
+                role="tabpanel"
+                aria-labelledby="profile-tab-clips"
+                className="space-y-4"
+              >
+                <div className="flex items-center justify-between border-b border-border-muted pb-3">
+                  <h2 className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
+                    CLIPES DE @{profile.username}
+                  </h2>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-mono-badge text-text-muted">
+                        Página {page} de {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={page <= 1}
+                        onClick={() => setPage((p) => p - 1)}
+                        aria-label="Página anterior de clipes"
+                        className="flex h-8 w-8 items-center justify-center rounded-control border border-border-muted bg-bg-surface text-text-secondary hover:border-success hover:text-text-primary disabled:opacity-45"
+                      >
+                        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={page >= totalPages}
+                        onClick={() => setPage((p) => p + 1)}
+                        aria-label="Próxima página de clipes"
+                        className="flex h-8 w-8 items-center justify-center rounded-control border border-border-muted bg-bg-surface text-text-secondary hover:border-success hover:text-text-primary disabled:opacity-45"
+                      >
+                        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {clips.length === 0 ? (
+                  <div className="flex flex-col items-center gap-3 rounded-bento border-[1.5px] border-dashed border-border-muted bg-bg-surface p-10 text-center">
+                    <Film className="h-10 w-10 text-text-muted" aria-hidden="true" />
+                    <div className="space-y-1">
+                      <h3 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+                        NENHUM CLIPE PÚBLICO ENCONTRADO
+                      </h3>
+                      <p className="font-mono text-mono-meta text-text-secondary">
+                        Este jogador ainda não publicou clipes públicos.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    data-testid="public-profile-clips-grid"
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  >
+                    {clips.map((clip) => (
+                      <ProfileClipCard
+                        key={clip.id}
+                        id={clip.id}
+                        slug={clip.slug}
+                        title={clip.title}
+                        thumbnailUrl={clip.thumbnail_url}
+                        durationSeconds={clip.duration_seconds}
+                        viewsCount={clip.views_count}
+                        likesCount={clip.likes_count}
+                        gameName={clip.game.name}
+                      />
+                    ))}
                   </div>
                 )}
-              </div>
-
-              {clips.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 rounded-bento border-[1.5px] border-dashed border-border-muted bg-bg-surface p-10 text-center">
-                  <Film className="h-10 w-10 text-text-muted" aria-hidden="true" />
-                  <div className="space-y-1">
-                    <h3 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
-                      NENHUM CLIPE PÚBLICO ENCONTRADO
-                    </h3>
-                    <p className="font-mono text-mono-meta text-text-secondary">
-                      Este jogador ainda não publicou clipes públicos.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  data-testid="public-profile-clips-grid"
-                  className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-                >
-                  {clips.map((clip) => (
-                    <Link
-                      key={clip.id}
-                      href={`/c/${getClipShareSlug(clip)}`}
-                      className="group flex flex-col overflow-hidden rounded-card border border-border-muted bg-bg-surface transition-colors hover:border-success"
-                    >
-                      <div className="relative aspect-video w-full overflow-hidden bg-bg-deep">
-                        <img
-                          src={clip.thumbnail_url}
-                          alt={`Miniatura de ${clip.title}`}
-                          className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
-                        />
-                        <span className="absolute bottom-2 right-2 rounded-control bg-bg-deep/90 px-2 py-0.5 font-mono text-mono-badge text-text-primary">
-                          {formatDurationBadge(clip.duration_seconds)}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-1 flex-col justify-between gap-3 p-4">
-                        <div className="space-y-1.5">
-                          <span className="inline-flex items-center gap-1 rounded-control border border-border-muted bg-bg-deep px-2 py-0.5 font-mono text-mono-badge uppercase text-success">
-                            <Gamepad2 className="h-3 w-3" aria-hidden="true" />
-                            {clip.game.name}
-                          </span>
-                          <h3 className="line-clamp-2 font-mono text-mono-body font-semibold text-text-primary group-hover:text-success">
-                            {clip.title}
-                          </h3>
-                        </div>
-
-                        <div className="flex items-center justify-between border-t border-border-muted pt-2.5 font-mono text-mono-badge text-text-muted">
-                          <span className="inline-flex items-center gap-1">
-                            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-                            {clip.views_count} views
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-danger">
-                            <Heart className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
-                            {clip.likes_count}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </section>
+              </section>
+            ) : (
+              <ProfileCollectionsSection
+                username={profile.username}
+                isOwnProfile={isOwnProfile}
+                isAuthenticated={Boolean(currentUser)}
+                globalVisibility={globalVisibility}
+                loadState={collectionsLoadState}
+                collections={collections}
+                page={collectionsPage}
+                totalPages={collectionsTotalPages}
+                errorMessage={collectionsError}
+                onPageChange={setCollectionsPage}
+                onRetry={() => void fetchProfileCollections()}
+              />
+            )}
           </>
         )}
       </div>

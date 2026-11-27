@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Link2, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Link2, Lock, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { LiquidSidebar, type DashboardSection } from '@/components/dashboard/LiquidSidebar';
 import { ConnectionsSettingsTab } from '@/components/settings/ConnectionsSettingsTab';
+import { PrivacySettingsTab } from '@/components/settings/PrivacySettingsTab';
 import { ProfileSettingsTab } from '@/components/settings/ProfileSettingsTab';
 import { SecurityTwoFactorTab } from '@/components/settings/SecurityTwoFactorTab';
 import { useSidebarState } from '@/contexts/sidebar-context';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
 
-export type SettingsTabId = 'profile' | 'connections' | 'security';
+export type SettingsTabId = 'profile' | 'privacy' | 'connections' | 'security';
 
 interface SettingsTabConfig {
   id: SettingsTabId;
@@ -21,12 +22,18 @@ interface SettingsTabConfig {
 
 const SETTINGS_TABS: readonly SettingsTabConfig[] = [
   { id: 'profile', label: 'Perfil', Icon: UserIcon },
+  { id: 'privacy', label: 'Privacidade', Icon: Lock },
   { id: 'connections', label: 'Conexões', Icon: Link2 },
   { id: 'security', label: 'Segurança (2FA)', Icon: ShieldCheck },
 ] as const;
 
 function resolveInitialTab(param: string | null): SettingsTabId {
-  if (param === 'connections' || param === 'security' || param === 'profile') {
+  if (
+    param === 'privacy' ||
+    param === 'connections' ||
+    param === 'security' ||
+    param === 'profile'
+  ) {
     return param;
   }
   return 'profile';
@@ -105,7 +112,8 @@ export function UserSettingsWorkspace() {
                 CONFIGURAÇÕES DA CONTA
               </h1>
               <p className="font-mono text-mono-meta text-text-secondary">
-                Gerencie seu perfil público, vínculo com o Discord e autenticação em duas etapas.
+                Gerencie seu perfil público, privacidade de coleções, vínculo com o Discord e
+                autenticação em duas etapas.
               </p>
             </div>
 
@@ -152,6 +160,8 @@ export function UserSettingsWorkspace() {
 
           {/* Conteúdo da Aba Selecionada */}
           {activeTab === 'profile' && <ProfileSettingsTab user={user} onUserUpdated={updateUser} />}
+
+          {activeTab === 'privacy' && <PrivacySettingsTab user={user} onUserUpdated={updateUser} />}
 
           {activeTab === 'connections' && (
             <ConnectionsSettingsTab user={user} onUserUpdated={updateUser} />

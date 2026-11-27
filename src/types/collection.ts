@@ -3,6 +3,8 @@ import type {
   CollectionClipItem,
   CollectionDetail,
   CollectionOwnerSummary,
+  CollectionPrivacy,
+  CollectionVisibility,
   PaginatedResponse,
   PrivacyLevel,
 } from '@/types/api';
@@ -12,6 +14,8 @@ export type {
   CollectionClipItem,
   CollectionDetail,
   CollectionOwnerSummary,
+  CollectionPrivacy,
+  CollectionVisibility,
   PaginatedResponse,
   PrivacyLevel,
 };
@@ -26,14 +30,16 @@ export interface ListCollectionsParams {
 export interface CreateCollectionRequest {
   title: string;
   description?: string | null;
-  privacy: PrivacyLevel;
+  privacy: CollectionVisibility;
+  show_on_profile?: boolean;
   accent_color?: string | null;
 }
 
 export interface UpdateCollectionRequest {
   title?: string;
   description?: string | null;
-  privacy?: PrivacyLevel;
+  privacy?: CollectionVisibility;
+  show_on_profile?: boolean;
   accent_color?: string | null;
 }
 

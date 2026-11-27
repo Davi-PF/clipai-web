@@ -1,8 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, FolderKanban, Globe, Link2, Plus, Users } from 'lucide-react';
-import type { Collection, PrivacyLevel } from '@/types/collection';
+import {
+  ChevronLeft,
+  ChevronRight,
+  FolderKanban,
+  Globe,
+  Link2,
+  Lock,
+  Plus,
+  Users,
+} from 'lucide-react';
+import type { Collection, CollectionPrivacy } from '@/types/collection';
 
 export interface CollectionsFanWidgetProps {
   collections: Collection[];
@@ -12,9 +21,10 @@ export interface CollectionsFanWidgetProps {
   onSelectCollection: (collection: Collection) => void;
 }
 
-const PRIVACY_ICONS: Record<PrivacyLevel, typeof Globe> = {
+const PRIVACY_ICONS: Record<CollectionPrivacy, typeof Globe> = {
   public: Globe,
   friends: Users,
+  private: Lock,
   unlisted: Link2,
 };
 
