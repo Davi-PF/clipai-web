@@ -295,6 +295,10 @@ export function BentoDashboardWorkspace() {
   );
 
   const handleSelectSection = (section: DashboardSection) => {
+    if (section === 'friends') {
+      router.push('/friends');
+      return;
+    }
     if (section === 'settings') {
       router.push('/settings');
       return;

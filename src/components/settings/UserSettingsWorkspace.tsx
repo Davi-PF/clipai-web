@@ -64,6 +64,10 @@ export function UserSettingsWorkspace() {
     if (section === 'settings') {
       return;
     }
+    if (section === 'friends') {
+      router.push('/friends');
+      return;
+    }
     if (section === 'studio') {
       router.push('/studio');
       return;
