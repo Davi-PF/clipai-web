@@ -34,8 +34,42 @@ const PERIOD_OPTIONS: readonly { id: AnalyticsPeriod; label: string }[] = [
   { id: 'all', label: 'TUDO' },
 ] as const;
 
-const STUDIO_PAGE_SIZE = 10;
+export const ITEMS_PER_PAGE = 5;
 const SEARCH_DEBOUNCE_MS = 300;
+
+interface StudioClipsPageResult {
+  items: CreatorClipAnalyticsItem[];
+  totalPages: number;
+  safePage: number;
+}
+
+export function resolveStudioClipsPage(params: {
+  rawItems: readonly CreatorClipAnalyticsItem[];
+  apiTotalPages: number;
+  page: number;
+  pageSize?: number;
+}): StudioClipsPageResult {
+  const pageSize = Math.max(1, params.pageSize ?? ITEMS_PER_PAGE);
+
+  if (params.rawItems.length > pageSize) {
+    const totalPages = Math.max(1, Math.ceil(params.rawItems.length / pageSize));
+    const safePage = Math.min(Math.max(1, params.page), totalPages);
+    const startIndex = (safePage - 1) * pageSize;
+    return {
+      items: params.rawItems.slice(startIndex, startIndex + pageSize),
+      totalPages,
+      safePage,
+    };
+  }
+
+  const totalPages = Math.max(1, params.apiTotalPages);
+  const safePage = Math.min(Math.max(1, params.page), totalPages);
+  return {
+    items: [...params.rawItems],
+    totalPages,
+    safePage,
+  };
+}
 
 export function CreatorStudioWorkspace() {
   const router = useRouter();
@@ -72,12 +106,16 @@ export function CreatorStudioWorkspace() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
+    const trimmed = searchInput.trim();
+    if (trimmed === debouncedQuery) {
+      return;
+    }
     const timer = setTimeout(() => {
-      setDebouncedQuery(searchInput.trim());
+      setDebouncedQuery(trimmed);
       setPage(1);
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, debouncedQuery]);
 
   const loadOverview = useCallback(async () => {
     setIsLoadingOverview(true);
@@ -102,11 +140,20 @@ export function CreatorStudioWorkspace() {
         period,
         sort: sortBy,
         page,
-        page_size: STUDIO_PAGE_SIZE,
+        page_size: ITEMS_PER_PAGE,
       });
-      setClips(res.items);
-      setTotalPages(Math.max(1, res.total_pages));
-      const firstClipId = res.items[0]?.id ?? null;
+      const resolved = resolveStudioClipsPage({
+        rawItems: res.items,
+        apiTotalPages: res.total_pages,
+        page,
+        pageSize: ITEMS_PER_PAGE,
+      });
+      setClips(resolved.items);
+      setTotalPages(resolved.totalPages);
+      if (resolved.safePage !== page) {
+        setPage(resolved.safePage);
+      }
+      const firstClipId = resolved.items[0]?.id ?? null;
       setSelectedClipId((prev) => prev ?? firstClipId);
     } catch {
       setClips([]);
@@ -231,7 +278,10 @@ export function CreatorStudioWorkspace() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg-deep text-text-primary md:flex-row">
+    <div
+      data-testid="studio-layout-shell"
+      className="flex min-h-dvh flex-col bg-bg-deep text-text-primary md:h-dvh md:flex-row md:overflow-hidden"
+    >
       <LiquidSidebar
         activeSection="studio"
         onSelectSection={handleSelectSection}
@@ -244,7 +294,10 @@ export function CreatorStudioWorkspace() {
         onLogout={() => void handleLogout()}
       />
 
-      <main className="min-w-0 flex-1 p-4 pb-24 md:p-6">
+      <main
+        data-testid="studio-main-content"
+        className="custom-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto p-4 pb-24 md:p-6"
+      >
         <div className="mx-auto max-w-[1440px] space-y-5">
           {/* Cabeçalho do Estúdio */}
           <header className="flex flex-col justify-between gap-4 rounded-bento border-[1.5px] border-border-muted bg-bg-surface p-5 md:flex-row md:items-center">
@@ -253,7 +306,7 @@ export function CreatorStudioWorkspace() {
                 <BarChart3 className="h-5 w-5 text-success" aria-hidden="true" />
               </span>
               <div>
-                <h1 className="font-display text-display-hero uppercase tracking-[0.06em] text-text-primary">
+                <h1 className="font-display text-display-hero uppercase text-text-primary">
                   ESTÚDIO DO CRIADOR
                 </h1>
                 <p className="font-mono text-mono-meta text-text-secondary">

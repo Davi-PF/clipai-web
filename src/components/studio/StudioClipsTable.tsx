@@ -66,7 +66,7 @@ function StudioClipsEmptyState({
     >
       <Film className="h-10 w-10 text-text-muted" aria-hidden="true" />
       <div className="space-y-1">
-        <h3 className="font-display text-display-md uppercase tracking-[0.06em] text-text-primary">
+        <h3 className="font-display text-display-md uppercase text-text-primary">
           {hasFilters ? 'NENHUM CLIPE ENCONTRADO NESTE FILTRO' : 'VOCÊ AINDA NÃO ENVIOU CLIPES'}
         </h3>
         <p className="font-mono text-mono-meta text-text-secondary">
@@ -121,7 +121,7 @@ function StudioClipsTableBody({
   if (isLoading) {
     return (
       <div aria-busy="true" aria-label="Carregando lista de clipes" className="mt-4 space-y-3">
-        {[1, 2, 3, 4].map((row) => (
+        {[1, 2, 3, 4, 5].map((row) => (
           <div
             key={row}
             className="h-20 w-full animate-pulse rounded-card border border-border-muted bg-bg-elevated"
@@ -356,6 +356,7 @@ export function StudioClipsTable({
 }: Readonly<StudioClipsTableProps>) {
   const hasFilters = Boolean(searchValue.trim() || privacyFilter !== 'all');
   const safeTotalPages = Math.max(1, totalPages);
+  const safePage = Math.min(Math.max(1, page), safeTotalPages);
 
   return (
     <section
@@ -366,7 +367,7 @@ export function StudioClipsTable({
       {/* Cabeçalho e barra de filtros */}
       <div className="flex flex-col justify-between gap-4 border-b border-border-muted pb-4 lg:flex-row lg:items-center">
         <div>
-          <h2 className="font-display text-display-lg uppercase tracking-[0.06em] text-text-primary">
+          <h2 className="font-display text-display-lg uppercase text-text-primary">
             MEUS CLIPES &amp; DESEMPENHO
           </h2>
           <p className="font-mono text-mono-meta text-text-secondary">
@@ -433,26 +434,29 @@ export function StudioClipsTable({
 
       {/* Paginação */}
       {safeTotalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between border-t border-border-muted pt-3.5 font-mono text-mono-badge text-text-muted">
+        <div
+          data-testid="studio-clips-pagination"
+          className="mt-4 flex items-center justify-between border-t border-border-muted pt-3.5 font-mono text-mono-badge text-text-muted"
+        >
           <span>
-            Página {page} de {safeTotalPages}
+            Página {safePage} de {safeTotalPages}
           </span>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
-              disabled={page <= 1 || isLoading}
-              onClick={() => onPageChange(page - 1)}
+              disabled={safePage <= 1 || isLoading}
+              onClick={() => onPageChange(safePage - 1)}
               aria-label="Página anterior do estúdio"
-              className="flex h-8 w-8 items-center justify-center rounded-control border border-border-muted bg-bg-elevated text-text-secondary hover:border-success hover:text-text-primary disabled:opacity-45"
+              className="flex h-8 w-8 items-center justify-center rounded-control border border-border-muted bg-bg-elevated text-text-secondary transition-colors hover:border-success hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             </button>
             <button
               type="button"
-              disabled={page >= safeTotalPages || isLoading}
-              onClick={() => onPageChange(page + 1)}
+              disabled={safePage >= safeTotalPages || isLoading}
+              onClick={() => onPageChange(safePage + 1)}
               aria-label="Próxima página do estúdio"
-              className="flex h-8 w-8 items-center justify-center rounded-control border border-border-muted bg-bg-elevated text-text-secondary hover:border-success hover:text-text-primary disabled:opacity-45"
+              className="flex h-8 w-8 items-center justify-center rounded-control border border-border-muted bg-bg-elevated text-text-secondary transition-colors hover:border-success hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-45"
             >
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>
