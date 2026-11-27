@@ -229,7 +229,8 @@ Autentica o usuário. Quando `is_2fa_enabled = false`, retorna o `access_token` 
     "discord_username": null,
     "is_email_verified": true,
     "is_2fa_enabled": false,
-    "has_password": true
+    "has_password": true,
+    "collections_visibility": "public"
   }
 }
 ```
@@ -253,7 +254,8 @@ Autentica o usuário. Quando `is_2fa_enabled = false`, retorna o `access_token` 
     "discord_username": "fallen_disc",
     "is_email_verified": true,
     "is_2fa_enabled": true,
-    "has_password": true
+    "has_password": true,
+    "collections_visibility": "public"
   }
 }
 ```
@@ -454,6 +456,7 @@ Retorna os dados completos do perfil do usuário autenticado, com `display_name`
   "avatar_source": "custom",
   "has_custom_avatar": true,
   "bio": "AWPer e criador de conteúdo.",
+  "collections_visibility": "public",
   "discord_linked": true,
   "discord_username": "fallen_disc",
   "discord_avatar_url": "https://cdn.discordapp.com/avatars/123456789/abcdef.png?size=256",
@@ -466,14 +469,15 @@ Retorna os dados completos do perfil do usuário autenticado, com `display_name`
 ```
 
 ### 5.2. `PATCH /api/v1/users/me`
-Atualiza `display_name` (até 50 caracteres), `bio` (até 240 caracteres) e `avatar_source` (`custom`, `discord` ou `none`) do usuário autenticado.
+Atualiza `display_name` (até 50 caracteres), `bio` (até 240 caracteres), `avatar_source` (`custom`, `discord` ou `none`) e `collections_visibility` (`public`, `friends` ou `private` — Teto Global de visibilidade de coleções no perfil) do usuário autenticado.
 - **Auth:** Bearer JWT obrigatório
 - **Request Body:**
 ```json
 {
   "display_name": "FalleN",
   "bio": "Professor do CS2.",
-  "avatar_source": "custom"
+  "avatar_source": "custom",
+  "collections_visibility": "friends"
 }
 ```
 - **Response `200 OK`:** Objeto `UserMeResponse` atualizado.
@@ -534,8 +538,8 @@ Lista paginada dos clipes favoritados pelo usuário autenticado.
 - **Response `200 OK`:** Envelope paginado contendo objetos `ClipSummaryResponse`.
 
 ### 5.8. `GET /api/v1/users/{username}`
-Retorna o perfil público de um usuário pelo `username`, incluindo `avatar_url` resolvida, indicador de vínculo com o Discord e estatísticas públicas básicas.
-- **Auth:** Público
+Retorna o perfil público de um usuário pelo `username`, incluindo `avatar_url` resolvida, indicador de vínculo com o Discord, `collections_visibility` (Teto Global do perfil) e estatísticas básicas (com `collections_count` calculado conforme as coleções marcadas com `show_on_profile = true` visíveis para o visitante atual).
+- **Auth:** Opcional (Bearer JWT ajusta `collections_count` para refletir a visibilidade efetiva do visitante autenticado ou do próprio dono)
 - **Response `200 OK` (`UserPublicResponse`):**
 ```json
 {
@@ -547,6 +551,7 @@ Retorna o perfil público de um usuário pelo `username`, incluindo `avatar_url`
   "avatar_source": "custom",
   "discord_linked": true,
   "discord_username": "fallen_disc",
+  "collections_visibility": "public",
   "stats": {
     "clips_count": 12,
     "total_views": 1840,
@@ -926,14 +931,20 @@ Registra ou atualiza de forma idempotente (upsert por `(clip_id, session_token)`
 
 ## 8. Endpoints — Coleções (`/api/v1/collections`)
 
+> **Regra de Privacidade em Dois Níveis (Teto Global / Master Switch):**
+> A visibilidade efetiva de uma coleção é sempre a opção mais restritiva entre o teto global do dono (`users.collections_visibility`) e a privacidade individual da coleção (`collections.privacy`), seguindo o ranking `private (0) < friends (1) < public (2)`:
+> `effective_privacy = min(user.collections_visibility, collection.privacy)`.
+> - Além do teto global, apenas coleções com `show_on_profile = true` (e `privacy != 'unlisted'`) aparecem na vitrine do perfil `GET /api/v1/users/{username}/collections`.
+> - O dono autenticado sempre visualiza suas próprias coleções (inclusive `private`).
+
 ### 8.1. `GET /api/v1/collections`
-Lista coleções acessíveis ao usuário (com `mine=true` para gerenciar as próprias), incluindo contagem de clipes e até 4 thumbnails de preview.
+Lista coleções acessíveis ao usuário (com `mine=true` para gerenciar as próprias), respeitando o Teto Global de cada dono e incluindo contagem de clipes visíveis, `cover_thumbnail_url` e até 4 thumbnails de preview.
 - **Auth:** Opcional (obrigatório quando `mine=true`)
 - **Query Params:** `mine` (default `false`), `author` (opcional), `page`, `page_size`
 - **Response `200 OK`:** Envelope paginado de `CollectionSummaryResponse`.
 
 ### 8.2. `POST /api/v1/collections`
-Cria uma nova coleção (playlist) de clipes. Aceita `title` (ou alias `name`), `description`, `privacy` e `accent_color` (`#RRGGBB` opcional).
+Cria uma nova coleção (playlist) de clipes. Aceita `title` (ou alias `name`), `description`, `privacy` (`public`, `friends` ou `private`; `unlisted` mantido apenas para compatibilidade legada), `show_on_profile` (`boolean`, padrão `false`) e `accent_color` (`#RRGGBB` opcional).
 - **Auth:** Bearer JWT obrigatório (`is_email_verified = true`)
 - **Request Body:**
 ```json
@@ -941,6 +952,7 @@ Cria uma nova coleção (playlist) de clipes. Aceita `title` (ou alias `name`), 
   "title": "Melhores Clutches de CS2",
   "description": "Compilado de rounds 1vX.",
   "privacy": "public",
+  "show_on_profile": true,
   "accent_color": "#2EB886"
 }
 ```
@@ -949,10 +961,14 @@ Cria uma nova coleção (playlist) de clipes. Aceita `title` (ou alias `name`), 
 {
   "id": "c3d4e5f6-1111-2222-3333-444455556666",
   "title": "Melhores Clutches de CS2",
+  "name": "Melhores Clutches de CS2",
   "description": "Compilado de rounds 1vX.",
   "privacy": "public",
+  "effective_privacy": "public",
+  "show_on_profile": true,
   "accent_color": "#2EB886",
   "clips_count": 0,
+  "cover_thumbnail_url": null,
   "preview_thumbnails": [],
   "owner": {
     "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -965,22 +981,69 @@ Cria uma nova coleção (playlist) de clipes. Aceita `title` (ou alias `name`), 
 ```
 
 ### 8.3. `GET /api/v1/users/{username}/collections`
-Lista as coleções de um usuário (apenas `public` para visitantes; inclui `friends` para autenticados e `unlisted` para o próprio dono).
+Retorna a vitrine paginada de coleções de um usuário no perfil `/u/[username]` marcadas com `show_on_profile = true` (nunca lista registros legados `unlisted`), filtradas pela regra do **Teto Global** (`effective_privacy = min(owner.collections_visibility, collection.privacy)`) conforme o `current_user`:
+- **Visitante anônimo:** vê apenas coleções com `effective_privacy = 'public'`.
+- **Outro usuário autenticado (amigo):** vê coleções com `effective_privacy IN ('public', 'friends')`.
+- **Dono do perfil autenticado:** vê todas as suas coleções marcadas com `show_on_profile = true` (incluindo `private`).
+- **Teto Global `private`:** quando `owner.collections_visibility = 'private'` e o solicitante não for o dono, retorna lista vazia (`items: []`, `total: 0`) de forma segura.
 - **Auth:** Opcional
-- **Query Params:** `page`, `page_size`
-- **Response `200 OK`:** Envelope paginado de `CollectionSummaryResponse`.
+- **Query Params:** `page` (default `1`), `page_size` (default `20`, máx `50`)
+- **Response `200 OK`:** Envelope paginado de `CollectionSummaryResponse`:
+```json
+{
+  "items": [
+    {
+      "id": "c3d4e5f6-1111-2222-3333-444455556666",
+      "title": "Melhores Clutches de CS2",
+      "name": "Melhores Clutches de CS2",
+      "description": "Compilado de rounds 1vX.",
+      "privacy": "public",
+      "effective_privacy": "friends",
+      "show_on_profile": true,
+      "accent_color": "#2EB886",
+      "clips_count": 4,
+      "cover_thumbnail_url": "https://cdn.clipai.com.br/clips/550e.../9b1d.../thumb.webp",
+      "preview_thumbnails": [
+        "https://cdn.clipai.com.br/clips/550e.../9b1d.../thumb.webp"
+      ],
+      "owner": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "fallen_br",
+        "display_name": "FalleN",
+        "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400.webp",
+        "discord_linked": true,
+        "discord_username": "fallen_disc"
+      },
+      "created_at": "2026-11-21T22:10:00Z",
+      "updated_at": "2026-11-21T22:12:00Z"
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 1,
+  "total_pages": 1
+}
+```
+> Nota: `clips_count` contabiliza apenas clipes `status = 'ready'` visíveis ao solicitante, e `cover_thumbnail_url` corresponde à thumbnail do primeiro clipe visível (ordenado por `position ASC, added_at ASC`), ambos carregados em lote sem consultas N+1.
+- **Erros:** `404 RESOURCE_NOT_FOUND` (usuário inexistente ou inativo).
 
 ### 8.4. `GET /api/v1/collections/{collection_id}`
-Retorna os metadados da coleção e a lista paginada e ordenada de clipes `ready` pertencentes a ela.
-- **Auth:** Opcional (respeita `collection.privacy` e filtra os clipes internos conforme `clip.privacy`)
+Retorna os metadados da coleção e a lista paginada e ordenada de clipes `status = 'ready'` visíveis para o solicitante, aplicando a regra de acesso combinada (`effective_privacy`):
+- `private` (individual ou via Teto Global): retorna `403 FORBIDDEN` para qualquer solicitante que não seja o dono.
+- `friends` (individual ou via Teto Global): exige autenticação (`401 INVALID_TOKEN` para anônimos).
+- `public`: acessível a todos.
+- **Auth:** Opcional
 - **Query Params:** `page` (default `1`), `page_size` (default `20`, máx `50`)
 - **Response `200 OK`:**
 ```json
 {
   "id": "c3d4e5f6-1111-2222-3333-444455556666",
   "title": "Melhores Clutches de CS2",
+  "name": "Melhores Clutches de CS2",
   "description": "Compilado de rounds 1vX.",
   "privacy": "public",
+  "effective_privacy": "public",
+  "show_on_profile": true,
   "accent_color": "#2EB886",
   "clips_count": 1,
   "owner": {
@@ -1020,9 +1083,9 @@ Retorna os metadados da coleção e a lista paginada e ordenada de clipes `ready
 > **Restrição de Privacidade de Metadados Técnicos:** Assim como nos demais endpoints de clipes, `file_size_bytes` e `technical_metadata` em `clips[].clip` são preenchidos apenas para o proprietário de cada clipe e retornados como `null` para terceiros e visitantes anônimos.
 
 ### 8.5. `PATCH /api/v1/collections/{collection_id}`
-Atualiza título (`title`/`name`), descrição, cor de destaque (`accent_color`) ou privacidade da coleção.
+Atualiza título (`title`/`name`), descrição, cor de destaque (`accent_color`), privacidade (`public`, `friends` ou `private`) ou exibição na vitrine do perfil (`show_on_profile`).
 - **Auth:** Bearer JWT obrigatório (apenas o dono da coleção)
-- **Request Body:** `{ "title": "...", "description": "...", "privacy": "unlisted", "accent_color": "#E8B04B" }`
+- **Request Body:** `{ "title": "...", "description": "...", "privacy": "private", "show_on_profile": true, "accent_color": "#E8B04B" }`
 - **Response `200 OK`:** `CollectionSummaryResponse` atualizado.
 
 ### 8.6. `DELETE /api/v1/collections/{collection_id}`
