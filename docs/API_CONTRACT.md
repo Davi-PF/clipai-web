@@ -132,7 +132,7 @@ Verifica a disponibilidade da API e a conectividade com o PostgreSQL.
 ## 4. Endpoints — Autenticação (`/api/v1/auth`)
 
 ### 4.1. `POST /api/v1/auth/register`
-Registra um novo usuário e dispara o e-mail de confirmação via Resend.
+Registra um novo usuário e dispara o e-mail de confirmação via Resend. Se `invite_code` opcional for informado e corresponder a um usuário ativo, cria automaticamente uma amizade com `status = "accepted"` e gera uma notificação `friend_accepted` para quem convidou (códigos inexistentes são ignorados sem impedir o cadastro).
 - **Auth:** Público (Rate limit: 5 req/min por IP)
 - **Request Body:**
 ```json
@@ -140,7 +140,8 @@ Registra um novo usuário e dispara o e-mail de confirmação via Resend.
   "username": "fallen_br",
   "email": "gabriel@exemplo.com.br",
   "password": "StrongPassword!2026",
-  "display_name": "Gabriel Toledo"
+  "display_name": "Gabriel Toledo",
+  "invite_code": "xK9mP2qR7zAb"
 }
 ```
 - **Response `201 Created`:**
@@ -537,9 +538,36 @@ Lista paginada dos clipes favoritados pelo usuário autenticado.
 - **Query Params:** `page`, `page_size`
 - **Response `200 OK`:** Envelope paginado contendo objetos `ClipSummaryResponse`.
 
+### 5.7.1. `GET /api/v1/users/search`
+Busca usuários ativos por `username`, `display_name` ou `discord_username` (case-insensitive, com suporte a prefixo `@`, excluindo o próprio usuário autenticado), retornando o estado de amizade em relação ao usuário atual sem consultas N+1.
+- **Auth:** Bearer JWT obrigatório
+- **Query Params:** `q` (obrigatório, 1..100 chars), `page` (default `1`), `page_size` (default `20`, máx `50`)
+- **Response `200 OK`:** Envelope paginado de `UserSearchItemResponse`:
+```json
+{
+  "items": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "username": "fallen_br",
+      "display_name": "FalleN",
+      "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400.webp",
+      "discord_linked": true,
+      "discord_username": "fallen_disc",
+      "friendship_status": "none",
+      "friendship_id": null
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 1,
+  "total_pages": 1
+}
+```
+> Valores de `friendship_status` na busca: `"none"` | `"pending_sent"` | `"pending_received"` | `"accepted"`.
+
 ### 5.8. `GET /api/v1/users/{username}`
-Retorna o perfil público de um usuário pelo `username`, incluindo `avatar_url` resolvida, indicador de vínculo com o Discord, `collections_visibility` (Teto Global do perfil) e estatísticas básicas (com `collections_count` calculado conforme as coleções marcadas com `show_on_profile = true` visíveis para o visitante atual).
-- **Auth:** Opcional (Bearer JWT ajusta `collections_count` para refletir a visibilidade efetiva do visitante autenticado ou do próprio dono)
+Retorna o perfil público de um usuário pelo `username`, incluindo `avatar_url` resolvida, indicador de vínculo com o Discord, `collections_visibility` (Teto Global do perfil), estado da amizade em relação ao visitante (`friendship_status` e `friendship_id`) e estatísticas básicas (com `collections_count` calculado conforme as coleções marcadas com `show_on_profile = true` visíveis para o visitante atual — exigindo amizade aceita para coleções com visibilidade efetiva `friends`).
+- **Auth:** Opcional (Bearer JWT calcula `friendship_status`, `friendship_id` e ajusta `collections_count`)
 - **Response `200 OK` (`UserPublicResponse`):**
 ```json
 {
@@ -552,6 +580,8 @@ Retorna o perfil público de um usuário pelo `username`, incluindo `avatar_url`
   "discord_linked": true,
   "discord_username": "fallen_disc",
   "collections_visibility": "public",
+  "friendship_status": "accepted",
+  "friendship_id": "a1b2c3d4-1111-2222-3333-444455556666",
   "stats": {
     "clips_count": 12,
     "total_views": 1840,
@@ -565,6 +595,7 @@ Retorna o perfil público de um usuário pelo `username`, incluindo `avatar_url`
   "created_at": "2026-11-21T22:00:00Z"
 }
 ```
+> Valores de `friendship_status` no perfil: `"self"` | `"none"` | `"pending_sent"` | `"pending_received"` | `"accepted"`.
 
 ### 5.9. `GET /api/v1/users/{username}/clips`
 Lista os clipes com `status = 'ready'` de um usuário. Se o solicitante for o próprio dono do perfil (autenticado via JWT), permite filtrar também seus clipes `unlisted` e `friends`; caso contrário, retorna apenas `privacy = 'public'`.
@@ -698,7 +729,7 @@ Cancela um upload ainda não finalizado (`status` `pending_upload` ou `failed`),
 ### 7.3. `GET /api/v1/clips`
 Lista paginada de clipes (`status = 'ready'`) com suporte a busca, filtros e regras de visibilidade:
 - **Anônimo:** retorna apenas `privacy = 'public'`.
-- **Autenticado:** retorna `public`, `friends` e os próprios clipes `unlisted`.
+- **Autenticado:** retorna `public`, clipes `friends` apenas de autores com amizade aceita (`friendships.status = 'accepted'`) e os próprios clipes (`public`, `friends`, `unlisted`).
 - **Com `mine=true` (autenticado obrigatório):** retorna todos os clipes `ready` do usuário autenticado (`public`, `friends` e `unlisted`).
 - **Auth:** Opcional (obrigatório quando `mine=true`)
 - **Query Params:**
@@ -780,7 +811,7 @@ Lista paginada de clipes (`status = 'ready'`) com suporte a busca, filtros e reg
 ### 7.4. `GET /api/v1/clips/{slug}` (também aceita `clip_id` UUID)
 Retorna os detalhes completos de um clipe (`status = 'ready'`), respeitando sua configuração de `privacy`:
 - `public` e `unlisted`: acessíveis por qualquer pessoa com o link.
-- `friends`: acessível apenas para usuários autenticados (`401 INVALID_TOKEN` para anônimos).
+- `friends`: acessível apenas para o **dono** ou usuários com amizade aceita (`friendships.status = 'accepted'`). Anônimos recebem `401 INVALID_TOKEN`; usuários logados não-amigos recebem `403 FORBIDDEN` (`"Este conteúdo é visível apenas para amigos."`).
 - Clipes `pending_upload` ou `failed` nunca são expostos para terceiros (`404 RESOURCE_NOT_FOUND`).
 - **Auth:** Opcional (obrigatório para visualizar clipes `friends`)
 - **Response `200 OK` (`ClipDetailResponse`):**
@@ -982,8 +1013,8 @@ Cria uma nova coleção (playlist) de clipes. Aceita `title` (ou alias `name`), 
 
 ### 8.3. `GET /api/v1/users/{username}/collections`
 Retorna a vitrine paginada de coleções de um usuário no perfil `/u/[username]` marcadas com `show_on_profile = true` (nunca lista registros legados `unlisted`), filtradas pela regra do **Teto Global** (`effective_privacy = min(owner.collections_visibility, collection.privacy)`) conforme o `current_user`:
-- **Visitante anônimo:** vê apenas coleções com `effective_privacy = 'public'`.
-- **Outro usuário autenticado (amigo):** vê coleções com `effective_privacy IN ('public', 'friends')`.
+- **Visitante anônimo ou usuário logado não-amigo:** vê apenas coleções com `effective_privacy = 'public'`.
+- **Amigo aceito (`friendships.status = 'accepted'`):** vê coleções com `effective_privacy IN ('public', 'friends')`.
 - **Dono do perfil autenticado:** vê todas as suas coleções marcadas com `show_on_profile = true` (incluindo `private`).
 - **Teto Global `private`:** quando `owner.collections_visibility = 'private'` e o solicitante não for o dono, retorna lista vazia (`items: []`, `total: 0`) de forma segura.
 - **Auth:** Opcional
@@ -1030,7 +1061,7 @@ Retorna a vitrine paginada de coleções de um usuário no perfil `/u/[username]
 ### 8.4. `GET /api/v1/collections/{collection_id}`
 Retorna os metadados da coleção e a lista paginada e ordenada de clipes `status = 'ready'` visíveis para o solicitante, aplicando a regra de acesso combinada (`effective_privacy`):
 - `private` (individual ou via Teto Global): retorna `403 FORBIDDEN` para qualquer solicitante que não seja o dono.
-- `friends` (individual ou via Teto Global): exige autenticação (`401 INVALID_TOKEN` para anônimos).
+- `friends` (individual ou via Teto Global): exige dono ou amizade aceita (`friendships.status = 'accepted'`). Anônimos recebem `401 INVALID_TOKEN`; usuários logados não-amigos recebem `403 FORBIDDEN` (`"Este conteúdo é visível apenas para amigos."`).
 - `public`: acessível a todos.
 - **Auth:** Opcional
 - **Query Params:** `page` (default `1`), `page_size` (default `20`, máx `50`)
@@ -1261,3 +1292,197 @@ Retorna a curva de retenção completa de 11 pontos (`0%` a `100%`), o ponto de 
 }
 ```
 > Quando `total_sessions == 0`, os 11 pontos de `curve` são retornados com `retention_pct: 0.0` e `sessions: 0`, e `biggest_drop_bucket_pct` é `null`.
+
+---
+
+## 10. Endpoints — Amizades (`/api/v1/friends`)
+
+### 10.1. `GET /api/v1/friends`
+Lista paginada dos amigos aceitos (`status = 'accepted'`) do usuário autenticado.
+- **Auth:** Bearer JWT obrigatório
+- **Query Params:** `page` (default `1`), `page_size` (default `20`, máx `50`)
+- **Response `200 OK`:** Envelope paginado de `FriendItemResponse`:
+```json
+{
+  "items": [
+    {
+      "friendship_id": "a1b2c3d4-1111-2222-3333-444455556666",
+      "since": "2026-11-27T15:00:00Z",
+      "user": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "fer_br",
+        "display_name": "Fernando Alvarenga",
+        "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400.webp",
+        "discord_linked": true,
+        "discord_username": "fer_god"
+      }
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 1,
+  "total_pages": 1
+}
+```
+
+### 10.2. `GET /api/v1/friends/requests`
+Lista todos os pedidos de amizade pendentes do usuário autenticado, separados em `received` (recebidos) e `sent` (enviados).
+- **Auth:** Bearer JWT obrigatório
+- **Response `200 OK` (`FriendRequestsResponse`):**
+```json
+{
+  "received": [
+    {
+      "friendship_id": "a1b2c3d4-1111-2222-3333-444455556666",
+      "direction": "received",
+      "created_at": "2026-11-27T14:55:00Z",
+      "user": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "fer_br",
+        "display_name": "Fernando Alvarenga",
+        "avatar_url": null,
+        "discord_linked": false,
+        "discord_username": null
+      }
+    }
+  ],
+  "sent": []
+}
+```
+
+### 10.3. `POST /api/v1/friends/request/{user_id}`
+Envia um pedido de amizade para `{user_id}` e cria notificação `friend_request` para o destinatário. Caso o destinatário já tenha enviado um pedido pendente para o usuário autenticado, aceita automaticamente (`status = "accepted"`, `auto_accepted = true`), marca a notificação original como lida e cria notificação `friend_accepted`.
+- **Auth:** Bearer JWT obrigatório
+- **Response `201 Created` (`FriendshipActionResponse`):**
+```json
+{
+  "friendship_id": "a1b2c3d4-1111-2222-3333-444455556666",
+  "status": "pending",
+  "auto_accepted": false,
+  "message": "Pedido de amizade enviado com sucesso.",
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "fer_br",
+    "display_name": "Fernando Alvarenga",
+    "avatar_url": null,
+    "discord_linked": false,
+    "discord_username": null
+  }
+}
+```
+- **Erros:** `400 BAD_REQUEST` (auto-pedido), `404 RESOURCE_NOT_FOUND` (usuário inexistente/inativo), `409 CONFLICT` (já são amigos ou pedido já enviado).
+
+### 10.4. `POST /api/v1/friends/{friendship_id}/accept`
+Aceita um pedido de amizade pendente (permitido apenas ao `addressee`), marca a notificação original `friend_request` como lida e cria notificação `friend_accepted` para o `requester`.
+- **Auth:** Bearer JWT obrigatório
+- **Response `200 OK` (`FriendshipActionResponse`):** `status: "accepted"`, `message: "Pedido de amizade aceito com sucesso."`.
+- **Erros:** `403 FORBIDDEN` (não é o destinatário), `404 RESOURCE_NOT_FOUND`, `409 CONFLICT` (já aceito).
+
+### 10.5. `DELETE /api/v1/friends/{friendship_id}`
+Recusa pedido recebido, cancela pedido enviado ou desfaz amizade existente (permitido apenas ao `requester` ou `addressee`). Marca eventuais notificações `friend_request` vinculadas como lidas.
+- **Auth:** Bearer JWT obrigatório
+- **Response `204 No Content`**
+- **Erros:** `403 FORBIDDEN`, `404 RESOURCE_NOT_FOUND`.
+
+---
+
+## 11. Endpoints — Notificações (`/api/v1/notifications`)
+
+### 11.1. `GET /api/v1/notifications`
+Lista paginada das notificações do usuário autenticado ordenadas da mais recente para a mais antiga, com dados do `actor` e contador global `unread_count`.
+- **Auth:** Bearer JWT obrigatório
+- **Query Params:** `unread_only` (opcional, default `false`), `page` (default `1`), `page_size` (default `20`, máx `50`)
+- **Response `200 OK` (`NotificationListResponse`):**
+```json
+{
+  "items": [
+    {
+      "id": "b2c3d4e5-1111-2222-3333-444455556666",
+      "type": "friend_request",
+      "entity_id": "a1b2c3d4-1111-2222-3333-444455556666",
+      "is_read": false,
+      "created_at": "2026-11-27T14:55:00Z",
+      "actor": {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "fallen_br",
+        "display_name": "FalleN",
+        "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400.webp"
+      }
+    }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 1,
+  "total_pages": 1,
+  "unread_count": 1
+}
+```
+
+### 11.2. `PATCH /api/v1/notifications/{notification_id}/read`
+Marca uma notificação específica do usuário autenticado como lida (`is_read = true`).
+- **Auth:** Bearer JWT obrigatório (somente destinatário)
+- **Response `200 OK`:** Objeto `NotificationItemResponse` atualizado.
+- **Erros:** `403 FORBIDDEN`, `404 RESOURCE_NOT_FOUND`.
+
+### 11.3. `POST /api/v1/notifications/read-all`
+Marca todas as notificações não lidas do usuário autenticado como lidas em uma única operação.
+- **Auth:** Bearer JWT obrigatório
+- **Response `200 OK` (`MarkAllNotificationsReadResponse`):**
+```json
+{
+  "updated_count": 3,
+  "message": "Todas as notificações foram marcadas como lidas."
+}
+```
+
+---
+
+## 12. Endpoints — Links de Convite (`/api/v1/invites`)
+
+### 12.1. `GET /api/v1/invites/me`
+Retorna o código pessoal de convite (`invite_code`) e a URL completa compartilhável (`{FRONTEND_URL}/invite/{invite_code}`).
+- **Auth:** Bearer JWT obrigatório
+- **Response `200 OK` (`MyInviteResponse`):**
+```json
+{
+  "invite_code": "xK9mP2qR7zAb",
+  "invite_url": "https://clipai.com.br/invite/xK9mP2qR7zAb"
+}
+```
+
+### 12.2. `GET /api/v1/invites/{code}`
+Retorna um preview público seguro de quem está convidando (sem e-mail ou dados sensíveis).
+- **Auth:** Público
+- **Response `200 OK` (`InvitePreviewResponse`):**
+```json
+{
+  "invite_code": "xK9mP2qR7zAb",
+  "username": "fallen_br",
+  "display_name": "FalleN",
+  "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400.webp",
+  "discord_username": "fallen_disc"
+}
+```
+- **Erros:** `404 RESOURCE_NOT_FOUND` (código inválido ou usuário inativo).
+
+### 12.3. `POST /api/v1/invites/{code}/accept`
+Aceita um link de convite e estabelece diretamente amizade com `status = "accepted"` entre o dono do convite e o usuário autenticado (ou atualiza pedido pendente existente para `accepted`), criando notificação `friend_accepted` para quem convidou. Idempotente caso já sejam amigos (`already_friends: true`).
+- **Auth:** Bearer JWT obrigatório
+- **Response `200 OK` (`InviteAcceptResponse`):**
+```json
+{
+  "friendship_id": "a1b2c3d4-1111-2222-3333-444455556666",
+  "status": "accepted",
+  "already_friends": false,
+  "message": "Convite aceito! Vocês agora são amigos.",
+  "inviter": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "username": "fallen_br",
+    "display_name": "FalleN",
+    "avatar_url": "https://cdn.clipai.com.br/avatars/550e8400.webp",
+    "discord_linked": true,
+    "discord_username": "fallen_disc"
+  }
+}
+```
+- **Erros:** `400 BAD_REQUEST` (auto-convite), `404 RESOURCE_NOT_FOUND` (código inválido ou usuário inativo).

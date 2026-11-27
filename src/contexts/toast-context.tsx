@@ -116,6 +116,10 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;
 }
 
+export function useOptionalToast(): ToastContextValue | null {
+  return useContext(ToastContext);
+}
+
 export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);
   if (!context) {

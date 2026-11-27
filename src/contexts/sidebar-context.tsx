@@ -11,7 +11,7 @@ import {
 } from 'react';
 import type { DashboardSection } from '@/components/dashboard/LiquidSidebar';
 
-export type DashboardContentSection = Exclude<DashboardSection, 'settings' | 'studio'>;
+export type DashboardContentSection = Exclude<DashboardSection, 'friends' | 'settings' | 'studio'>;
 
 export interface SidebarContextValue {
   isCollapsed: boolean;

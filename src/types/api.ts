@@ -24,6 +24,14 @@ export type ClipSortOption = 'recent' | 'popular' | 'featured' | 'most_viewed';
 
 export type ClipPeriod = '7d' | '30d' | 'all';
 
+export type FriendshipStatus = 'self' | 'none' | 'pending_sent' | 'pending_received' | 'accepted';
+
+export type SearchFriendshipStatus = Exclude<FriendshipStatus, 'self'>;
+
+export type FriendRequestDirection = 'received' | 'sent';
+
+export type NotificationType = 'friend_request' | 'friend_accepted';
+
 export type ApiErrorCode =
   | 'BAD_REQUEST'
   | 'UPLOAD_VERIFICATION_FAILED'
@@ -116,6 +124,8 @@ export interface PublicUserProfile {
   collections_visibility?: CollectionVisibility;
   discord_linked?: boolean;
   discord_username?: string | null;
+  friendship_status?: FriendshipStatus;
+  friendship_id?: string | null;
   stats?: UserPublicStats;
   clips_count?: number;
   total_views?: number;
@@ -188,6 +198,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   display_name: string;
+  invite_code?: string | null;
 }
 
 export interface RegisterResponse {
@@ -429,4 +440,100 @@ export interface CollectionDetail extends Collection {
   page?: number;
   page_size?: number;
   total_pages?: number;
+}
+
+// ============================================================================
+// 7. Amizades, Notificações e Convites
+// ============================================================================
+
+export interface FriendUser {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  discord_linked?: boolean;
+  discord_username?: string | null;
+}
+
+export interface FriendItem {
+  friendship_id: string;
+  since: string;
+  user: FriendUser;
+}
+
+export interface FriendRequest {
+  friendship_id: string;
+  direction: FriendRequestDirection;
+  created_at: string;
+  user: FriendUser;
+}
+
+export interface FriendRequestsResponse {
+  received: FriendRequest[];
+  sent: FriendRequest[];
+}
+
+export interface FriendshipActionResponse {
+  friendship_id: string;
+  status: 'pending' | 'accepted';
+  auto_accepted?: boolean;
+  message: string;
+  user: FriendUser;
+}
+
+export interface UserSearchItem {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  discord_linked: boolean;
+  discord_username: string | null;
+  friendship_status: SearchFriendshipStatus;
+  friendship_id: string | null;
+}
+
+export interface NotificationActor {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
+export interface NotificationItem {
+  id: string;
+  type: NotificationType;
+  entity_id: string;
+  is_read: boolean;
+  created_at: string;
+  actor: NotificationActor;
+}
+
+export interface NotificationListResponse extends PaginatedResponse<NotificationItem> {
+  unread_count: number;
+}
+
+export interface MarkAllNotificationsReadResponse {
+  updated_count: number;
+  message: string;
+}
+
+export interface MyInviteResponse {
+  invite_code: string;
+  invite_url: string;
+}
+
+export interface InvitePreview {
+  invite_code: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  discord_username: string | null;
+}
+
+export interface InviteAcceptResponse {
+  friendship_id: string;
+  status: 'accepted';
+  already_friends: boolean;
+  message: string;
+  inviter: FriendUser;
 }

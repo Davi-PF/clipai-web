@@ -207,6 +207,10 @@ export function CreatorStudioWorkspace() {
     if (section === 'studio') {
       return;
     }
+    if (section === 'friends') {
+      router.push('/friends');
+      return;
+    }
     if (section === 'settings') {
       router.push('/settings');
       return;

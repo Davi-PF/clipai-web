@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, type SubmitEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Lock, Mail } from 'lucide-react';
+import { AlertTriangle, Lock, Mail, UserPlus } from 'lucide-react';
 import { AuthCardLayout } from '@/components/auth/AuthCardLayout';
 import { DiscordOAuthButton } from '@/components/auth/DiscordOAuthButton';
 import { TwoFactorChallengeStep } from '@/components/auth/TwoFactorChallengeStep';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { useToast } from '@/contexts/toast-context';
 import { useAuth } from '@/hooks/useAuth';
 import { ApiClientError } from '@/lib/api-client';
+import { acceptPendingInviteIfPresent, capturePendingInviteCode } from '@/lib/pending-invite';
 import { validateEmail, validateLoginPassword } from '@/lib/validators';
 import { resolveChallengeToken } from '@/types/auth';
 
@@ -44,6 +45,22 @@ export function LoginForm() {
 
   const [challengeToken, setChallengeToken] = useState<string | null>(null);
   const [challengeEmail, setChallengeEmail] = useState<string | null>(null);
+  const [pendingInviteCode, setPendingInviteCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPendingInviteCode(capturePendingInviteCode());
+  }, []);
+
+  const finalizePostLogin = async () => {
+    const accepted = await acceptPendingInviteIfPresent();
+    if (accepted) {
+      success(
+        accepted.message ||
+          `Convite aceito! Você e @${accepted.inviter.username} agora são amigos.`,
+      );
+    }
+    router.replace(getSafeRedirectTarget());
+  };
 
   const validateFields = (): boolean => {
     const emailValidation = validateEmail(email);
@@ -87,7 +104,7 @@ export function LoginForm() {
       }
 
       success('Login realizado com sucesso! Bem-vindo de volta.');
-      router.replace(getSafeRedirectTarget());
+      await finalizePostLogin();
     } catch (err: unknown) {
       const message =
         err instanceof ApiClientError
@@ -109,7 +126,7 @@ export function LoginForm() {
         <TwoFactorChallengeStep
           challengeToken={challengeToken}
           userEmail={challengeEmail}
-          onSuccess={() => router.replace(getSafeRedirectTarget())}
+          onSuccess={() => void finalizePostLogin()}
           onCancel={() => {
             setChallengeToken(null);
             setChallengeEmail(null);
@@ -128,7 +145,11 @@ export function LoginForm() {
         <p className="text-center">
           Ainda não tem uma conta?{' '}
           <Link
-            href="/register"
+            href={
+              pendingInviteCode
+                ? `/register?invite=${encodeURIComponent(pendingInviteCode)}`
+                : '/register'
+            }
             className="font-semibold text-success transition-colors hover:underline"
           >
             Criar conta
@@ -137,6 +158,17 @@ export function LoginForm() {
       }
     >
       <div className="space-y-4">
+        {pendingInviteCode && (
+          <div
+            data-testid="login-invite-banner"
+            className="flex items-start gap-2.5 rounded-card border border-success bg-success-surface/50 p-3 font-mono text-mono-meta text-text-primary"
+          >
+            <UserPlus className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+            <span>
+              Convite detectado! Ao entrar na sua conta, a amizade será aceita automaticamente.
+            </span>
+          </div>
+        )}
         <form onSubmit={(event) => void handleSubmit(event)} noValidate className="space-y-4">
           {errors.form && (
             <div
