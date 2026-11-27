@@ -7,6 +7,7 @@ import type {
   AvatarUploadUrlResponse,
   ClipSummary,
   Collection,
+  CollectionVisibility,
   DiscordAuthUrlResponse,
   PaginatedResponse,
   PublicUserProfile,
@@ -44,6 +45,10 @@ export const userService = {
 
   async updateProfile(payload: UserUpdateRequest): Promise<User> {
     return apiClient.patch<User>('/api/v1/users/me', payload);
+  },
+
+  async updateCollectionsVisibility(collectionsVisibility: CollectionVisibility): Promise<User> {
+    return this.updateProfile({ collections_visibility: collectionsVisibility });
   },
 
   async createAvatarUploadUrl(payload: AvatarUploadUrlRequest): Promise<AvatarUploadUrlResponse> {

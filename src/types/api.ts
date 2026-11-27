@@ -4,6 +4,10 @@
 
 export type PrivacyLevel = 'public' | 'unlisted' | 'friends';
 
+export type CollectionVisibility = 'public' | 'friends' | 'private';
+
+export type CollectionPrivacy = CollectionVisibility | 'unlisted';
+
 export type ClipStatus = 'pending_upload' | 'ready' | 'failed';
 
 export type VideoMimeType = 'video/mp4' | 'video/webm';
@@ -84,6 +88,7 @@ export interface User {
   avatar_source?: AvatarSource;
   has_custom_avatar?: boolean;
   bio?: string | null;
+  collections_visibility?: CollectionVisibility;
   discord_linked?: boolean;
   discord_username?: string | null;
   discord_avatar_url?: string | null;
@@ -108,6 +113,7 @@ export interface PublicUserProfile {
   avatar_url: string | null;
   avatar_source?: AvatarSource;
   bio: string | null;
+  collections_visibility?: CollectionVisibility;
   discord_linked?: boolean;
   discord_username?: string | null;
   stats?: UserPublicStats;
@@ -117,6 +123,8 @@ export interface PublicUserProfile {
   collections_count?: number;
   created_at: string;
 }
+
+export type PublicProfile = PublicUserProfile;
 
 export interface ClipAuthorSummary {
   id: string;
@@ -133,6 +141,7 @@ export interface UserUpdateRequest {
   display_name?: string | null;
   bio?: string | null;
   avatar_source?: AvatarSource;
+  collections_visibility?: CollectionVisibility;
 }
 
 export interface AvatarUploadUrlRequest {
@@ -371,15 +380,22 @@ export interface CollectionOwnerSummary {
   id: string;
   username: string;
   display_name: string;
+  avatar_url?: string | null;
+  discord_linked?: boolean;
+  discord_username?: string | null;
 }
 
 export interface Collection {
   id: string;
   title: string;
+  name?: string;
   description: string | null;
-  privacy: PrivacyLevel;
+  privacy: CollectionPrivacy;
+  effective_privacy?: CollectionVisibility;
+  show_on_profile?: boolean;
   accent_color?: string | null;
   clips_count: number;
+  cover_thumbnail_url?: string | null;
   preview_thumbnails?: string[];
   owner: CollectionOwnerSummary;
   created_at: string;
@@ -404,6 +420,7 @@ export interface CollectionClipItem {
     is_favorited?: boolean;
     is_liked_by_me?: boolean;
     is_favorited_by_me?: boolean;
+    game?: Game | null;
   };
 }
 
