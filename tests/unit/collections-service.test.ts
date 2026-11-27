@@ -92,15 +92,39 @@ describe('collections-service & social clips-service', () => {
 
     const created = await collectionsService.createCollection({
       title: 'Highlights Valorant',
-      privacy: 'public',
+      privacy: 'friends',
+      show_on_profile: true,
       accent_color: '#2EB886',
     });
     expect(created.id).toBe('col-2');
+    expect(fetchMock.mock.calls[3]?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          title: 'Highlights Valorant',
+          privacy: 'friends',
+          show_on_profile: true,
+          accent_color: '#2EB886',
+        }),
+      }),
+    );
 
     const updated = await collectionsService.updateCollection('col-2', {
       title: 'Highlights Valorant 2026',
+      privacy: 'private',
+      show_on_profile: false,
     });
     expect(updated.title).toBe('Highlights Valorant 2026');
+    expect(fetchMock.mock.calls[4]?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({
+          title: 'Highlights Valorant 2026',
+          privacy: 'private',
+          show_on_profile: false,
+        }),
+      }),
+    );
 
     const added = await collectionsService.addClipToCollection('col-2', 'c1', 0);
     expect(added.clip_id).toBe('c1');

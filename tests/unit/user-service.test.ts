@@ -232,4 +232,56 @@ describe('user-service', () => {
     });
     expect(collections.items).toEqual([]);
   });
+
+  it('updates global collections_visibility via updateProfile and updateCollectionsVisibility', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: 'u1',
+            username: 'fallen_br',
+            email: 'gabriel@clipai.com.br',
+            display_name: 'FalleN',
+            avatar_url: null,
+            collections_visibility: 'friends',
+            is_email_verified: true,
+            is_2fa_enabled: false,
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: 'u1',
+            username: 'fallen_br',
+            email: 'gabriel@clipai.com.br',
+            display_name: 'FalleN',
+            avatar_url: null,
+            collections_visibility: 'private',
+            is_email_verified: true,
+            is_2fa_enabled: false,
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const viaProfile = await userService.updateProfile({ collections_visibility: 'friends' });
+    expect(viaProfile.collections_visibility).toBe('friends');
+    expect(fetchMock.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ collections_visibility: 'friends' }),
+      }),
+    );
+
+    const viaHelper = await userService.updateCollectionsVisibility('private');
+    expect(viaHelper.collections_visibility).toBe('private');
+    expect(fetchMock.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ collections_visibility: 'private' }),
+      }),
+    );
+  });
 });
