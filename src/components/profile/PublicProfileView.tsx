@@ -11,6 +11,7 @@ import {
   Settings,
   UserX,
 } from 'lucide-react';
+import { FriendshipActionButton } from '@/components/profile/FriendshipActionButton';
 import { ProfileClipCard } from '@/components/profile/ProfileClipCard';
 import {
   ProfileCollectionsSection,
@@ -26,6 +27,7 @@ import { normalizeCollectionVisibility } from '@/lib/collection-privacy';
 import { userService } from '@/services/user-service';
 import type { ClipSummary } from '@/types/clip';
 import type { Collection } from '@/types/collection';
+import type { FriendshipStatus } from '@/types/friendship';
 import { getUserDisplayName, type PublicUserProfile } from '@/types/user';
 
 type ProfileLoadState = 'loading' | 'ready' | 'not_found' | 'error';
@@ -146,6 +148,21 @@ export function PublicProfileView({ username }: Readonly<{ username: string }>) 
     fetchProfileCollections,
   ]);
 
+  const handleFriendshipStatusChange = (
+    nextStatus: FriendshipStatus,
+    nextFriendshipId: string | null,
+  ) => {
+    setProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            friendship_status: nextStatus,
+            friendship_id: nextFriendshipId,
+          }
+        : prev,
+    );
+  };
+
   const clipsCount = profile?.stats?.clips_count ?? profile?.clips_count ?? clips.length;
   const totalViews = profile?.stats?.total_views ?? profile?.total_views ?? 0;
   const totalLikes = profile?.stats?.total_likes ?? profile?.total_likes ?? 0;
@@ -240,6 +257,17 @@ export function PublicProfileView({ username }: Readonly<{ username: string }>) 
                       </span>
                       {profile.discord_linked && (
                         <DiscordBadge discordUsername={profile.discord_username} />
+                      )}
+                      {!isOwnProfile && (
+                        <FriendshipActionButton
+                          targetUserId={profile.id}
+                          targetUsername={profile.username}
+                          targetDisplayName={getUserDisplayName(profile)}
+                          isAuthenticated={Boolean(currentUser)}
+                          status={profile.friendship_status ?? 'none'}
+                          friendshipId={profile.friendship_id ?? null}
+                          onStatusChange={handleFriendshipStatusChange}
+                        />
                       )}
                     </div>
 
